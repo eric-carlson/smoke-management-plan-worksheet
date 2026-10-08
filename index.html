@@ -25,6 +25,7 @@
   --field:#232B27; --accent:#E2604F; --accent-ink:#1A0E0C; --oak:#9DBB82; --focus:#7DB1E8;
 }
 *,*::before,*::after{box-sizing:inherit}
+[hidden]{display:none!important}
 html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 88px)}
 body{margin:0;background:var(--bg);color:var(--ink);
   font-family:"Public Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.5}
@@ -108,8 +109,8 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-w
 .toast.show{opacity:1}
 
 @media (max-width:860px){
-  .layout{grid-template-columns:1fr;gap:16px;padding-top:12px}
-  nav.toc{position:static}
+  .layout{grid-template-columns:minmax(0,1fr);gap:16px;padding-top:12px}
+  nav.toc{position:static;min-width:0}
   nav.toc ol{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
   nav.toc li{flex:none}
   nav.toc a{background:var(--surface);border:1px solid var(--line);grid-template-columns:auto auto}
@@ -117,6 +118,65 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-w
   .pm-card{display:none}
   .grid{grid-template-columns:1fr}
   section.sec{padding:18px 16px 22px}
+}
+.meta{display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:0}
+.who-badge{border:0;background:none;padding:0;font-size:.875rem;font-weight:600;color:var(--ink);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px}
+.who-badge:hover{color:var(--oak)}
+.menu-btn{display:none}
+.dlg-foot{display:flex;gap:8px;justify-content:flex-end;align-items:center;flex-wrap:wrap;margin-top:20px;padding-top:14px;border-top:1px solid var(--line)}
+.dlg-foot .fieldmsg{margin-right:auto}
+.lblrow{flex-wrap:wrap}
+@media (max-width:700px){
+  html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 110px)}
+  .top-inner{padding:10px 14px;gap:6px 10px}
+  .title{flex:1 1 0}
+  .title h1{font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .title p{display:none}
+  .meta{order:3;flex:1 1 100%;flex-direction:row;align-items:center;gap:12px;justify-content:space-between}
+  .who-badge{max-width:55%;font-size:.8125rem}
+  .status{font-size:.75rem;white-space:normal;text-align:right}
+  .menu-btn{display:inline-flex;align-items:center;min-height:40px;order:2}
+  .actions{display:none;order:4;flex:1 1 100%;grid-template-columns:1fr 1fr;gap:8px;padding:6px 0 4px}
+  header.top.menu-open .actions{display:grid}
+  .actions .btn{min-height:44px;width:100%}
+  .layout{padding:12px 12px 80px}
+  section.sec{padding:16px 14px 20px;border-radius:8px}
+  section.sec h2{font-size:1.125rem}
+  nav.toc a{padding:8px 12px;min-height:40px;align-items:center}
+  .tipbtn{width:28px;height:28px;font-size:.875rem}
+  .actbtn{min-height:36px;padding:4px 12px;font-size:.875rem}
+  .actgroup{flex:1 1 100%;margin:4px 0 2px}
+  .actgroup .actbtn{flex:1 1 0}
+  .checks label,.checklist label{min-height:40px}
+  .btn.small{min-height:40px;padding:6px 14px}
+  .x{min-width:40px;min-height:40px;font-size:1.5rem}
+  /* tables become stacked cards */
+  .table-wrap{border:0;overflow:visible;border-radius:0}
+  table.stack{min-width:0}
+  table.stack thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  table.stack,table.stack tbody,table.stack tfoot{display:block;width:100%}
+  table.stack tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:2px 12px}
+  table.stack td{display:block;min-width:0}
+  table.stack td:first-child,table.stack td[colspan],table.stack td.codecell{grid-column:1 / -1}
+  table.stack tr{position:relative;border:1px solid var(--line);border-radius:8px;padding:10px 48px 10px 12px;margin-bottom:10px;background:var(--surface)}
+  table.stack tfoot tr{background:var(--field);padding-right:12px}
+  table.stack td{border:0;padding:4px 0}
+  table.stack td[data-label]::before{content:attr(data-label);display:block;font-size:.8125rem;font-weight:600;color:var(--muted);margin-bottom:3px}
+  table.stack td.num{text-align:left;padding:4px 0;font-size:1rem}
+  table.stack td.blank,table.stack td:empty:not([data-label]){display:none}
+  table.stack td.rm{position:absolute;top:4px;right:4px;width:auto;padding:0}
+  table.stack td.codecell{white-space:normal}
+  /* dialogs go full screen */
+  dialog{inset:0;width:100%;max-width:100%;height:100%;max-height:100%;margin:0;border-radius:0;border:0;
+    padding:calc(env(safe-area-inset-top,0px) + 16px) 16px calc(env(safe-area-inset-bottom,0px) + 16px)}
+  dialog textarea{min-height:0;height:calc(100dvh - 220px)}
+  #shareDlg[open]{display:flex;flex-direction:column;overflow-y:auto}
+  #shareDlg .dlg-foot{margin-top:auto;position:sticky;bottom:0;background:var(--surface)}
+  #mapDialog{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
+  #mapDialog[open]{display:flex;flex-direction:column}
+  #mapDialog #map{flex:1 1 auto;height:auto;min-height:0}
+  #mapFallback{overflow-y:auto}
+  .map-foot .btn{min-height:44px}
 }
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 .leaflet-pane,
@@ -697,11 +757,10 @@ border-right-color: #fff;
 print-color-adjust: exact;
 }
 }
-.actbtn{border:1px solid var(--line);background:var(--surface);border-radius:5px;padding:2px 8px;font-size:.8125rem;font-weight:500;cursor:pointer;margin-left:auto}
-.actbtn + .actbtn{margin-left:0}
+.actgroup{margin-left:auto;display:flex;gap:6px}
+.actbtn{border:1px solid var(--line);background:var(--surface);border-radius:5px;padding:2px 8px;font-size:.8125rem;font-weight:500;cursor:pointer}
 .actbtn:disabled{opacity:.45;cursor:not-allowed}
 .actbtn:not(:disabled):hover{border-color:var(--oak);color:var(--oak)}
-.lblrow .actbtn:first-of-type{margin-left:auto}
 .fieldmsg{font-size:.8125rem;color:var(--muted)}
 .fieldmsg.err{color:var(--accent)}
 #mapDialog{width:min(980px,96vw);padding:0;overflow:hidden}
@@ -739,8 +798,12 @@ body.readonly .ro-banner{display:block}
       <h1 id="docTitle">Yorkville Schoolhouse Ranch 2026 Prescribed Burn</h1>
       <p>Mendocino County AQMD. Saves as you type.</p>
     </div>
-    <span class="status" id="status">Not saved yet</span>
-    <div class="actions">
+    <div class="meta">
+      <button type="button" class="who-badge" id="whoBadge" hidden title="You're signed in. Open Sharing to sign out or manage who has access."></button>
+      <span class="status" id="status">Not saved yet</span>
+    </div>
+    <button class="btn menu-btn" id="menuBtn" aria-expanded="false" aria-controls="actions" title="Show sharing, export, and backup actions">Menu</button>
+    <div class="actions" id="actions">
       <button class="btn" id="shareBtn" title="Sign in with your access code to sync edits with everyone on the plan. The owner adds people and assigns editor or viewer access here.">Sharing</button>
       <button class="btn" id="tipsAll" aria-pressed="false" title="Open the explanation under every field at once. Use the ? next to a field to open just that one.">Show all explanations</button>
       <button class="btn" id="exportMd" title="Download the whole worksheet as a Markdown (.md) file you can print, email, or paste into the district's SMP form.">Export markdown</button>
@@ -806,15 +869,18 @@ body.readonly .ro-banner{display:block}
   <div id="peopleSec" hidden>
     <h3>People with access</h3>
     <p>Editors can change the worksheet. Viewers can read it. Removing someone takes effect immediately.</p>
-    <div class="table-wrap"><table><thead><tr><th>Name</th><th>Role</th><th>Access code</th><th></th></tr></thead><tbody id="peopleBody"></tbody></table></div>
+    <div class="table-wrap"><table class="stack"><thead><tr><th>Name</th><th>Role</th><th>Access code</th><th></th></tr></thead><tbody id="peopleBody"></tbody></table></div>
     <div class="inline" style="margin-top:10px">
       <input type="text" id="newName" placeholder="Name" aria-label="New person's name">
       <select id="newRole" aria-label="New person's role" style="flex:0 1 140px"><option value="editor">Editor</option><option value="viewer">Viewer</option></select>
       <button class="btn" id="addPerson">Add person</button>
     </div>
-    <div class="inline" style="margin-top:12px"><button class="btn primary" id="savePeople" disabled>Save changes</button><span class="fieldmsg" id="peopleMsg"></span></div>
   </div>
-  <div class="row" style="display:flex;justify-content:flex-end;margin-top:18px"><button class="btn" id="shareClose">Close</button></div>
+  <div class="dlg-foot">
+    <span class="fieldmsg" id="peopleMsg" aria-live="polite"></span>
+    <button class="btn primary" id="savePeople" disabled hidden>Save changes</button>
+    <button class="btn" id="shareClose">Close</button>
+  </div>
 </dialog>
 <div class="toast" id="toast" role="status"></div>
 
@@ -1085,8 +1151,8 @@ function control(f){
 function tableHTML(f){
   const rows = state[f.k] || [];
   const head = f.cols.map(c=>`<th scope="col">${esc(c.label)}</th>`).join("") + `<th scope="col"><span class="sr" style="position:absolute;left:-9999px">Remove</span></th>`;
-  const body = rows.map((r,i)=>`<tr>${f.cols.map(c=>`<td><input type="text" aria-label="${esc(c.label)}, row ${i+1}" data-t="${f.k}" data-r="${i}" data-c="${c.k}" value="${esc(r[c.k])}"></td>`).join("")}<td class="rm"><button class="x" data-del="${f.k}" data-r="${i}" aria-label="Remove row ${i+1}">×</button></td></tr>`).join("");
-  return `<div class="table-wrap"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>
+  const body = rows.map((r,i)=>`<tr>${f.cols.map(c=>`<td data-label="${esc(c.label)}"><input type="text" aria-label="${esc(c.label)}, row ${i+1}" data-t="${f.k}" data-r="${i}" data-c="${c.k}" value="${esc(r[c.k])}"></td>`).join("")}<td class="rm"><button class="x" data-del="${f.k}" data-r="${i}" aria-label="Remove row ${i+1}">×</button></td></tr>`).join("");
+  return `<div class="table-wrap"><table class="stack"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>
     <div class="tbl-foot"><button class="btn small" data-add="${f.k}">Add row</button></div>`;
 }
 
@@ -1094,16 +1160,16 @@ function emissionsHTML(){
   const rows = state.emis || [];
   const opts = v => `<option value=""></option>` + EV.map(e=>`<option value="${esc(e[0])}"${e[0]===v?" selected":""}>${esc(e[0])} (${e[1].toFixed(3)})</option>`).join("");
   const body = rows.map((r,i)=>`<tr>
-    <td><select aria-label="Vegetation type, row ${i+1}" data-t="emis" data-r="${i}" data-c="veg">${opts(r.veg)}</select></td>
-    <td><input type="number" step="any" inputmode="decimal" aria-label="Acres, row ${i+1}" data-t="emis" data-r="${i}" data-c="acres" value="${esc(r.acres)}"></td>
-    <td><input type="number" step="any" inputmode="decimal" aria-label="Tons per acre, row ${i+1}" data-t="emis" data-r="${i}" data-c="load" value="${esc(r.load)}"></td>
-    <td class="num" data-fuel="${i}"></td><td class="num" data-pm="${i}"></td>
+    <td data-label="Vegetation type (EV)"><select aria-label="Vegetation type, row ${i+1}" data-t="emis" data-r="${i}" data-c="veg">${opts(r.veg)}</select></td>
+    <td data-label="Acres"><input type="number" step="any" inputmode="decimal" aria-label="Acres, row ${i+1}" data-t="emis" data-r="${i}" data-c="acres" value="${esc(r.acres)}"></td>
+    <td data-label="Tons/acre"><input type="number" step="any" inputmode="decimal" aria-label="Tons per acre, row ${i+1}" data-t="emis" data-r="${i}" data-c="load" value="${esc(r.load)}"></td>
+    <td class="num" data-label="Fuel (tons)" data-fuel="${i}"></td><td class="num" data-label="PM10 (tons)" data-pm="${i}"></td>
     <td class="rm"><button class="x" data-del="emis" data-r="${i}" aria-label="Remove row ${i+1}">×</button></td></tr>`).join("");
   const th=(l,k)=>`<th><div class="lblrow">${l}${tipBtn(k)}</div></th>`;
-  return `<div class="tip-list">${["emisVeg","emisAcres","emisLoad","emisFuel","emisPM"].map(tipBox).join("")}</div><div class="table-wrap"><table>
+  return `<div class="tip-list">${["emisVeg","emisAcres","emisLoad","emisFuel","emisPM"].map(tipBox).join("")}</div><div class="table-wrap"><table class="stack">
     <thead><tr>${th("Vegetation type (EV)","emisVeg")}${th("Acres","emisAcres")}${th("Tons/acre","emisLoad")}${th("Fuel (tons)","emisFuel")}${th("PM10 (tons)","emisPM")}<th></th></tr></thead>
     <tbody>${body}</tbody>
-    <tfoot><tr><td>Total</td><td class="num" id="totAcres"></td><td></td><td class="num" id="totFuel"></td><td class="num" id="totPM"></td><td></td></tr></tfoot>
+    <tfoot><tr><td class="tot-lbl">Total</td><td class="num" data-label="Acres" id="totAcres"></td><td class="blank"></td><td class="num" data-label="Fuel (tons)" id="totFuel"></td><td class="num" data-label="PM10 (tons)" id="totPM"></td><td class="blank"></td></tr></tfoot>
   </table></div><div class="tbl-foot"><button class="btn small" data-add="emis">Add vegetation type</button></div>`;
 }
 
@@ -1117,7 +1183,7 @@ function fieldHTML(f){
     const sel = state[f.k] || [];
     return `<div class="f wide checklist">${f.opts.map(o=>`<label><input type="checkbox" data-ck="${f.k}" value="${esc(o)}"${sel.includes(o)?" checked":""}><span>${esc(o)}</span></label>`).join("")}</div>`;
   }
-  const acts = f.actions ? `<button type="button" class="actbtn" id="useLoc">Use my location</button><button type="button" class="actbtn" id="pickMap"${canPick()?"":" disabled"}>Pick on map</button>` : "";
+  const acts = f.actions ? `<span class="actgroup"><button type="button" class="actbtn" id="useLoc">Use my location</button><button type="button" class="actbtn" id="pickMap"${canPick()?"":" disabled"}>Pick on map</button></span>` : "";
   const msg = f.actions ? `<span class="fieldmsg" id="locMsg" aria-live="polite"></span>` : "";
   return `<div class="f${f.wide?" wide":""}">${f.label?`<div class="lblrow"><label for="f_${f.k}">${esc(f.label)}</label>${tipBtn(f.k)}${acts}</div>${tipBox(f.k)}`:""}${control(f)}${msg}</div>`;
 }
@@ -1531,8 +1597,14 @@ function updateShareUI(){
   else { line.textContent="Not signed in. Changes are saved on this device only."; line.className="who"; }
   document.getElementById("signInRow").hidden=!!sync.who;
   document.getElementById("signOutRow").hidden=!sync.who;
-  document.getElementById("peopleSec").hidden=!(sync.who && sync.who.role==="owner");
+  const owner = !!(sync.who && sync.who.role==="owner");
+  document.getElementById("peopleSec").hidden=!owner;
+  document.getElementById("savePeople").hidden=!owner;
+  const badge=document.getElementById("whoBadge");
+  if(sync.who){ badge.textContent=`${sync.who.name} (${ROLE_LABEL[sync.who.role]})`; badge.hidden=false; }
+  else { badge.hidden=true; badge.textContent=""; }
 }
+document.getElementById("whoBadge").onclick=()=>document.getElementById("shareBtn").click();
 document.getElementById("shareBtn").onclick=async()=>{
   updateShareUI(); shareDlg.showModal();
   if(sync.who && sync.who.role==="owner") loadPeople();
@@ -1575,9 +1647,9 @@ async function loadPeople(){
 function renderPeople(){
   const body=document.getElementById("peopleBody");
   body.innerHTML = (people||[]).length ? people.map((p,i)=>`<tr>
-    <td>${esc(p.name)}</td>
-    <td><select data-pi="${i}" aria-label="Role for ${esc(p.name)}"><option value="editor"${p.role==="editor"?" selected":""}>Editor</option><option value="viewer"${p.role==="viewer"?" selected":""}>Viewer</option></select></td>
-    <td class="codecell">${esc(p.code)} <button class="btn small" data-copy="${i}">Copy</button></td>
+    <td data-label="Name">${esc(p.name)}</td>
+    <td data-label="Role"><select data-pi="${i}" aria-label="Role for ${esc(p.name)}"><option value="editor"${p.role==="editor"?" selected":""}>Editor</option><option value="viewer"${p.role==="viewer"?" selected":""}>Viewer</option></select></td>
+    <td class="codecell" data-label="Access code">${esc(p.code)} <button class="btn small" data-copy="${i}">Copy</button></td>
     <td class="rm"><button class="x" data-rmp="${i}" aria-label="Remove ${esc(p.name)}">×</button></td></tr>`).join("")
     : `<tr><td colspan="4" style="color:var(--muted)">No one else has access yet. Add a person below.</td></tr>`;
   document.getElementById("savePeople").disabled=!peopleDirty;
@@ -1613,6 +1685,13 @@ document.getElementById("savePeople").onclick=async()=>{
     peopleDirty=false; renderPeople(); peopleMsg("Saved."); toast("People updated");
   }catch(e){ peopleMsg("Couldn't save: "+(e.message||"network error"),true); }
 };
+
+/* ---------- mobile header menu ---------- */
+const menuBtn=document.getElementById("menuBtn"), topHeader=document.querySelector("header.top");
+function setMenu(open){ topHeader.classList.toggle("menu-open",open); menuBtn.setAttribute("aria-expanded",String(open)); menuBtn.textContent = open ? "Close" : "Menu"; }
+menuBtn.onclick=()=>setMenu(!topHeader.classList.contains("menu-open"));
+document.getElementById("actions").addEventListener("click",e=>{ if(e.target.closest("button")) setMenu(false); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape" && topHeader.classList.contains("menu-open")) setMenu(false); });
 
 /* ---------- markdown ---------- */
 function mdEsc(s){ return String(s??"").replace(/\|/g,"\\|").replace(/\n+/g," "); }
