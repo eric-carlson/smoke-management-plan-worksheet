@@ -171,7 +171,8 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-w
     padding:calc(env(safe-area-inset-top,0px) + 16px) 16px calc(env(safe-area-inset-bottom,0px) + 16px)}
   dialog textarea{min-height:0;height:calc(100dvh - 220px)}
   /* Sharing and view-only stay traditional centered dialogs with the page visible around them */
-  #shareDlg,#roDlg{inset:0;margin:auto;width:calc(100% - 24px);max-width:560px;height:fit-content;max-height:calc(100dvh - 48px);
+  #historyDlg .h-body{max-height:calc(100dvh - 260px)}
+  #shareDlg,#roDlg,#historyDlg{inset:0;margin:auto;width:calc(100% - 24px);max-width:560px;height:fit-content;max-height:calc(100dvh - 48px);
     border:1px solid var(--line);border-radius:12px;padding:20px 18px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
   #shareDlg[open]{overflow-y:auto}
   #shareDlg .dlg-foot{position:sticky;bottom:-20px;background:var(--surface);padding-bottom:4px}
@@ -765,6 +766,7 @@ print-color-adjust: exact;
 .actbtn:disabled{opacity:.45;cursor:not-allowed}
 .actbtn:not(:disabled):hover{border-color:var(--oak);color:var(--oak)}
 .fieldmsg{font-size:.8125rem;color:var(--muted)}
+input.computed{background:transparent;border-style:dashed;font-variant-numeric:tabular-nums}
 .fieldmsg.err{color:var(--accent)}
 #mapDialog{width:min(980px,96vw);padding:0;overflow:hidden}
 .map-head{display:flex;gap:8px;padding:12px;border-bottom:1px solid var(--line);flex-wrap:wrap;align-items:center}
@@ -774,6 +776,14 @@ print-color-adjust: exact;
 .map-foot .readout{flex:1 1 260px;font-size:.9375rem;font-variant-numeric:tabular-nums}
 .map-msg{padding:8px 12px;font-size:.875rem;background:var(--field);border-bottom:1px solid var(--line)}
 .map-msg[hidden],#mapFallback[hidden]{display:none}
+.map-modes{display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);align-items:center;flex-wrap:wrap}
+.modebtn[aria-pressed="true"]{background:var(--oak);border-color:var(--oak);color:#fff}
+.unit-sum{margin-left:auto;font-size:.875rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.foot-btns{display:flex;gap:8px;flex-wrap:wrap}
+.vtx{width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid #A3261C;box-shadow:0 0 0 1px rgba(0,0,0,.35);cursor:grab}
+.vtx.first{background:#A3261C;border-color:#fff}
+.leaflet-tooltip.closetip{font:600 12px/1.2 "Public Sans",system-ui,sans-serif;padding:3px 6px}
+#map.drawing{cursor:crosshair}
 #mapFallback{padding:16px;display:grid;gap:12px;max-width:62ch}
 #mapFallback p{margin:0}
 .leaflet-container{font:inherit}
@@ -792,6 +802,21 @@ print-color-adjust: exact;
 body.readonly main input,body.readonly main select,body.readonly main textarea{opacity:.75}
 .ro-banner .btn{margin-left:6px}
 #roDlg{width:min(460px,94vw)}
+#historyDlg{width:min(680px,94vw)}
+#historyDlg h2{margin:0 0 4px;font-size:1.25rem;font-weight:800}
+.h-intro{margin:0 0 12px;color:var(--muted);font-size:.9375rem}
+.h-body{max-height:min(60vh,560px);overflow-y:auto;margin:0 -4px;padding:0 4px}
+.h-day{margin:14px 0 6px;font-size:.8125rem;font-weight:700;color:var(--muted)}
+.h-day:first-child{margin-top:0}
+.h-entry{padding:10px 0;border-top:1px solid var(--line)}
+.h-meta{display:flex;gap:10px;flex-wrap:wrap;align-items:baseline}
+.h-meta strong{font-weight:700}
+.h-meta span{color:var(--muted);font-size:.875rem;font-variant-numeric:tabular-nums}
+.h-fields{margin-top:3px;font-size:.9375rem}
+.h-fields button{border:0;background:none;padding:0;font:inherit;color:var(--oak);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.h-more{color:var(--muted)}
+.flash{outline:3px solid var(--oak);outline-offset:4px;border-radius:6px;transition:outline-color 1.2s}
+.flash.fade{outline-color:transparent}
 #roDlg h2{margin:0 0 8px;font-size:1.25rem;font-weight:800}
 #roDlg p{margin:0;color:var(--ink);max-width:52ch}
 .ro-banner{display:none;background:var(--field);border:1px solid var(--line);border-left:3px solid var(--oak);padding:10px 14px;border-radius:0 8px 8px 0;margin-bottom:16px;font-size:.9375rem}
@@ -812,6 +837,7 @@ body.readonly .ro-banner{display:block}
     <button class="btn menu-btn" id="menuBtn" aria-expanded="false" aria-controls="actions" title="Show sharing, export, and backup actions">Menu</button>
     <div class="actions" id="actions">
       <button class="btn" id="shareBtn" title="Sign in with your access code to sync edits with everyone on the plan. The owner adds people and assigns editor or viewer access here.">Sharing</button>
+      <button class="btn" id="historyBtn" title="See who changed which parts of the worksheet, and when.">History</button>
       <button class="btn" id="tipsAll" aria-pressed="false" title="Open the explanation under every field at once. Use the ? next to a field to open just that one.">Show all explanations</button>
       <button class="btn" id="exportMd" title="Download the whole worksheet as a Markdown (.md) file you can print, email, or paste into the district's SMP form.">Export markdown</button>
       <button class="btn" id="backup" title="Download a JSON copy of everything entered. Use it with Restore to move your work to another browser or device.">Back up</button>
@@ -841,11 +867,16 @@ body.readonly .ro-banner{display:block}
     <button class="btn primary" id="mdClose">Close</button>
   </div>
 </dialog>
-<dialog id="mapDialog" aria-label="Pick location on map">
+<dialog id="mapDialog" aria-label="Map">
   <div class="map-head">
     <input type="text" id="mapSearch" aria-label="Address to find">
     <button class="btn small" id="mapFind">Find</button>
     <button class="btn small" id="mapClose">Close</button>
+  </div>
+  <div class="map-modes" role="toolbar" aria-label="Map mode">
+    <button class="btn small modebtn" id="modeLoc" aria-pressed="false" title="Click the map to set the burn location's latitude and longitude. Click again to leave this mode.">Set location</button>
+    <button class="btn small modebtn" id="modeUnit" aria-pressed="false" title="Click corners to outline the burn unit. Fills in project area and elevations. Click again to leave this mode.">Draw burn unit</button>
+    <span class="unit-sum" id="unitSum"></span>
   </div>
   <div class="map-msg" id="mapMsg" hidden></div>
   <div id="map"></div>
@@ -858,8 +889,14 @@ body.readonly .ro-banner{display:block}
       <input type="text" id="pasteCoords" placeholder="38.88678, -123.15587"></div>
   </div>
   <div class="map-foot">
-    <span class="readout" id="mapReadout">Click the map to place the point.</span>
-    <button class="btn primary" id="mapUse" disabled>Use this location</button>
+    <span class="readout" id="mapReadout" aria-live="polite"></span>
+    <span class="foot-btns" id="locBtns" hidden><button class="btn primary" id="mapUse" disabled>Use this location</button></span>
+    <span class="foot-btns" id="unitBtns" hidden>
+      <button class="btn" id="unitUndo" title="Remove the most recent corner (Backspace)">Undo corner</button>
+      <button class="btn" id="unitRestart" title="Remove all corners and start the outline again">Start over</button>
+      <button class="btn primary" id="unitFinish" title="Save the outline (Enter, double-click, or click the first corner)">Finish unit</button>
+    </span>
+    <span class="foot-btns" id="browseBtns" hidden><button class="btn" id="unitDelete" title="Remove the saved unit outline. Project area and elevations are left as they are.">Delete unit outline</button></span>
   </div>
 </dialog>
 <dialog id="shareDlg" aria-labelledby="shareTitle">
@@ -889,6 +926,12 @@ body.readonly .ro-banner{display:block}
     <button class="btn" id="shareClose">Close</button>
   </div>
 </dialog>
+<dialog id="historyDlg" aria-labelledby="historyTitle">
+  <h2 id="historyTitle">History</h2>
+  <p class="h-intro">Who changed which parts of the worksheet. One person's edits within 15 minutes are grouped together. Click a field to jump to it.</p>
+  <div id="historyBody" class="h-body"></div>
+  <div class="dlg-foot"><span class="fieldmsg" id="historyMsg"></span><button class="btn" id="historyRefresh">Refresh</button><button class="btn" id="historyClose">Close</button></div>
+</dialog>
 <dialog id="roDlg" aria-labelledby="roDlgTitle">
   <h2 id="roDlgTitle">View only</h2>
   <p id="roDlgText"></p>
@@ -913,31 +956,49 @@ const EV = [
 const evOf = name => { const r = EV.find(e => e[0] === name); return r ? r[1] : 0; };
 
 const SECTIONS = [
- {id:"project", title:"Project description", hint:"Required for every SMP. Matches the district's Project Description page.", fields:[
+ {id:"applicant", title:"Application and applicant", hint:"Sections I, III, IV, and V of the district's 2024 SMP application form.", fields:[
+  {k:"appType",label:"Type of application (check all that apply)",type:"checks",wide:1,opts:["Potential to impact sensitive receptors","Burning past 3:00 P.M. and overnight burns","More than 10 acres broadcast or 50 tons piled fuels","Burning 100+ acres"]},
+  {k:"org",label:"Business or organization name (DBA)",wide:1},
+  {k:"permitTo",label:"Permit will be issued to",wide:1},
+  {k:"landowner",label:"Legal owner (if different from DBA)",wide:1},
+  {k:"ownership",label:"Type of ownership",type:"select",opts:["Corporation","Partnership","Sole proprietor","Government agency","Other"]},{k:"ownershipOther",label:"Ownership type, if other"},
+  {k:"landownerAddr",label:"Mailing address",wide:1},
+  {k:"mailCity",label:"City"},{k:"mailState",label:"State"},
+  {k:"mailZip",label:"ZIP"},
+  {k:"objectives",label:"Purpose of the open burning",type:"textarea",wide:1},
+  {k:"burnDate",label:"Estimated starting date",type:"date"},{k:"endDate",label:"Estimated completion date",type:"date"},
+  {k:"burnWindow",label:"Backup window",wide:1},
+  {k:"permittee",label:"Authorized representative name"},{k:"repTitle",label:"Representative's title"},
+  {k:"repPhone",label:"Telephone",type:"tel"},{k:"phone24",label:"Cell phone (24-hour contact)",type:"tel"},
+  {k:"email",label:"Email",type:"email"},{k:"facilityId",label:"Facility ID #"}
+ ]},
+ {id:"project", title:"Project description", hint:"Section VI of the district's 2024 SMP application form.", fields:[
   {k:"name",label:"Project name",wide:1},
-  {k:"address",label:"Burn location address",wide:1,actions:1},
+  {k:"address",label:"Site address",wide:1,actions:"loc"},
+  {k:"town",label:"Nearest city/town"},{k:"county",label:"County"},
   {k:"lat",label:"Latitude (DMM)"},{k:"lon",label:"Longitude (DMM)"},
-  {k:"county",label:"County"},{k:"town",label:"Nearest town"},
-  {k:"elevTop",label:"Elevation, top (ft)",type:"number"},{k:"elevBottom",label:"Elevation, bottom (ft)",type:"number"},
-  {k:"landowner",label:"Landowner(s)",wide:1},
-  {k:"landownerAddr",label:"Landowner mailing address",wide:1},
-  {k:"permittee",label:"Permittee / field contact"},{k:"phone24",label:"24-hour phone",type:"tel"},
-  {k:"email",label:"Email",type:"email"},{k:"burnBoss",label:"Burn boss (CARX)"},
-  {k:"org",label:"Organization conducting the burn",wide:1},
-  {k:"burnDate",label:"Planned burn date",type:"date"},{k:"burnWindow",label:"Backup window"},
+  {k:"apn",label:"APN(s)"},{k:"thp",label:"THP #"},
+  {k:"legalT",label:"Legal: Township"},{k:"legalR",label:"Legal: Range"},
+  {k:"legalSec",label:"Legal: Section(s)"},
+  {k:"access",label:"Access route to the property",type:"textarea",wide:1},
+  {k:"elevTop",label:"Top elevation (ft)",type:"number"},{k:"elevBottom",label:"Bottom elevation (ft)",type:"number"},
+  {k:"burnBoss",label:"Burn boss (CARX)"},
   {k:"burnType",label:"Burn type",type:"select",opts:["Range improvement","Forest management","Wildland vegetation management"]},
   {k:"hazard",label:"Primary purpose is fire hazard reduction",type:"select",opts:["Yes","No"]},
-  {k:"vegGrass",label:"Grass (%)",type:"number"},{k:"vegBrush",label:"Brush (%)",type:"number"},
-  {k:"vegLitter",label:"Timber litter (%)",type:"number"},{k:"vegSlash",label:"Timber slash (%)",type:"number"},
+  {k:"wildlife",label:"Primary purpose is wildlife or game habitat",type:"select",opts:["No","Yes"]},
+  {k:"acres",label:"Project area (acres)",type:"number",actions:"unit"},{k:"broadcastAcres",label:"Broadcast area (acres)",type:"number"},
+  {k:"numPiles",label:"Number of piles",type:"number"},{k:"pileSize",label:"Average pile size (ft × ft)"},
+  {k:"fuelPerAcre",label:"Vegetation fuel load per acre (tons)",type:"computed"},{k:"fuelTotal",label:"Total project fuel loading (tons)",type:"computed"},
+  {k:"vegBrush",label:"Brush (%)",type:"number"},{k:"vegSlash",label:"Timber slash (%)",type:"number"},
+  {k:"vegLitter",label:"Underbrush (%)",type:"number"},{k:"vegGrass",label:"Grass (%)",type:"number"},
   {k:"vegOther",label:"Other vegetation (describe)",wide:1},
-  {k:"vegCond",label:"Vegetation condition",type:"select",opts:["Broadcast","Understory","Hand pile","Machine pile","Landing pile"]},
-  {k:"acres",label:"Project area (acres)",type:"number"},
-  {k:"ignHours",label:"Preferred ignition hours"},{k:"duration",label:"Expected duration, ignition to extinction"},
+  {k:"vegCond",label:"Vegetation condition",type:"select",opts:["Machine pile","Slash / landing pile","Treated","Hand pile","Broadcast / standing brush","Other"]},{k:"vegCondOther",label:"Vegetation condition, if other"},
+  {k:"technique",label:"Ignition technique"},{k:"intensity",label:"Expected fire intensity",type:"select",opts:["Low","High"]},
+  {k:"duration",label:"Expected burn duration, ignition to complete extinction (hours or days)",wide:1},
+  {k:"ignHours",label:"Preferred ignition hours"},{k:"hoursBetween",label:"Min hours between ignitions"},
   {k:"acresPerHour",label:"Max acres per hour",type:"number"},{k:"acresPerDay",label:"Max acres per day",type:"number"},
-  {k:"hoursBetween",label:"Min hours between ignitions"},{k:"technique",label:"Ignition technique"},
-  {k:"intensity",label:"Expected fire intensity",type:"select",opts:["Low","High"]},
   {k:"drying",label:"Fuel drying time and conditions before ignition",type:"textarea",wide:1},
-  {k:"objectives",label:"Goals and objectives",type:"textarea",wide:1}
+  {k:"attach",label:"Attachments (check as applicable)",type:"checks",wide:1,opts:["Section A attached (burn could impact smoke sensitive areas)","Section B attached (over 100 acres or over 5 tons PM10)"]}
  ]},
  {id:"emissions", title:"Emissions estimate", hint:"Acres × fuel loading (tons/acre) × emission value from the district's Table 2. Adjust the split between vegetation types to match the unit.", custom:"emissions"},
  {id:"ssa", title:"Section A: Smoke sensitive areas", hint:"Required when smoke could reach roads, homes, or towns. Hwy 128 alone triggers this section.", fields:[
@@ -979,7 +1040,9 @@ const SECTIONS = [
    "SMP filed with MCAQMD at least 30 days before the burn",
    "$50 filing fee paid",
    "Authorized Contact List Form submitted",
-   "Unit map attached (boundary, sensitive areas, smoke travel, signs)",
+   "Application signed by the owner/operator or responsible member",
+   "Location map attached (boundary, access directions, sensitive areas, smoke travel, signs)",
+   "CDFW certification filed (only if the primary purpose is wildlife or game habitat)",
    "SMP approved and SMP number received",
    "Adjacent landowners notified",
    "Public notice published",
@@ -1002,7 +1065,8 @@ const DEFAULTS = {
   landowner:"Barbara Henderson and Eric Carlson",
   burnBoss:"Kyle Farmer",
   org:"Mendocino County Prescribed Burn Association (prescribed fire workshop burn)",
-  hazard:"Yes", vegCond:"Understory", acres:"9",
+  hazard:"Yes", wildlife:"No", vegCond:"Broadcast / standing brush", acres:"9", broadcastAcres:"9", numPiles:"0",
+  appType:["Potential to impact sensitive receptors","Burning past 3:00 P.M. and overnight burns"],
   ignHours:"10:00 to 15:00, after test fire",
   duration:"1 day of ignition; large downed logs may smolder overnight",
   technique:"Drip torch", intensity:"Low",
@@ -1046,7 +1110,7 @@ const TIPS = {
  lon:"Longitude of the unit's center in degrees and decimal minutes, e.g. 123° 09.352′ W.",
  county:"County where the burn takes place. This determines which air district reviews the plan.",
  town:"Closest town or community. Helps the district locate the burn and anticipate who might see or smell smoke.",
- elevTop:"Highest point in the unit, in feet. Elevation range tells the district how smoke will rise by day and drain downhill at night. Read it from a topo map or Google Earth.",
+ elevTop:"Highest point in the unit, in feet. Filled in automatically when you outline the unit on the map, from USGS 3DEP elevation data. Elevation range tells the district how smoke will rise by day and drain downhill at night. Read it from a topo map or Google Earth.",
  elevBottom:"Lowest point in the unit, in feet. Smoke pools at low points overnight.",
  landowner:"Name(s) on title for the property being burned.",
  landownerAddr:"Mailing address for district correspondence, including the acreage fee invoice and the post-burn report reminder.",
@@ -1065,7 +1129,7 @@ const TIPS = {
  vegSlash:"Percent that is timber slash: cut or downed woody material such as branches and logs. The 2023 snow storm downfall goes here.",
  vegOther:"Any fuel not covered by the percentages above.",
  vegCond:"How the fuel is arranged. Broadcast: fire spreads across open ground. Understory: fire burns beneath a tree canopy. Pile options: material stacked by hand, by machine, or at a log landing. A burn under oaks is understory.",
- acres:"Total area to be burned, measured on a map. The acreage fee is based on acres actually blackened, reported after the burn.",
+ acres:"Total area to be burned. \"Draw on map\" lets you outline the unit; the area is calculated from the outline and filled in here, along with the top and bottom elevations. The acreage fee is based on acres actually blackened, reported after the burn.",
  ignHours:"The window when crews will be lighting fire. The district wants ignition done early enough for smoke to lift before evening. Burning past 3 PM is itself an SMP trigger.",
  duration:"Time from first ignition until no smoke remains. Include smoldering time for large logs, which can run overnight or longer.",
  acresPerHour:"The most area you'll ignite in any one hour. Limiting this limits how much smoke is produced at once. The district may cap it.",
@@ -1112,6 +1176,46 @@ const TIPS = {
  emisFuel:"Acres × tons per acre. Calculated.",
  emisPM:"Fuel tons × emission value. Calculated. This is the number the district uses to set the plan tier."
 };
+Object.assign(TIPS, {
+ appType:"Why this burn needs an SMP. Check every reason that applies. Being next to Hwy 128 is a potential impact to sensitive receptors, and smoldering logs overnight count as burning past 3:00 P.M.",
+ org:"The business or organization applying, as it should appear on the permit. For a workshop burn this may be the Prescribed Burn Association or the ranch.",
+ permitTo:"The person or organization whose name goes on the permit. They are responsible for meeting the permit conditions.",
+ landowner:"Name(s) on title for the property, if different from the business or organization above.",
+ ownership:"Legal form of the applicant. Individuals or a married couple applying for their own land are usually Sole proprietor or Other.",
+ ownershipOther:"Describe the ownership type if you chose Other, for example \"Private landowners\".",
+ landownerAddr:"Street or PO Box where the district should mail the permit, invoices for acreage fees, and the post-burn report reminder.",
+ mailCity:"City for the mailing address.", mailState:"State for the mailing address.", mailZip:"ZIP code for the mailing address.",
+ objectives:"Why you're burning and what it should accomplish, in measurable terms. Copy from the burn plan's goals and objectives.",
+ burnDate:"First date you expect to burn. File the SMP at least 30 days before this. Ignition still needs a permissive burn day and district authorization.",
+ endDate:"Last date of the burn window covered by this application.",
+ permittee:"The person who signs the application and is responsible for the burn: the owner/operator or a responsible member of the organization. The district contacts this person about approval, burn-day authorization, and smoke complaints.",
+ repTitle:"The representative's title or role, e.g. Landowner, Burn Boss, or PBA Coordinator.",
+ repPhone:"Daytime phone number for the authorized representative.",
+ phone24:"Cell phone where the district can reach the representative at any hour from ignition until the burn is out, including overnight.",
+ email:"Email for the authorized representative. The district sends SMP approval and burn request responses here.",
+ facilityId:"District-assigned ID if you've had a permit from MCAQMD before. Leave blank for a first application.",
+ address:"Street address of the burn site. The driveway address that leads to the unit is correct here. \"Use my location\" fills latitude and longitude from your device's GPS, so use it while standing in the unit. \"Pick on map\" opens a map centered on the latitude and longitude entered below, or on the address if no coordinates are entered yet.",
+ apn:"Assessor's parcel number(s) for the land being burned, from your property tax bill or the county assessor's parcel viewer. Required if the site has no street address, and worth including anyway.",
+ thp:"Timber Harvest Plan number, only if the burn is part of an approved THP. Usually blank for a range or fuel reduction burn.",
+ legalT:"Township from the Public Land Survey legal description, e.g. 12N. Found on your deed or the county parcel viewer.",
+ legalR:"Range from the legal description, e.g. 12W.",
+ legalSec:"Section number(s) from the legal description.",
+ access:"Directions from the nearest public road to the burn unit, so district staff can find it. Include gates, landmarks, and road surface.",
+ burnType:"Range improvement: removing vegetation for wildlife or livestock habitat or new agriculture. Forest management: removing forest debris as part of timber or forest protection work. Wildland vegetation management: prescribed burning by a public agency, or under a cooperative agreement involving one, on land mostly covered with chaparral, trees, grass, or brush.",
+ wildlife:"If the burn is done primarily to improve wildlife or game habitat, the district requires a statement from California Department of Fish and Wildlife certifying the burn is desirable and proper.",
+ broadcastAcres:"Acres burned by spreading fire across the ground rather than burning piles. For an all-broadcast burn this equals the project area.",
+ numPiles:"How many piles will be burned. Enter 0 for a broadcast-only burn.",
+ pileSize:"Typical pile dimensions in feet, e.g. 6 × 6. Leave blank for a broadcast-only burn.",
+ fuelPerAcre:"Total fuel tons divided by project acres. Calculated from the emissions estimate.",
+ fuelTotal:"Tons of vegetation to be burned across the whole project. Calculated from the emissions estimate.",
+ vegBrush:"Percent of the fuel that is shrubs such as chamise, manzanita, coyote brush, or poison oak. The four percentages should total 100.",
+ vegSlash:"Percent that is timber slash: cut or downed woody material such as branches and logs. The 2023 snow storm downfall goes here.",
+ vegLitter:"Percent that is underbrush: low vegetation, leaf litter, and small plants beneath a tree canopy. Oak leaf litter goes here.",
+ vegCond:"How the fuel is arranged, using the form's categories. An understory burn through grass and oak litter is Broadcast / standing brush. Treated means fuel already crushed, chipped, or otherwise prepared.",
+ vegCondOther:"Describe the vegetation condition if you chose Other.",
+ duration:"Time from first ignition until no smoke remains, in hours or days. Include smoldering time for large logs.",
+ attach:"Check Section A if smoke could reach roads, homes, or towns. Check Section B if the burn is over 100 acres or estimated over 5 tons of PM10. Both sections are in this worksheet."
+});
 let tipSeq=0;
 function tipBtn(k){
   if(!TIPS[k]) return "";
@@ -1157,8 +1261,12 @@ let uid=0;
 
 function control(f){
   const id = "f_"+f.k; const v = state[f.k] ?? "";
+  if(f.type==="computed") return `<input id="${id}" type="text" readonly class="computed" aria-describedby="${id}_c" value="${esc(computedVal(f.k))}"><span class="fieldmsg" id="${id}_c">Calculated from the emissions estimate</span>`;
   if(f.type==="textarea") return `<textarea id="${id}" data-k="${f.k}">${esc(v)}</textarea>`;
-  if(f.type==="select") return `<select id="${id}" data-k="${f.k}"><option value=""></option>${f.opts.map(o=>`<option${o===v?" selected":""}>${esc(o)}</option>`).join("")}</select>`;
+  if(f.type==="select"){
+    const legacy = v && !f.opts.includes(v) ? `<option value="${esc(v)}" selected>${esc(v)} (not on the 2024 form, choose another)</option>` : "";
+    return `<select id="${id}" data-k="${f.k}"><option value=""></option>${legacy}${f.opts.map(o=>`<option${o===v?" selected":""}>${esc(o)}</option>`).join("")}</select>`;
+  }
   const t = f.type || "text";
   const extra = t==="number" ? ' step="any" inputmode="decimal"' : "";
   return `<input id="${id}" type="${t}" data-k="${f.k}" value="${esc(v)}"${extra}>`;
@@ -1199,8 +1307,9 @@ function fieldHTML(f){
     const sel = state[f.k] || [];
     return `<div class="f wide checklist">${f.opts.map(o=>`<label><input type="checkbox" data-ck="${f.k}" value="${esc(o)}"${sel.includes(o)?" checked":""}><span>${esc(o)}</span></label>`).join("")}</div>`;
   }
-  const acts = f.actions ? `<span class="actgroup"><button type="button" class="actbtn" id="useLoc">Use my location</button><button type="button" class="actbtn" id="pickMap"${canPick()?"":" disabled"}>Pick on map</button></span>` : "";
-  const msg = f.actions ? `<span class="fieldmsg" id="locMsg" aria-live="polite"></span>` : "";
+  const acts = f.actions==="loc" ? `<span class="actgroup"><button type="button" class="actbtn" id="useLoc">Use my location</button><button type="button" class="actbtn" id="pickMap"${canPick()?"":" disabled"}>Pick on map</button></span>`
+             : f.actions==="unit" ? `<span class="actgroup"><button type="button" class="actbtn" id="drawUnit"${canPick()?"":" disabled"}>Draw on map</button></span>` : "";
+  const msg = f.actions==="loc" ? `<span class="fieldmsg" id="locMsg" aria-live="polite"></span>` : "";
   return `<div class="f${f.wide?" wide":""}">${f.label?`<div class="lblrow"><label for="f_${f.k}">${esc(f.label)}</label>${tipBtn(f.k)}${acts}</div>${tipBox(f.k)}`:""}${control(f)}${msg}</div>`;
 }
 
@@ -1244,6 +1353,13 @@ function sectionOfKey(k){
 }
 
 /* ---------- derived ---------- */
+function computedVal(k){
+  const t=emissionTotals();
+  if(!t.f) return "";
+  if(k==="fuelTotal") return t.f.toFixed(1);
+  if(k==="fuelPerAcre"){ const a=num(state.acres)||t.a; return a ? (t.f/a).toFixed(1) : ""; }
+  return "";
+}
 const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
 function emissionTotals(){
   let a=0,f=0,p=0; const per=[];
@@ -1260,12 +1376,13 @@ function updateDerived(){
   const set=(id,v)=>{const e=document.getElementById(id); if(e) e.textContent=v;};
   set("totAcres",t.a.toFixed(1)); set("totFuel",t.f.toFixed(1)); set("totPM",t.p.toFixed(2));
   set("pmSide",t.p.toFixed(2));
+  ["fuelTotal","fuelPerAcre"].forEach(k=>{ const el=document.getElementById("f_"+k); if(el) el.value=computedVal(k); });
   SECTIONS.forEach(s=>{
     let done=0,total=0;
     if(s.custom==="emissions"){ total=1; done = t.p>0 ? 1 : 0; }
     else s.fields.forEach(f=>{
       if(f.type==="checklist"){ total+=f.opts.length; done+=(state[f.k]||[]).length; }
-      else { total++; if(filled(state[f.k])) done++; }
+      else if(f.type!=="computed"){ total++; if(filled(state[f.k])) done++; }
     });
     const c=toc.querySelector(`[data-count="${s.id}"]`), b=toc.querySelector(`[data-bar="${s.id}"]`);
     if(c) c.textContent = `${done}/${total}`; if(b) b.style.width = (total?done/total*100:0)+"%";
@@ -1276,7 +1393,7 @@ function updateDerived(){
 main.addEventListener("input", e=>{
   const el=e.target;
   if(el.dataset.k){ state[el.dataset.k]=el.value;
-    if(["address","lat","lon"].includes(el.dataset.k)){ const b=document.getElementById("pickMap"); if(b) b.disabled=!canPick(); } }
+    if(["address","lat","lon"].includes(el.dataset.k)){ ["pickMap","drawUnit"].forEach(id=>{ const b=document.getElementById(id); if(b) b.disabled=!canPick(); }); } }
   else if(el.dataset.t){ const arr=state[el.dataset.t]; arr[+el.dataset.r][el.dataset.c]=el.value; }
   else if(el.dataset.ck){
     const set = new Set(state[el.dataset.ck]||[]); el.checked?set.add(el.value):set.delete(el.value);
@@ -1324,13 +1441,13 @@ function fromDMM(str){
   return v;
 }
 function canPick(){
-  return !!(state.address||"").trim() || (fromDMM(state.lat)!=null && fromDMM(state.lon)!=null);
+  return !!(state.address||"").trim() || (fromDMM(state.lat)!=null && fromDMM(state.lon)!=null) || hasUnit();
 }
 function setCoords(lat,lon){
   state.lat=toDMM(lat,true); state.lon=toDMM(lon,false);
   const a=document.getElementById("f_lat"), b=document.getElementById("f_lon");
   if(a) a.value=state.lat; if(b) b.value=state.lon;
-  const pb=document.getElementById("pickMap"); if(pb && !document.body.classList.contains("readonly")) pb.disabled=false;
+  ["pickMap","drawUnit"].forEach(id=>{ const pb=document.getElementById(id); if(pb) pb.disabled=false; });
   updateDerived(); scheduleSave();
 }
 function locMsg(t,err){ const m=document.getElementById("locMsg"); if(m){ m.textContent=t; m.classList.toggle("err",!!err); } }
@@ -1368,14 +1485,18 @@ main.addEventListener("click", e=>{
       locMsg(why,true);
     }, {enableHighAccuracy:true, timeout:20000, maximumAge:0});
   }
-  if(e.target.id==="pickMap") openMap();
+  if(e.target.id==="pickMap") openMap("loc");
+  if(e.target.id==="drawUnit") openMap("unit");
 });
 
 const mapDlg=document.getElementById("mapDialog"), mapMsgEl=document.getElementById("mapMsg"),
       mapReadout=document.getElementById("mapReadout"), mapUse=document.getElementById("mapUse"),
       mapFallback=document.getElementById("mapFallback"), mapEl=document.getElementById("map");
 let L_ready=null, map=null, marker=null, picked=null, tilesOk=false, tileErrs=0;
+let mapMode="browse", tmpPts=[], drawLayer=null, savedLayer=null, handleLayer=null;
+const FIRE="#A3261C";
 function mapMsg(t){ mapMsgEl.textContent=t||""; mapMsgEl.hidden=!t; }
+function readout(t){ mapReadout.textContent=t||""; }
 function loadLeaflet(){
   if(!L_ready) L_ready=new Promise((res,rej)=>{
     if(window.L) return res(window.L);
@@ -1386,37 +1507,197 @@ function loadLeaflet(){
   });
   return L_ready;
 }
+
+/* ---------- geometry ---------- */
+function hasUnit(){ return Array.isArray(state.unitPoly) && state.unitPoly.length>=3; }
+function polyAcres(pts){
+  // geodesic polygon area on the WGS84 sphere (same method Leaflet.draw uses)
+  const R=6378137, rad=Math.PI/180; let a=0;
+  for(let i=0;i<pts.length;i++){ const p1=pts[i], p2=pts[(i+1)%pts.length];
+    a += (p2[1]-p1[1])*rad * (2+Math.sin(p1[0]*rad)+Math.sin(p2[0]*rad)); }
+  return Math.abs(a*R*R/2)/4046.8564224;
+}
+function inPoly(pt,poly){
+  let inside=false; const x=pt[1], y=pt[0];
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+    const xi=poly[i][1], yi=poly[i][0], xj=poly[j][1], yj=poly[j][0];
+    if(((yi>y)!==(yj>y)) && (x < (xj-xi)*(y-yi)/(yj-yi)+xi)) inside=!inside;
+  }
+  return inside;
+}
+function samplePoints(poly, target){
+  const lats=poly.map(p=>p[0]), lons=poly.map(p=>p[1]);
+  const s={n:Math.max(...lats),s:Math.min(...lats),e:Math.max(...lons),w:Math.min(...lons)};
+  let pts=[], n=18;
+  while(n<=60){
+    pts=[];
+    for(let i=0;i<=n;i++) for(let j=0;j<=n;j++){
+      const p=[s.s+(s.n-s.s)*i/n, s.w+(s.e-s.w)*j/n]; if(inPoly(p,poly)) pts.push(p); }
+    if(pts.length>=target*0.6) break; n+=10;
+  }
+  return poly.concat(pts).slice(0, target+poly.length);
+}
+async function elevRange(poly){
+  const pts=samplePoints(poly,300); let vals=[];
+  try{
+    const body=new URLSearchParams({geometryType:"esriGeometryMultipoint",
+      geometry:JSON.stringify({points:pts.map(p=>[p[1],p[0]]),spatialReference:{wkid:4326}}),
+      returnFirstValueOnly:"true", f:"json"});
+    const r=await fetch("https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/getSamples",{method:"POST",body});
+    const js=await r.json();
+    vals=(js.samples||[]).map(x=>parseFloat(x.value)).filter(v=>!isNaN(v)&&v>-500).map(m=>m*3.28084);
+  }catch(e){}
+  if(!vals.length){
+    // fallback: USGS point query service on the corners plus a few interior points
+    const few=poly.concat(pts.slice(poly.length).filter((_,i,a)=>i%Math.max(1,Math.floor(a.length/15))===0)).slice(0,30);
+    const res=await Promise.all(few.map(p=>fetch(`https://epqs.nationalmap.gov/v1/json?x=${p[1]}&y=${p[0]}&units=Feet&wkid=4326&includeDate=false`)
+      .then(r=>r.json()).then(j=>{ const v=+j.value; return isNaN(v)||v<-500?null:v; }).catch(()=>null)));
+    vals=res.filter(v=>v!=null);
+  }
+  return vals.length ? {min:Math.min(...vals), max:Math.max(...vals), n:vals.length} : null;
+}
+
+/* ---------- location ---------- */
 function setPicked(lat,lon){
   picked={lat,lon};
-  mapReadout.textContent=`${toDMM(lat,true)}, ${toDMM(lon,false)}  (${lat.toFixed(5)}, ${lon.toFixed(5)})`;
+  readout(`${toDMM(lat,true)}, ${toDMM(lon,false)}  (${lat.toFixed(5)}, ${lon.toFixed(5)})`);
   mapUse.disabled=false;
 }
 function showFallback(){
   mapEl.style.display="none"; mapFallback.hidden=false; mapMsg("");
+  document.querySelector(".map-modes").hidden=true;
+  ["unitBtns","browseBtns"].forEach(id=>document.getElementById(id).hidden=true);
+  document.getElementById("locBtns").hidden=false;
   const q=document.getElementById("mapSearch").value||state.address||"";
   const link=document.getElementById("gmapsLink");
   const la=fromDMM(state.lat), lo=fromDMM(state.lon);
   link.href = (la!=null&&lo!=null) ? `https://www.google.com/maps/search/?api=1&query=${la},${lo}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
-  mapReadout.textContent="Paste coordinates to continue.";
+  readout("Paste coordinates to continue.");
 }
 document.getElementById("pasteCoords").addEventListener("input", e=>{
   const m=e.target.value.match(/(-?\d{1,3}\.\d+)\s*[, ]\s*(-?\d{1,3}\.\d+)/);
   if(m){ const la=+m[1], lo=+m[2];
     if(Math.abs(la)<=90&&Math.abs(lo)<=180){ setPicked(la,lo); return; } }
-  picked=null; mapUse.disabled=true; mapReadout.textContent="Waiting for coordinates like 38.88678, -123.15587.";
+  picked=null; mapUse.disabled=true; readout("Waiting for coordinates like 38.88678, -123.15587.");
 });
 async function centerOn(q){
   const la=fromDMM(state.lat), lo=fromDMM(state.lon);
   mapMsg("Looking up address…");
   const g = q ? await geocode(q) : null;
-  if(g){ map.setView([g.lat,g.lon],16); mapMsg("Centered on the address. Click the burn unit's center."); return; }
+  if(g){ map.setView([g.lat,g.lon],16); modeBanner(); return; }
   if(la!=null&&lo!=null){ map.setView([la,lo],16); mapMsg("Address lookup isn't available, so the map is centered on the coordinates entered in the worksheet."); return; }
-  map.setView([38.9,-123.2],12); mapMsg("Address lookup isn't available. Pan to the unit and click its center.");
+  map.setView([38.9,-123.2],12); mapMsg("Address lookup isn't available. Pan to the burn unit.");
 }
-async function openMap(){
+
+/* ---------- modes ---------- */
+const BANNERS={
+  browse:"Choose Set location or Draw burn unit above.",
+  loc:"Click the map to place the burn location. Click Set location again to stop.",
+  unit:"Click to add corners around the unit. Drag a corner to move it. Finish with Enter, a double-click, or by clicking the first corner. Escape cancels."
+};
+function modeBanner(){ mapMsg(BANNERS[mapMode]); }
+function unitSummary(){
+  document.getElementById("unitSum").textContent = hasUnit()
+    ? `Unit: ${polyAcres(state.unitPoly).toFixed(1)} ac, ${state.unitPoly.length} corners` : "";
+}
+function setMode(m){
+  mapMode=m;
+  document.getElementById("modeLoc").setAttribute("aria-pressed",String(m==="loc"));
+  document.getElementById("modeUnit").setAttribute("aria-pressed",String(m==="unit"));
+  document.getElementById("locBtns").hidden = m!=="loc";
+  document.getElementById("unitBtns").hidden = m!=="unit";
+  document.getElementById("browseBtns").hidden = !(m==="browse" && hasUnit());
+  mapEl.classList.toggle("drawing", m==="unit");
+  if(map){ m==="unit" ? map.doubleClickZoom.disable() : map.doubleClickZoom.enable(); }
+  if(m==="unit"){ tmpPts = hasUnit() ? clone(state.unitPoly) : []; readout(tmpPts.length ? "Editing the saved outline. Drag corners or add new ones, then Finish." : "Click the first corner of the unit."); }
+  else tmpPts=[];
+  if(m==="loc"){ picked=null; mapUse.disabled=true; readout(fromDMM(state.lat)!=null ? `Current: ${state.lat}, ${state.lon}` : "Click the map to place the point."); }
+  if(m==="browse" && !mapReadout.dataset.keep) readout("");
+  delete mapReadout.dataset.keep;
+  modeBanner(); drawSaved(); drawTmp(true); unitSummary();
+}
+const toggleMode = m => setMode(mapMode===m ? "browse" : m);
+document.getElementById("modeLoc").onclick=()=>toggleMode("loc");
+document.getElementById("modeUnit").onclick=()=>toggleMode("unit");
+
+/* ---------- drawing ---------- */
+function drawSaved(){
+  if(!map) return;
+  savedLayer.clearLayers();
+  if(hasUnit() && mapMode!=="unit")
+    L.polygon(state.unitPoly,{color:FIRE,weight:3,fillColor:FIRE,fillOpacity:.18,interactive:false}).addTo(savedLayer);
+}
+function drawTmp(rebuildHandles){
+  if(!map) return;
+  drawLayer.clearLayers();
+  if(mapMode!=="unit"){ handleLayer.clearLayers(); return; }
+  if(tmpPts.length>=2) L.polyline(tmpPts,{color:FIRE,weight:3,interactive:false}).addTo(drawLayer);
+  if(tmpPts.length>=3){
+    L.polyline([tmpPts[tmpPts.length-1],tmpPts[0]],{color:FIRE,weight:2,dashArray:"6 6",interactive:false}).addTo(drawLayer);
+    L.polygon(tmpPts,{stroke:false,fillColor:FIRE,fillOpacity:.12,interactive:false}).addTo(drawLayer);
+    readout(`${tmpPts.length} corners, ${polyAcres(tmpPts).toFixed(1)} acres so far.`);
+  } else if(tmpPts.length) readout(`${tmpPts.length} corner${tmpPts.length>1?"s":""}. Keep clicking around the unit.`);
+  if(rebuildHandles) drawHandles();
+}
+function drawHandles(){
+  handleLayer.clearLayers();
+  tmpPts.forEach((p,i)=>{
+    const h=L.marker(p,{draggable:true,keyboard:false,
+      icon:L.divIcon({className:"",html:`<div class="vtx${i===0?" first":""}"></div>`,iconSize:[16,16],iconAnchor:[8,8]})}).addTo(handleLayer);
+    h.on("drag",ev=>{ const ll=ev.target.getLatLng(); tmpPts[i]=[ll.lat,ll.lng]; drawTmp(false); });
+    h.on("click",ev=>{ L.DomEvent.stopPropagation(ev); if(i===0 && tmpPts.length>=3) finishUnit(); });
+    if(i===0 && tmpPts.length>=3) h.bindTooltip("Click to close",{permanent:true,direction:"top",offset:[0,-10],className:"closetip"});
+  });
+}
+function addCorner(ll){
+  if(tmpPts.length){
+    const last=map.latLngToContainerPoint(tmpPts[tmpPts.length-1]), here=map.latLngToContainerPoint(ll);
+    if(last.distanceTo(here)<6) return;   // ignore the repeat click from a double-click
+  }
+  tmpPts.push([ll.lat,ll.lng]); drawTmp(true);
+}
+async function finishUnit(){
+  if(mapMode!=="unit") return;
+  const pts=tmpPts.slice();
+  if(pts.length<3){ mapReadout.dataset.keep="1"; setMode("browse"); readout("Need at least three corners. Nothing was saved."); return; }
+  const acres=polyAcres(pts);
+  state.unitPoly=pts.map(p=>[+p[0].toFixed(6),+p[1].toFixed(6)]);
+  setField("acres", acres.toFixed(1));
+  mapReadout.dataset.keep="1"; setMode("browse");
+  readout(`Unit saved: ${acres.toFixed(1)} acres. Project area updated. Looking up elevations…`);
+  const er=await elevRange(state.unitPoly);
+  if(er){
+    setField("elevTop", String(Math.round(er.max))); setField("elevBottom", String(Math.round(er.min)));
+    readout(`Unit saved: ${acres.toFixed(1)} acres, ${Math.round(er.min).toLocaleString()} to ${Math.round(er.max).toLocaleString()} ft (${er.n} elevation samples). Fields updated.`);
+  } else readout(`Unit saved: ${acres.toFixed(1)} acres. Elevation lookup isn't available here, so enter the top and bottom elevations by hand.`);
+}
+function setField(k,v){
+  state[k]=v; const el=document.getElementById("f_"+k); if(el) el.value=v;
+  updateDerived(); scheduleSave();
+}
+document.getElementById("unitUndo").onclick=()=>{ tmpPts.pop(); drawTmp(true); if(!tmpPts.length) readout("Click the first corner of the unit."); };
+document.getElementById("unitRestart").onclick=()=>{ tmpPts=[]; drawTmp(true); readout("Click the first corner of the unit."); };
+document.getElementById("unitFinish").onclick=()=>finishUnit();
+let delArmed=false;
+document.getElementById("unitDelete").onclick=e=>{
+  if(!delArmed){ delArmed=true; e.target.textContent="Click again to delete"; setTimeout(()=>{ delArmed=false; e.target.textContent="Delete unit outline"; },3000); return; }
+  delArmed=false; e.target.textContent="Delete unit outline";
+  delete state.unitPoly; updateDerived(); scheduleSave(); setMode("browse"); readout("Unit outline deleted.");
+};
+// Escape cancels the drawing in progress (or leaves location mode) instead of closing the map
+mapDlg.addEventListener("cancel", e=>{ if(mapMode!=="browse"){ e.preventDefault(); setMode("browse"); } });
+mapDlg.addEventListener("keydown", e=>{
+  if(e.target.matches && e.target.matches("input")) return;
+  if(mapMode==="unit" && e.key==="Enter"){ e.preventDefault(); finishUnit(); }
+  if(mapMode==="unit" && (e.key==="Backspace"||e.key==="Delete")){ e.preventDefault(); document.getElementById("unitUndo").click(); }
+});
+
+/* ---------- open ---------- */
+async function openMap(mode){
   document.getElementById("mapSearch").value=state.address||"";
-  picked=null; mapUse.disabled=true; mapReadout.textContent="Click the map to place the point.";
-  mapEl.style.display=""; mapFallback.hidden=true; document.getElementById("pasteCoords").value="";
+  picked=null; mapUse.disabled=true; readout("");
+  mapEl.style.display=""; mapFallback.hidden=true; document.querySelector(".map-modes").hidden=false;
+  document.getElementById("pasteCoords").value="";
   if(mapDlg.showModal) mapDlg.showModal(); else mapDlg.setAttribute("open","");
   let L;
   try{ L=await loadLeaflet(); }catch(e){ showFallback(); return; }
@@ -1427,27 +1708,37 @@ async function openMap(){
     [sat,topo].forEach(l=>{ l.on("tileload",()=>{tilesOk=true;}); l.on("tileerror",()=>{tileErrs++;}); });
     sat.addTo(map);
     L.control.layers({"Satellite":sat,"Topo":topo},null,{collapsed:false}).addTo(map);
+    savedLayer=L.layerGroup().addTo(map); drawLayer=L.layerGroup().addTo(map); handleLayer=L.layerGroup().addTo(map);
     map.on("click",ev=>{
-      const {lat,lng}=ev.latlng;
-      if(marker) marker.setLatLng(ev.latlng);
-      else marker=L.circleMarker(ev.latlng,{radius:9,color:"#ffffff",weight:3,fillColor:"#A3261C",fillOpacity:1}).addTo(map);
-      setPicked(lat,lng);
+      if(mapMode==="loc"){
+        if(marker) marker.setLatLng(ev.latlng);
+        else marker=L.circleMarker(ev.latlng,{radius:9,color:"#ffffff",weight:3,fillColor:FIRE,fillOpacity:1}).addTo(map);
+        setPicked(ev.latlng.lat,ev.latlng.lng);
+      } else if(mapMode==="unit") addCorner(ev.latlng);
     });
+    map.on("dblclick",()=>{ if(mapMode==="unit") finishUnit(); });
   }
   setTimeout(()=>map.invalidateSize(),50);
   const la=fromDMM(state.lat), lo=fromDMM(state.lon);
   if(la!=null&&lo!=null){
-    if(marker) marker.setLatLng([la,lo]); else marker=L.circleMarker([la,lo],{radius:9,color:"#ffffff",weight:3,fillColor:"#A3261C",fillOpacity:1}).addTo(map);
+    if(marker) marker.setLatLng([la,lo]); else marker=L.circleMarker([la,lo],{radius:9,color:"#ffffff",weight:3,fillColor:FIRE,fillOpacity:1}).addTo(map);
   }
-  // Prefer saved coordinates: street-address geocoding is unreliable on rural roads
-  if(la!=null&&lo!=null){ map.setView([la,lo],17); mapMsg(`Centered on the coordinates entered in the worksheet (${state.lat}, ${state.lon}). Click the map to choose a different point.`); }
+  setMode(mode||"browse");
+  // Prefer the saved outline, then saved coordinates: street-address geocoding is unreliable on rural roads
+  if(hasUnit()) map.fitBounds(L.polygon(state.unitPoly).getBounds(),{padding:[40,40],maxZoom:18});
+  else if(la!=null&&lo!=null) map.setView([la,lo],17);
   else centerOn(state.address);
   setTimeout(()=>{ if(!tilesOk && mapDlg.open) showFallback(); },6000);
 }
 document.getElementById("mapFind").onclick=()=>{ if(map && mapFallback.hidden) centerOn(document.getElementById("mapSearch").value); else showFallback(); };
 document.getElementById("mapSearch").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); document.getElementById("mapFind").click(); } });
-document.getElementById("mapClose").onclick=()=>mapDlg.close();
-mapUse.onclick=()=>{ if(!picked) return; setCoords(picked.lat,picked.lon); mapDlg.close(); locMsg("Latitude and longitude set from the map."); toast("Location set"); };
+document.getElementById("mapClose").onclick=()=>{ setMode("browse"); mapDlg.close(); };
+mapUse.onclick=()=>{
+  if(!picked) return; setCoords(picked.lat,picked.lon);
+  if(!mapFallback.hidden){ mapDlg.close(); }
+  else { mapReadout.dataset.keep="1"; setMode("browse"); readout(`Location set: ${state.lat}, ${state.lon}`); }
+  locMsg("Latitude and longitude set from the map."); toast("Location set");
+};
 
 
 /* ---------- shared sync (Cloudflare Worker + KV) ----------
@@ -1504,7 +1795,7 @@ function applyChanges(merged){
     if(def && !["table","checks","checklist"].includes(def.type)){
       const el=document.getElementById("f_"+k);
       if(el && el!==document.activeElement) el.value = state[k] ?? "";
-      if(["address","lat","lon"].includes(k)){ const b=document.getElementById("pickMap"); if(b) b.disabled=!canPick(); }
+      if(["address","lat","lon"].includes(k)){ ["pickMap","drawUnit"].forEach(id=>{ const b=document.getElementById(id); if(b) b.disabled=!canPick(); }); }
     } else secs.add(sec);
   });
   secs.forEach(id=>{
@@ -1607,8 +1898,8 @@ function applyReadOnly(){
     ? "You have view-only access. Ask the owner for an editor code to make changes."
     : "You're not signed in, so this worksheet is view-only.";
   document.getElementById("roSignIn").hidden = !!sync.who;
-  main.querySelectorAll("textarea,input:not([type=checkbox]):not([type=file])").forEach(el=>{ el.readOnly = ro; });
-  main.querySelectorAll("select,input[type=checkbox],button[data-add],button[data-del],.actbtn").forEach(el=>{ el.disabled = (el.id==="pickMap" && !canPick()); });
+  main.querySelectorAll("textarea,input:not([type=checkbox]):not([type=file]):not(.computed)").forEach(el=>{ el.readOnly = ro; });
+  main.querySelectorAll("select,input[type=checkbox],button[data-add],button[data-del],.actbtn").forEach(el=>{ el.disabled = ((el.id==="pickMap"||el.id==="drawUnit") && !canPick()); });
   document.getElementById("restoreBtn").disabled = ro;
 }
 
@@ -1764,6 +2055,63 @@ document.getElementById("savePeople").onclick=async()=>{
   }catch(e){ peopleMsg("Couldn't save: "+(e.message||"network error"),true); }
 };
 
+
+/* ---------- history ---------- */
+const historyDlg=document.getElementById("historyDlg");
+const SPECIAL_LABELS={emis:["Emissions estimate","emissions"], unitPoly:["Unit boundary","project"], steps:["Filing checklist","checklist"], notes:["Notes","notes"]};
+function fieldInfo(k){
+  if(SPECIAL_LABELS[k]) return {label:SPECIAL_LABELS[k][0], sec:SPECIAL_LABELS[k][1]};
+  for(const s of SECTIONS){ const f=(s.fields||[]).find(f=>f.k===k); if(f) return {label:f.label||s.title, sec:s.id}; }
+  return {label:k, sec:null};
+}
+function dayLabel(d){
+  const t=new Date(); t.setHours(0,0,0,0); const x=new Date(d); x.setHours(0,0,0,0);
+  const diff=Math.round((t-x)/864e5);
+  return diff===0?"Today":diff===1?"Yesterday":d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric",year: d.getFullYear()===new Date().getFullYear()?undefined:"numeric"});
+}
+const hm = d => d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});
+function renderHistory(log){
+  const body=document.getElementById("historyBody");
+  if(!log.length){ body.innerHTML=`<p class="h-intro">No changes recorded yet.</p>`; return; }
+  let html="", lastDay="";
+  log.slice().reverse().forEach(e=>{
+    const at=new Date(e.at), start=new Date(e.start||e.at), day=dayLabel(at);
+    if(day!==lastDay){ html+=`<div class="h-day">${esc(day)}</div>`; lastDay=day; }
+    const when = (at-start>60000 && dayLabel(start)===day) ? `${hm(start)} to ${hm(at)}` : hm(at);
+    let what;
+    if(e.created) what="Created the shared worksheet";
+    else {
+      const items=e.fields.map(k=>({k,...fieldInfo(k)}));
+      const shown=items.slice(0,10).map(i=>`<button type="button" data-goto="${esc(i.k)}" data-sec="${esc(i.sec||"")}">${esc(i.label)}</button>`).join(", ");
+      what=`Changed ${shown}${items.length>10?` <span class="h-more">and ${items.length-10} more</span>`:""}`;
+    }
+    html+=`<div class="h-entry"><div class="h-meta"><strong>${esc(e.by||"Unknown")}</strong><span>${esc(when)}</span></div><div class="h-fields">${what}</div></div>`;
+  });
+  body.innerHTML=html;
+}
+async function loadHistory(){
+  const msg=document.getElementById("historyMsg"); msg.textContent="Loading…"; msg.classList.remove("err");
+  if(!sync.who){ document.getElementById("historyBody").innerHTML=`<p class="h-intro">Sign in to see the history.</p>`; msg.textContent=""; return; }
+  try{
+    const r=await api("/log");
+    if(r.status===404){ document.getElementById("historyBody").innerHTML=`<p class="h-intro">History isn't available yet. The sync Worker needs to be redeployed with the change log update.</p>`; msg.textContent=""; return; }
+    if(!r.ok) throw new Error(r.status);
+    renderHistory(await r.json()); msg.textContent="";
+  }catch(e){ msg.textContent="Couldn't load history. Check your connection."; msg.classList.add("err"); }
+}
+document.getElementById("historyBtn").onclick=()=>{ historyDlg.showModal(); loadHistory(); };
+document.getElementById("historyClose").onclick=()=>historyDlg.close();
+document.getElementById("historyRefresh").onclick=()=>loadHistory();
+document.getElementById("historyBody").addEventListener("click",e=>{
+  const b=e.target.closest("[data-goto]"); if(!b) return;
+  historyDlg.close();
+  const k=b.dataset.goto, el=document.getElementById("f_"+k);
+  const target = el ? el.closest(".f") : (document.querySelector(`[data-t="${k}"]`)||{}).closest?.(".f") || document.getElementById(b.dataset.sec);
+  if(!target) return;
+  target.scrollIntoView({behavior:"smooth",block:"center"});
+  target.classList.add("flash"); setTimeout(()=>target.classList.add("fade"),900); setTimeout(()=>target.classList.remove("flash","fade"),2300);
+});
+
 /* ---------- mobile header menu ---------- */
 const menuBtn=document.getElementById("menuBtn"), topHeader=document.querySelector("header.top");
 function setMenu(open){ topHeader.classList.toggle("menu-open",open); menuBtn.setAttribute("aria-expanded",String(open)); menuBtn.textContent = open ? "Close" : "Menu"; }
@@ -1807,11 +2155,17 @@ function toMarkdown(){
       } else if(f.type==="textarea"){
         if(simple.length){ md += simple.join("\n")+"\n\n"; simple=[]; }
         md += `**${f.label}**\n\n${String(v||"").trim()||blank}\n\n`;
+      } else if(f.type==="computed"){
+        simple.push(`- **${f.label}:** ${computedVal(f.k)||blank}`);
       } else {
         simple.push(`- **${f.label}:** ${String(v??"").trim()||blank}`);
       }
     });
     if(simple.length) md += simple.join("\n")+"\n";
+    if(s.id==="project" && hasUnit()){
+      md += `\n### Unit boundary\n\nDrawn on the worksheet map: ${state.unitPoly.length} corners, ${polyAcres(state.unitPoly).toFixed(1)} acres.\n\n| Corner | Latitude | Longitude |\n| --- | --- | --- |\n`;
+      state.unitPoly.forEach((p,i)=>{ md += `| ${i+1} | ${toDMM(p[0],true)} | ${toDMM(p[1],false)} |\n`; });
+    }
   });
   return md.replace(/\n{3,}/g,"\n\n");
 }
