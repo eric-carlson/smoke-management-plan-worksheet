@@ -170,8 +170,11 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-w
   dialog{inset:0;width:100%;max-width:100%;height:100%;max-height:100%;margin:0;border-radius:0;border:0;
     padding:calc(env(safe-area-inset-top,0px) + 16px) 16px calc(env(safe-area-inset-bottom,0px) + 16px)}
   dialog textarea{min-height:0;height:calc(100dvh - 220px)}
-  #shareDlg[open]{display:flex;flex-direction:column;overflow-y:auto}
-  #shareDlg .dlg-foot{margin-top:auto;position:sticky;bottom:0;background:var(--surface)}
+  /* Sharing and view-only stay traditional centered dialogs with the page visible around them */
+  #shareDlg,#roDlg{inset:0;margin:auto;width:calc(100% - 24px);max-width:560px;height:fit-content;max-height:calc(100dvh - 48px);
+    border:1px solid var(--line);border-radius:12px;padding:20px 18px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+  #shareDlg[open]{overflow-y:auto}
+  #shareDlg .dlg-foot{position:sticky;bottom:-20px;background:var(--surface);padding-bottom:4px}
   #mapDialog{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
   #mapDialog[open]{display:flex;flex-direction:column}
   #mapDialog #map{flex:1 1 auto;height:auto;min-height:0}
@@ -787,6 +790,10 @@ print-color-adjust: exact;
 .who.err{color:var(--accent)}
 .codecell{font-variant-numeric:tabular-nums;white-space:nowrap}
 body.readonly main input,body.readonly main select,body.readonly main textarea{opacity:.75}
+.ro-banner .btn{margin-left:6px}
+#roDlg{width:min(460px,94vw)}
+#roDlg h2{margin:0 0 8px;font-size:1.25rem;font-weight:800}
+#roDlg p{margin:0;color:var(--ink);max-width:52ch}
 .ro-banner{display:none;background:var(--field);border:1px solid var(--line);border-left:3px solid var(--oak);padding:10px 14px;border-radius:0 8px 8px 0;margin-bottom:16px;font-size:.9375rem}
 body.readonly .ro-banner{display:block}
 </style>
@@ -822,7 +829,7 @@ body.readonly .ro-banner{display:block}
       <p>Estimated tons PM10. The large-burn tier starts at 5 tons or 100 acres.</p>
     </div>
   </nav>
-  <div class="mainwrap"><div class="ro-banner" id="roBanner">You have view-only access. Ask the owner for an editor code to make changes.</div><main id="main"></main></div>
+  <div class="mainwrap"><div class="ro-banner" id="roBanner"><span id="roText"></span> <button class="btn small" id="roSignIn">Sign in</button></div><main id="main"></main></div>
 </div>
 
 <dialog id="mdDialog">
@@ -880,6 +887,14 @@ body.readonly .ro-banner{display:block}
     <span class="fieldmsg" id="peopleMsg" aria-live="polite"></span>
     <button class="btn primary" id="savePeople" disabled hidden>Save changes</button>
     <button class="btn" id="shareClose">Close</button>
+  </div>
+</dialog>
+<dialog id="roDlg" aria-labelledby="roDlgTitle">
+  <h2 id="roDlgTitle">View only</h2>
+  <p id="roDlgText"></p>
+  <div class="dlg-foot">
+    <button class="btn" id="roKeep">Keep viewing</button>
+    <button class="btn primary" id="roDlgSignIn">Sign in</button>
   </div>
 </dialog>
 <div class="toast" id="toast" role="status"></div>
@@ -1127,6 +1142,7 @@ function saveNow(){
 }
 function showSaved(){
   if(typeof sync!=="undefined" && sync.who){ showSyncStatus(); return; }
+  if(typeof sync!=="undefined" && sync){ statusEl.textContent="Not signed in"; statusEl.className="status offline"; return; }
   if(!state._savedAt) return;
   const d = new Date(state._savedAt);
   statusEl.textContent = "Saved " + d.toLocaleDateString(undefined,{month:"short",day:"numeric"}) + ", " + d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});
@@ -1439,7 +1455,9 @@ mapUse.onclick=()=>{ if(!picked) return; setCoords(picked.lat,picked.lon); mapDl
    the last synced copy ("base") so concurrent edits merge field by field: a field you
    changed keeps your value, a field only someone else changed takes theirs. */
 const SYNC_URL = "https://smp-sync.eric-carlson.workers.dev";
-const CODE_KEY = KEY+":code", META_KEY = KEY+":sync";
+const CODE_KEY = KEY+":code", META_KEY = KEY+":sync", WHO_KEY = KEY+":who";
+function cacheWho(w){ try{ w ? localStorage.setItem(WHO_KEY, JSON.stringify(w)) : localStorage.removeItem(WHO_KEY); }catch(e){} }
+function cachedWho(){ try{ return JSON.parse(localStorage.getItem(WHO_KEY)||"null"); }catch(e){ return null; } }
 const clone = o => o==null ? o : JSON.parse(JSON.stringify(o));
 const same = (a,b) => JSON.stringify(a??null) === JSON.stringify(b??null);
 var sync = { code:"", who:null, version:0, base:null, inflight:false, again:false, timer:null,
@@ -1560,7 +1578,7 @@ async function push(){
 }
 
 function lostAccess(){
-  sync.who=null; applyReadOnly(); updateShareUI();
+  sync.who=null; cacheWho(null); applyReadOnly(); updateShareUI(); openSignIn();
   statusEl.textContent="Access code not accepted. Open Sharing to sign in."; statusEl.className="status warn";
 }
 async function connect(){
@@ -1568,19 +1586,78 @@ async function connect(){
   setSync("Connecting…","");
   let res;
   try{ res = await api("/whoami"); }
-  catch(e){ statusEl.textContent="Offline. Saved on this device"; statusEl.className="status offline"; return false; }
+  catch(e){
+    // Offline: keep the last confirmed identity so edits continue and sync when back online
+    const w = cachedWho();
+    if(w){ sync.who=w; applyReadOnly(); updateShareUI(); setSync("Offline. Saved on this device","offline"); return true; }
+    statusEl.textContent="Offline. Can't verify your access code"; statusEl.className="status offline"; return false;
+  }
   if(res.status===401){ lostAccess(); return false; }
   if(!res.ok){ statusEl.textContent="Sync error ("+res.status+")"; statusEl.className="status warn"; return false; }
-  sync.who = await res.json();
+  sync.who = await res.json(); cacheWho(sync.who);
   applyReadOnly(); updateShareUI();
   await pull();
   return true;
 }
+function isRO(){ return !sync.who || sync.who.role==="viewer"; }
 function applyReadOnly(){
-  const ro = !!(sync.who && sync.who.role==="viewer");
+  const ro = isRO();
   document.body.classList.toggle("readonly", ro);
-  main.querySelectorAll("input,select,textarea,button[data-add],button[data-del],.actbtn").forEach(el=>{ el.disabled = ro || (el.id==="pickMap" && !canPick()); });
+  document.getElementById("roText").textContent = sync.who
+    ? "You have view-only access. Ask the owner for an editor code to make changes."
+    : "You're not signed in, so this worksheet is view-only.";
+  document.getElementById("roSignIn").hidden = !!sync.who;
+  main.querySelectorAll("textarea,input:not([type=checkbox]):not([type=file])").forEach(el=>{ el.readOnly = ro; });
+  main.querySelectorAll("select,input[type=checkbox],button[data-add],button[data-del],.actbtn").forEach(el=>{ el.disabled = (el.id==="pickMap" && !canPick()); });
   document.getElementById("restoreBtn").disabled = ro;
+}
+
+/* ---------- view-only guard ----------
+   Fields stay readable and focusable; any attempt to change them is blocked and explained. */
+const roDlg=document.getElementById("roDlg");
+let roShown=false, roToastAt=0;
+function roPrompt(){
+  if(roDlg.open || shareDlg.open) return;
+  if(!roShown){
+    roShown=true;
+    if(document.activeElement) document.activeElement.blur();
+    const signedIn=!!sync.who;
+    document.getElementById("roDlgText").textContent = signedIn
+      ? "Your access code is for viewing only, so changes can't be made. Ask the owner for an editor code if you need to edit."
+      : "You're not signed in, so you can view this worksheet but not change it. Sign in with your access code to edit. Edits are only kept for people who are signed in.";
+    document.getElementById("roDlgSignIn").hidden = signedIn;
+    document.getElementById("roKeep").textContent = signedIn ? "OK" : "Keep viewing";
+    roDlg.showModal();
+  } else if(Date.now()-roToastAt>4000){
+    roToastAt=Date.now(); toast(sync.who ? "View only" : "View only. Sign in to edit.");
+  }
+}
+function revertEl(el){
+  if(el.dataset.k) el.value = state[el.dataset.k] ?? "";
+  else if(el.dataset.t) el.value = ((state[el.dataset.t]||[])[+el.dataset.r]||{})[el.dataset.c] ?? "";
+  else if(el.dataset.ck) el.checked = (state[el.dataset.ck]||[]).includes(el.value);
+}
+const isField = el => el && el.matches && el.matches("input,select,textarea");
+main.addEventListener("focusin", e=>{ if(isRO() && isField(e.target)) roPrompt(); }, true);
+main.addEventListener("beforeinput", e=>{ if(isRO()){ e.preventDefault(); roPrompt(); } }, true);
+main.addEventListener("pointerdown", e=>{ if(isRO() && e.target.matches && e.target.matches("select")){ e.preventDefault(); roPrompt(); } }, true);
+main.addEventListener("click", e=>{
+  if(!isRO()) return;
+  const t=e.target;
+  if((t.matches && t.matches("input[type=checkbox]")) || t.closest("[data-add],[data-del],.actbtn")){
+    e.preventDefault(); e.stopImmediatePropagation(); roPrompt();
+  }
+}, true);
+["input","change"].forEach(type=>main.addEventListener(type, e=>{
+  if(isRO() && isField(e.target)){ revertEl(e.target); e.stopImmediatePropagation(); }
+}, true));
+document.getElementById("roKeep").onclick=()=>roDlg.close();
+document.getElementById("roDlgSignIn").onclick=()=>{ roDlg.close(); openSignIn(); };
+document.getElementById("roSignIn").onclick=()=>openSignIn();
+function openSignIn(){
+  updateShareUI();
+  if(!shareDlg.open) shareDlg.showModal();
+  if(!sync.who) setTimeout(()=>document.getElementById("codeInput").focus(),50);
 }
 setInterval(()=>{ if(document.visibilityState==="visible" && !sync.timer) pull(); }, 20000);
 document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible") pull(); });
@@ -1594,7 +1671,7 @@ function updateShareUI(){
   const line=document.getElementById("whoLine");
   if(sync.who){ line.textContent=`Signed in as ${sync.who.name} (${ROLE_LABEL[sync.who.role]}).`; line.className="who"; }
   else if(sync.code){ line.textContent="Signed out. This code wasn't accepted, or the sync service couldn't be reached."; line.className="who err"; }
-  else { line.textContent="Not signed in. Changes are saved on this device only."; line.className="who"; }
+  else { line.textContent="Not signed in. The worksheet is view-only until you sign in."; line.className="who"; }
   document.getElementById("signInRow").hidden=!!sync.who;
   document.getElementById("signOutRow").hidden=!sync.who;
   const owner = !!(sync.who && sync.who.role==="owner");
@@ -1626,14 +1703,15 @@ document.getElementById("signIn").onclick=async()=>{
   sync.version=0; sync.base=null; saveMeta();
   const ok = await connect();
   if(ok){ try{ localStorage.setItem(CODE_KEY,v); }catch(e){} document.getElementById("codeInput").value="";
-          toast("Signed in"); if(sync.who.role==="owner") loadPeople(); }
+          toast("Signed in"); roShown=false;
+          if(sync.who.role==="owner") loadPeople(); else shareDlg.close(); }
   else { sync.code=""; updateShareUI(); }
 };
 document.getElementById("codeInput").addEventListener("keydown",e=>{ if(e.key==="Enter") document.getElementById("signIn").click(); });
 document.getElementById("signOut").onclick=()=>{
   try{ localStorage.removeItem(CODE_KEY); }catch(e){}
-  sync.code=""; sync.who=null; people=null; applyReadOnly(); updateShareUI(); showSaved();
-  statusEl.className="status"+(state._savedAt?" saved":""); toast("Signed out on this device");
+  sync.code=""; sync.who=null; people=null; cacheWho(null); roShown=false; applyReadOnly(); updateShareUI(); showSaved();
+  toast("Signed out on this device");
 };
 
 function peopleMsg(t,err){ const m=document.getElementById("peopleMsg"); m.textContent=t||""; m.classList.toggle("err",!!err); }
@@ -1798,7 +1876,8 @@ restoreFile.onchange=async()=>{
   restoreFile.value="";
 };
 
-renderAll(); applyTips(); showSaved(); applyReadOnly(); connect();
+renderAll(); applyTips(); showSaved(); applyReadOnly();
+connect().then(()=>{ if(!sync.who) openSignIn(); });
 })();
 </script>
 </body>
