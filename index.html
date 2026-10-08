@@ -741,11 +741,11 @@ body.readonly .ro-banner{display:block}
     </div>
     <span class="status" id="status">Not saved yet</span>
     <div class="actions">
-      <button class="btn" id="shareBtn">Sharing</button>
-      <button class="btn" id="tipsAll" aria-pressed="false">Show all explanations</button>
-      <button class="btn primary" id="exportMd">Export markdown</button>
-      <button class="btn" id="backup">Back up</button>
-      <button class="btn" id="restoreBtn">Restore</button>
+      <button class="btn" id="shareBtn" title="Sign in with your access code to sync edits with everyone on the plan. The owner adds people and assigns editor or viewer access here.">Sharing</button>
+      <button class="btn" id="tipsAll" aria-pressed="false" title="Open the explanation under every field at once. Use the ? next to a field to open just that one.">Show all explanations</button>
+      <button class="btn" id="exportMd" title="Download the whole worksheet as a Markdown (.md) file you can print, email, or paste into the district's SMP form.">Export markdown</button>
+      <button class="btn" id="backup" title="Download a JSON copy of everything entered. Use it with Restore to move your work to another browser or device.">Back up</button>
+      <button class="btn" id="restoreBtn" title="Load a JSON backup made with Back up. This replaces what's on screen, and syncs to everyone if you're signed in as an editor.">Restore</button>
       <input type="file" id="restoreFile" accept=".json,application/json" hidden>
     </div>
   </div>
@@ -960,7 +960,7 @@ const DEFAULTS = {
 
 const TIPS = {
  name:"A short name the district uses to identify this burn on your SMP and on each day-of-burn request.",
- address:"Street address closest to the burn unit. The driveway address that leads to the unit is correct here. \"Use my location\" fills latitude and longitude from your device's GPS, so use it while standing in the unit. \"Pick on map\" lets you click the unit's center on a map.",
+ address:"Street address closest to the burn unit. The driveway address that leads to the unit is correct here. \"Use my location\" fills latitude and longitude from your device's GPS, so use it while standing in the unit. \"Pick on map\" opens a map centered on the latitude and longitude entered below, or on the address if no coordinates are entered yet, and lets you click the unit's center.",
  lat:"Latitude of the unit's center in degrees and decimal minutes, e.g. 38° 53.207′ N. The district uses it to map the burn and check which smoke sensitive areas are nearby.",
  lon:"Longitude of the unit's center in degrees and decimal minutes, e.g. 123° 09.352′ W.",
  county:"County where the burn takes place. This determines which air district reviews the plan.",
@@ -1117,7 +1117,7 @@ function fieldHTML(f){
     const sel = state[f.k] || [];
     return `<div class="f wide checklist">${f.opts.map(o=>`<label><input type="checkbox" data-ck="${f.k}" value="${esc(o)}"${sel.includes(o)?" checked":""}><span>${esc(o)}</span></label>`).join("")}</div>`;
   }
-  const acts = f.actions ? `<button type="button" class="actbtn" id="useLoc">Use my location</button><button type="button" class="actbtn" id="pickMap"${(state.address||"").trim()?"":" disabled"}>Pick on map</button>` : "";
+  const acts = f.actions ? `<button type="button" class="actbtn" id="useLoc">Use my location</button><button type="button" class="actbtn" id="pickMap"${canPick()?"":" disabled"}>Pick on map</button>` : "";
   const msg = f.actions ? `<span class="fieldmsg" id="locMsg" aria-live="polite"></span>` : "";
   return `<div class="f${f.wide?" wide":""}">${f.label?`<div class="lblrow"><label for="f_${f.k}">${esc(f.label)}</label>${tipBtn(f.k)}${acts}</div>${tipBox(f.k)}`:""}${control(f)}${msg}</div>`;
 }
@@ -1139,6 +1139,7 @@ function applyTips(){
   main.querySelectorAll(".tipbtn").forEach(b=>b.setAttribute("aria-expanded",String(allTips)));
   const t=document.getElementById("tipsAll");
   t.textContent = allTips ? "Hide all explanations" : "Show all explanations";
+  t.title = allTips ? "Close every field explanation." : "Open the explanation under every field at once. Use the ? next to a field to open just that one.";
   t.setAttribute("aria-pressed",String(allTips));
 }
 document.getElementById("tipsAll").onclick=()=>{
@@ -1193,7 +1194,7 @@ function updateDerived(){
 main.addEventListener("input", e=>{
   const el=e.target;
   if(el.dataset.k){ state[el.dataset.k]=el.value;
-    if(el.dataset.k==="address"){ const b=document.getElementById("pickMap"); if(b) b.disabled=!el.value.trim(); } }
+    if(["address","lat","lon"].includes(el.dataset.k)){ const b=document.getElementById("pickMap"); if(b) b.disabled=!canPick(); } }
   else if(el.dataset.t){ const arr=state[el.dataset.t]; arr[+el.dataset.r][el.dataset.c]=el.value; }
   else if(el.dataset.ck){
     const set = new Set(state[el.dataset.ck]||[]); el.checked?set.add(el.value):set.delete(el.value);
@@ -1240,10 +1241,14 @@ function fromDMM(str){
   if(m[3] && /[SW]/i.test(m[3])) v=-v;
   return v;
 }
+function canPick(){
+  return !!(state.address||"").trim() || (fromDMM(state.lat)!=null && fromDMM(state.lon)!=null);
+}
 function setCoords(lat,lon){
   state.lat=toDMM(lat,true); state.lon=toDMM(lon,false);
   const a=document.getElementById("f_lat"), b=document.getElementById("f_lon");
   if(a) a.value=state.lat; if(b) b.value=state.lon;
+  const pb=document.getElementById("pickMap"); if(pb && !document.body.classList.contains("readonly")) pb.disabled=false;
   updateDerived(); scheduleSave();
 }
 function locMsg(t,err){ const m=document.getElementById("locMsg"); if(m){ m.textContent=t; m.classList.toggle("err",!!err); } }
@@ -1323,7 +1328,7 @@ async function centerOn(q){
   mapMsg("Looking up address…");
   const g = q ? await geocode(q) : null;
   if(g){ map.setView([g.lat,g.lon],16); mapMsg("Centered on the address. Click the burn unit's center."); return; }
-  if(la!=null&&lo!=null){ map.setView([la,lo],16); mapMsg("Address lookup isn't available, so the map is centered on the current coordinates."); return; }
+  if(la!=null&&lo!=null){ map.setView([la,lo],16); mapMsg("Address lookup isn't available, so the map is centered on the coordinates entered in the worksheet."); return; }
   map.setView([38.9,-123.2],12); mapMsg("Address lookup isn't available. Pan to the unit and click its center.");
 }
 async function openMap(){
@@ -1352,7 +1357,9 @@ async function openMap(){
   if(la!=null&&lo!=null){
     if(marker) marker.setLatLng([la,lo]); else marker=L.circleMarker([la,lo],{radius:9,color:"#ffffff",weight:3,fillColor:"#A3261C",fillOpacity:1}).addTo(map);
   }
-  centerOn(state.address);
+  // Prefer saved coordinates: street-address geocoding is unreliable on rural roads
+  if(la!=null&&lo!=null){ map.setView([la,lo],17); mapMsg(`Centered on the coordinates entered in the worksheet (${state.lat}, ${state.lon}). Click the map to choose a different point.`); }
+  else centerOn(state.address);
   setTimeout(()=>{ if(!tilesOk && mapDlg.open) showFallback(); },6000);
 }
 document.getElementById("mapFind").onclick=()=>{ if(map && mapFallback.hidden) centerOn(document.getElementById("mapSearch").value); else showFallback(); };
@@ -1413,7 +1420,7 @@ function applyChanges(merged){
     if(def && !["table","checks","checklist"].includes(def.type)){
       const el=document.getElementById("f_"+k);
       if(el && el!==document.activeElement) el.value = state[k] ?? "";
-      if(k==="address"){ const b=document.getElementById("pickMap"); if(b) b.disabled=!(state.address||"").trim(); }
+      if(["address","lat","lon"].includes(k)){ const b=document.getElementById("pickMap"); if(b) b.disabled=!canPick(); }
     } else secs.add(sec);
   });
   secs.forEach(id=>{
@@ -1506,7 +1513,7 @@ async function connect(){
 function applyReadOnly(){
   const ro = !!(sync.who && sync.who.role==="viewer");
   document.body.classList.toggle("readonly", ro);
-  main.querySelectorAll("input,select,textarea,button[data-add],button[data-del],.actbtn").forEach(el=>{ el.disabled = ro || (el.id==="pickMap" && !(state.address||"").trim()); });
+  main.querySelectorAll("input,select,textarea,button[data-add],button[data-del],.actbtn").forEach(el=>{ el.disabled = ro || (el.id==="pickMap" && !canPick()); });
   document.getElementById("restoreBtn").disabled = ro;
 }
 setInterval(()=>{ if(document.visibilityState==="visible" && !sync.timer) pull(); }, 20000);
