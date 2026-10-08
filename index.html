@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Smoke Management Plan worksheet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#ECEEE8; --surface:#FFFFFF; --ink:#1C2420; --muted:#5D6862; --line:#C7CDC3;
+  --field:#F7F8F5; --accent:#A3261C; --accent-ink:#FFFFFF; --oak:#4E6A3A; --focus:#2F6FB0;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141917; --surface:#1D2420; --ink:#E6EAE4; --muted:#9BA69F; --line:#36413B;
+    --field:#232B27; --accent:#E2604F; --accent-ink:#1A0E0C; --oak:#9DBB82; --focus:#7DB1E8;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141917; --surface:#1D2420; --ink:#E6EAE4; --muted:#9BA69F; --line:#36413B;
+  --field:#232B27; --accent:#E2604F; --accent-ink:#1A0E0C; --oak:#9DBB82; --focus:#7DB1E8;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 88px)}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Public Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.5}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);
+  border-bottom:1px solid var(--line)}
+.top-inner{max-width:1120px;margin:0 auto;padding:14px 20px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.title{flex:1 1 260px;min-width:0}
+.title h1{margin:0;font-size:1.25rem;font-weight:800;letter-spacing:-0.01em;line-height:1.2}
+.title p{margin:2px 0 0;color:var(--muted);font-size:.875rem}
+.status{font-size:.8125rem;color:var(--muted);white-space:nowrap}
+.status.saved::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--oak);margin-right:6px;vertical-align:1px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--surface);padding:8px 14px;border-radius:6px;cursor:pointer;font-weight:500;font-size:.9375rem}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn.small{padding:4px 10px;font-size:.875rem}
+.btn.danger-armed{border-color:var(--accent);color:var(--accent)}
+
+.layout{max-width:1120px;margin:0 auto;padding:24px 20px 80px;display:grid;grid-template-columns:240px minmax(0,1fr);gap:40px}
+nav.toc{position:sticky;top:96px;align-self:start}
+nav.toc ol{list-style:none;margin:0;padding:0}
+nav.toc a{display:grid;grid-template-columns:1fr auto;gap:8px;padding:9px 10px;border-radius:6px;color:var(--ink);text-decoration:none;font-size:.9375rem}
+nav.toc a:hover{background:var(--surface)}
+nav.toc .count{color:var(--muted);font-size:.8125rem;font-variant-numeric:tabular-nums}
+nav.toc .bar{grid-column:1 / -1;height:3px;background:var(--line);border-radius:2px;overflow:hidden}
+nav.toc .bar span{display:block;height:100%;background:var(--oak);width:0;transition:width .3s}
+.pm-card{margin-top:20px;padding:14px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.pm-card .big{font-size:2rem;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.pm-card p{margin:6px 0 0;font-size:.8125rem;color:var(--muted)}
+
+main{min-width:0}
+section.sec{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:24px 24px 28px;margin-bottom:24px}
+section.sec h2{margin:0 0 4px;font-size:1.25rem;font-weight:800;letter-spacing:-0.01em}
+section.sec .sec-hint{margin:0 0 18px;color:var(--muted);font-size:.9375rem;max-width:62ch}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px}
+.f{display:flex;flex-direction:column;gap:5px;min-width:0}
+.f.wide{grid-column:1 / -1}
+.f label,.f .lbl{font-size:.875rem;font-weight:600}
+.f .hint{font-size:.8125rem;color:var(--muted);font-weight:400}
+input[type=text],input[type=number],input[type=date],input[type=tel],input[type=email],select,textarea{
+  width:100%;background:var(--field);border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+textarea{min-height:84px;resize:vertical;line-height:1.45}
+input:focus,select:focus,textarea:focus{border-color:var(--focus)}
+.checks{display:flex;flex-wrap:wrap;gap:8px 18px}
+.checks label{display:flex;align-items:center;gap:7px;font-weight:400;font-size:.9375rem}
+.checks input{width:18px;height:18px;accent-color:var(--oak)}
+.checklist label{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line);font-weight:400}
+.checklist label:last-child{border-bottom:0}
+.checklist input{width:18px;height:18px;margin-top:3px;accent-color:var(--oak);flex:none}
+
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;min-width:520px}
+th{font-size:.8125rem;font-weight:600;text-align:left;padding:8px 8px;background:var(--field);border-bottom:1px solid var(--line);color:var(--muted)}
+td{padding:6px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+td input,td select{padding:6px 8px}
+td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;padding-right:12px}
+td.rm{width:40px;text-align:center}
+.x{border:0;background:none;cursor:pointer;color:var(--muted);font-size:1.25rem;line-height:1;padding:4px 8px;border-radius:4px}
+.x:hover{color:var(--accent)}
+tfoot td{font-weight:700;background:var(--field)}
+.lblrow{display:flex;align-items:center;gap:6px}
+.tipbtn{flex:none;width:20px;height:20px;border-radius:50%;border:1px solid var(--line);background:var(--field);color:var(--muted);
+  font-size:.75rem;font-weight:700;line-height:1;cursor:pointer;padding:0;display:inline-flex;align-items:center;justify-content:center}
+.tipbtn:hover,.tipbtn[aria-expanded="true"]{border-color:var(--oak);color:var(--oak)}
+.tip{font-size:.875rem;line-height:1.5;color:var(--ink);background:var(--field);border-left:3px solid var(--oak);padding:8px 10px;border-radius:0 6px 6px 0;max-width:68ch}
+.tip[hidden]{display:none}
+.tip-list{margin:0 0 14px;padding:0;list-style:none;display:grid;gap:6px}
+th .lblrow{gap:4px}
+.tbl-foot{margin-top:8px}
+
+dialog{border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);width:min(760px,94vw);padding:20px}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+dialog textarea{min-height:50vh;font-size:.8125rem}
+dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);transform:translateX(-50%);
+  background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:.9375rem;opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.show{opacity:1}
+
+@media (max-width:860px){
+  .layout{grid-template-columns:1fr;gap:16px;padding-top:12px}
+  nav.toc{position:static}
+  nav.toc ol{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+  nav.toc li{flex:none}
+  nav.toc a{background:var(--surface);border:1px solid var(--line);grid-template-columns:auto auto}
+  nav.toc .bar{display:none}
+  .pm-card{display:none}
+  .grid{grid-template-columns:1fr}
+  section.sec{padding:18px 16px 22px}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+.leaflet-pane,
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-tile-container,
+.leaflet-pane > svg,
+.leaflet-pane > canvas,
+.leaflet-zoom-box,
+.leaflet-image-layer,
+.leaflet-layer {
+position: absolute;
+left: 0;
+top: 0;
+}
+.leaflet-container {
+overflow: hidden;
+}
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+-webkit-user-select: none;
+-moz-user-select: none;
+user-select: none;
+-webkit-user-drag: none;
+}
+.leaflet-tile::selection {
+background: transparent;
+}
+.leaflet-safari .leaflet-tile {
+image-rendering: -webkit-optimize-contrast;
+}
+.leaflet-safari .leaflet-tile-container {
+width: 1600px;
+height: 1600px;
+-webkit-transform-origin: 0 0;
+}
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+display: block;
+}
+.leaflet-container .leaflet-overlay-pane svg {
+max-width: none !important;
+max-height: none !important;
+}
+.leaflet-container .leaflet-marker-pane img,
+.leaflet-container .leaflet-shadow-pane img,
+.leaflet-container .leaflet-tile-pane img,
+.leaflet-container img.leaflet-image-layer,
+.leaflet-container .leaflet-tile {
+max-width: none !important;
+max-height: none !important;
+width: auto;
+padding: 0;
+}
+.leaflet-container img.leaflet-tile {
+mix-blend-mode: plus-lighter;
+}
+.leaflet-container.leaflet-touch-zoom {
+-ms-touch-action: pan-x pan-y;
+touch-action: pan-x pan-y;
+}
+.leaflet-container.leaflet-touch-drag {
+-ms-touch-action: pinch-zoom;
+touch-action: none;
+touch-action: pinch-zoom;
+}
+.leaflet-container.leaflet-touch-drag.leaflet-touch-zoom {
+-ms-touch-action: none;
+touch-action: none;
+}
+.leaflet-container {
+-webkit-tap-highlight-color: transparent;
+}
+.leaflet-container a {
+-webkit-tap-highlight-color: rgba(51, 181, 229, 0.4);
+}
+.leaflet-tile {
+filter: inherit;
+visibility: hidden;
+}
+.leaflet-tile-loaded {
+visibility: inherit;
+}
+.leaflet-zoom-box {
+width: 0;
+height: 0;
+-moz-box-sizing: border-box;
+box-sizing: border-box;
+z-index: 800;
+}
+.leaflet-overlay-pane svg {
+-moz-user-select: none;
+}
+.leaflet-pane         { z-index: 400; }
+.leaflet-tile-pane    { z-index: 200; }
+.leaflet-overlay-pane { z-index: 400; }
+.leaflet-shadow-pane  { z-index: 500; }
+.leaflet-marker-pane  { z-index: 600; }
+.leaflet-tooltip-pane   { z-index: 650; }
+.leaflet-popup-pane   { z-index: 700; }
+.leaflet-map-pane canvas { z-index: 100; }
+.leaflet-map-pane svg    { z-index: 200; }
+.leaflet-vml-shape {
+width: 1px;
+height: 1px;
+}
+.lvml {
+behavior: url(#default#VML);
+display: inline-block;
+position: absolute;
+}
+.leaflet-control {
+position: relative;
+z-index: 800;
+pointer-events: visiblePainted;
+pointer-events: auto;
+}
+.leaflet-top,
+.leaflet-bottom {
+position: absolute;
+z-index: 1000;
+pointer-events: none;
+}
+.leaflet-top {
+top: 0;
+}
+.leaflet-right {
+right: 0;
+}
+.leaflet-bottom {
+bottom: 0;
+}
+.leaflet-left {
+left: 0;
+}
+.leaflet-control {
+float: left;
+clear: both;
+}
+.leaflet-right .leaflet-control {
+float: right;
+}
+.leaflet-top .leaflet-control {
+margin-top: 10px;
+}
+.leaflet-bottom .leaflet-control {
+margin-bottom: 10px;
+}
+.leaflet-left .leaflet-control {
+margin-left: 10px;
+}
+.leaflet-right .leaflet-control {
+margin-right: 10px;
+}
+.leaflet-fade-anim .leaflet-popup {
+opacity: 0;
+-webkit-transition: opacity 0.2s linear;
+-moz-transition: opacity 0.2s linear;
+transition: opacity 0.2s linear;
+}
+.leaflet-fade-anim .leaflet-map-pane .leaflet-popup {
+opacity: 1;
+}
+.leaflet-zoom-animated {
+-webkit-transform-origin: 0 0;
+-ms-transform-origin: 0 0;
+transform-origin: 0 0;
+}
+svg.leaflet-zoom-animated {
+will-change: transform;
+}
+.leaflet-zoom-anim .leaflet-zoom-animated {
+-webkit-transition: -webkit-transform 0.25s cubic-bezier(0,0,0.25,1);
+-moz-transition:    -moz-transform 0.25s cubic-bezier(0,0,0.25,1);
+transition:         transform 0.25s cubic-bezier(0,0,0.25,1);
+}
+.leaflet-zoom-anim .leaflet-tile,
+.leaflet-pan-anim .leaflet-tile {
+-webkit-transition: none;
+-moz-transition: none;
+transition: none;
+}
+.leaflet-zoom-anim .leaflet-zoom-hide {
+visibility: hidden;
+}
+.leaflet-interactive {
+cursor: pointer;
+}
+.leaflet-grab {
+cursor: -webkit-grab;
+cursor:    -moz-grab;
+cursor:         grab;
+}
+.leaflet-crosshair,
+.leaflet-crosshair .leaflet-interactive {
+cursor: crosshair;
+}
+.leaflet-popup-pane,
+.leaflet-control {
+cursor: auto;
+}
+.leaflet-dragging .leaflet-grab,
+.leaflet-dragging .leaflet-grab .leaflet-interactive,
+.leaflet-dragging .leaflet-marker-draggable {
+cursor: move;
+cursor: -webkit-grabbing;
+cursor:    -moz-grabbing;
+cursor:         grabbing;
+}
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-image-layer,
+.leaflet-pane > svg path,
+.leaflet-tile-container {
+pointer-events: none;
+}
+.leaflet-marker-icon.leaflet-interactive,
+.leaflet-image-layer.leaflet-interactive,
+.leaflet-pane > svg path.leaflet-interactive,
+svg.leaflet-image-layer.leaflet-interactive path {
+pointer-events: visiblePainted;
+pointer-events: auto;
+}
+.leaflet-container {
+background: #ddd;
+outline-offset: 1px;
+}
+.leaflet-container a {
+color: #0078A8;
+}
+.leaflet-zoom-box {
+border: 2px dotted #38f;
+background: rgba(255,255,255,0.5);
+}
+.leaflet-container {
+font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
+font-size: 12px;
+font-size: 0.75rem;
+line-height: 1.5;
+}
+.leaflet-bar {
+box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+border-radius: 4px;
+}
+.leaflet-bar a {
+background-color: #fff;
+border-bottom: 1px solid #ccc;
+width: 26px;
+height: 26px;
+line-height: 26px;
+display: block;
+text-align: center;
+text-decoration: none;
+color: black;
+}
+.leaflet-bar a,
+.leaflet-control-layers-toggle {
+background-position: 50% 50%;
+background-repeat: no-repeat;
+display: block;
+}
+.leaflet-bar a:hover,
+.leaflet-bar a:focus {
+background-color: #f4f4f4;
+}
+.leaflet-bar a:first-child {
+border-top-left-radius: 4px;
+border-top-right-radius: 4px;
+}
+.leaflet-bar a:last-child {
+border-bottom-left-radius: 4px;
+border-bottom-right-radius: 4px;
+border-bottom: none;
+}
+.leaflet-bar a.leaflet-disabled {
+cursor: default;
+background-color: #f4f4f4;
+color: #bbb;
+}
+.leaflet-touch .leaflet-bar a {
+width: 30px;
+height: 30px;
+line-height: 30px;
+}
+.leaflet-touch .leaflet-bar a:first-child {
+border-top-left-radius: 2px;
+border-top-right-radius: 2px;
+}
+.leaflet-touch .leaflet-bar a:last-child {
+border-bottom-left-radius: 2px;
+border-bottom-right-radius: 2px;
+}
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out {
+font: bold 18px 'Lucida Console', Monaco, monospace;
+text-indent: 1px;
+}
+.leaflet-touch .leaflet-control-zoom-in, .leaflet-touch .leaflet-control-zoom-out  {
+font-size: 22px;
+}
+.leaflet-control-layers {
+box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+background: #fff;
+border-radius: 5px;
+}
+.leaflet-control-layers-toggle {
+background-image: none;
+width: 36px;
+height: 36px;
+}
+.leaflet-retina .leaflet-control-layers-toggle {
+background-image: none;
+background-size: 26px 26px;
+}
+.leaflet-touch .leaflet-control-layers-toggle {
+width: 44px;
+height: 44px;
+}
+.leaflet-control-layers .leaflet-control-layers-list,
+.leaflet-control-layers-expanded .leaflet-control-layers-toggle {
+display: none;
+}
+.leaflet-control-layers-expanded .leaflet-control-layers-list {
+display: block;
+position: relative;
+}
+.leaflet-control-layers-expanded {
+padding: 6px 10px 6px 6px;
+color: #333;
+background: #fff;
+}
+.leaflet-control-layers-scrollbar {
+overflow-y: scroll;
+overflow-x: hidden;
+padding-right: 5px;
+}
+.leaflet-control-layers-selector {
+margin-top: 2px;
+position: relative;
+top: 1px;
+}
+.leaflet-control-layers label {
+display: block;
+font-size: 13px;
+font-size: 1.08333em;
+}
+.leaflet-control-layers-separator {
+height: 0;
+border-top: 1px solid #ddd;
+margin: 5px -10px 5px -6px;
+}
+.leaflet-default-icon-path {
+background-image: none;
+}
+.leaflet-container .leaflet-control-attribution {
+background: #fff;
+background: rgba(255, 255, 255, 0.8);
+margin: 0;
+}
+.leaflet-control-attribution,
+.leaflet-control-scale-line {
+padding: 0 5px;
+color: #333;
+line-height: 1.4;
+}
+.leaflet-control-attribution a {
+text-decoration: none;
+}
+.leaflet-control-attribution a:hover,
+.leaflet-control-attribution a:focus {
+text-decoration: underline;
+}
+.leaflet-attribution-flag {
+display: inline !important;
+vertical-align: baseline !important;
+width: 1em;
+height: 0.6669em;
+}
+.leaflet-left .leaflet-control-scale {
+margin-left: 5px;
+}
+.leaflet-bottom .leaflet-control-scale {
+margin-bottom: 5px;
+}
+.leaflet-control-scale-line {
+border: 2px solid #777;
+border-top: none;
+line-height: 1.1;
+padding: 2px 5px 1px;
+white-space: nowrap;
+-moz-box-sizing: border-box;
+box-sizing: border-box;
+background: rgba(255, 255, 255, 0.8);
+text-shadow: 1px 1px #fff;
+}
+.leaflet-control-scale-line:not(:first-child) {
+border-top: 2px solid #777;
+border-bottom: none;
+margin-top: -2px;
+}
+.leaflet-control-scale-line:not(:first-child):not(:last-child) {
+border-bottom: 2px solid #777;
+}
+.leaflet-touch .leaflet-control-attribution,
+.leaflet-touch .leaflet-control-layers,
+.leaflet-touch .leaflet-bar {
+box-shadow: none;
+}
+.leaflet-touch .leaflet-control-layers,
+.leaflet-touch .leaflet-bar {
+border: 2px solid rgba(0,0,0,0.2);
+background-clip: padding-box;
+}
+.leaflet-popup {
+position: absolute;
+text-align: center;
+margin-bottom: 20px;
+}
+.leaflet-popup-content-wrapper {
+padding: 1px;
+text-align: left;
+border-radius: 12px;
+}
+.leaflet-popup-content {
+margin: 13px 24px 13px 20px;
+line-height: 1.3;
+font-size: 13px;
+font-size: 1.08333em;
+min-height: 1px;
+}
+.leaflet-popup-content p {
+margin: 17px 0;
+margin: 1.3em 0;
+}
+.leaflet-popup-tip-container {
+width: 40px;
+height: 20px;
+position: absolute;
+left: 50%;
+margin-top: -1px;
+margin-left: -20px;
+overflow: hidden;
+pointer-events: none;
+}
+.leaflet-popup-tip {
+width: 17px;
+height: 17px;
+padding: 1px;
+margin: -10px auto 0;
+pointer-events: auto;
+-webkit-transform: rotate(45deg);
+-moz-transform: rotate(45deg);
+-ms-transform: rotate(45deg);
+transform: rotate(45deg);
+}
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+background: white;
+color: #333;
+box-shadow: 0 3px 14px rgba(0,0,0,0.4);
+}
+.leaflet-container a.leaflet-popup-close-button {
+position: absolute;
+top: 0;
+right: 0;
+border: none;
+text-align: center;
+width: 24px;
+height: 24px;
+font: 16px/24px Tahoma, Verdana, sans-serif;
+color: #757575;
+text-decoration: none;
+background: transparent;
+}
+.leaflet-container a.leaflet-popup-close-button:hover,
+.leaflet-container a.leaflet-popup-close-button:focus {
+color: #585858;
+}
+.leaflet-popup-scrolled {
+overflow: auto;
+}
+.leaflet-oldie .leaflet-popup-content-wrapper {
+-ms-zoom: 1;
+}
+.leaflet-oldie .leaflet-popup-tip {
+width: 24px;
+margin: 0 auto;
+-ms-filter: "progid:DXImageTransform.Microsoft.Matrix(M11=0.70710678, M12=0.70710678, M21=-0.70710678, M22=0.70710678)";
+filter: progid:DXImageTransform.Microsoft.Matrix(M11=0.70710678, M12=0.70710678, M21=-0.70710678, M22=0.70710678);
+}
+.leaflet-oldie .leaflet-control-zoom,
+.leaflet-oldie .leaflet-control-layers,
+.leaflet-oldie .leaflet-popup-content-wrapper,
+.leaflet-oldie .leaflet-popup-tip {
+border: 1px solid #999;
+}
+.leaflet-div-icon {
+background: #fff;
+border: 1px solid #666;
+}
+.leaflet-tooltip {
+position: absolute;
+padding: 6px;
+background-color: #fff;
+border: 1px solid #fff;
+border-radius: 3px;
+color: #222;
+white-space: nowrap;
+-webkit-user-select: none;
+-moz-user-select: none;
+-ms-user-select: none;
+user-select: none;
+pointer-events: none;
+box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+.leaflet-tooltip.leaflet-interactive {
+cursor: pointer;
+pointer-events: auto;
+}
+.leaflet-tooltip-top:before,
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
+position: absolute;
+pointer-events: none;
+border: 6px solid transparent;
+background: transparent;
+content: "";
+}
+.leaflet-tooltip-bottom {
+margin-top: 6px;
+}
+.leaflet-tooltip-top {
+margin-top: -6px;
+}
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-top:before {
+left: 50%;
+margin-left: -6px;
+}
+.leaflet-tooltip-top:before {
+bottom: 0;
+margin-bottom: -12px;
+border-top-color: #fff;
+}
+.leaflet-tooltip-bottom:before {
+top: 0;
+margin-top: -12px;
+margin-left: -6px;
+border-bottom-color: #fff;
+}
+.leaflet-tooltip-left {
+margin-left: -6px;
+}
+.leaflet-tooltip-right {
+margin-left: 6px;
+}
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
+top: 50%;
+margin-top: -6px;
+}
+.leaflet-tooltip-left:before {
+right: 0;
+margin-right: -12px;
+border-left-color: #fff;
+}
+.leaflet-tooltip-right:before {
+left: 0;
+margin-left: -12px;
+border-right-color: #fff;
+}
+@media print {
+.leaflet-control {
+-webkit-print-color-adjust: exact;
+print-color-adjust: exact;
+}
+}
+.actbtn{border:1px solid var(--line);background:var(--surface);border-radius:5px;padding:2px 8px;font-size:.8125rem;font-weight:500;cursor:pointer;margin-left:auto}
+.actbtn + .actbtn{margin-left:0}
+.actbtn:disabled{opacity:.45;cursor:not-allowed}
+.actbtn:not(:disabled):hover{border-color:var(--oak);color:var(--oak)}
+.lblrow .actbtn:first-of-type{margin-left:auto}
+.fieldmsg{font-size:.8125rem;color:var(--muted)}
+.fieldmsg.err{color:var(--accent)}
+#mapDialog{width:min(980px,96vw);padding:0;overflow:hidden}
+.map-head{display:flex;gap:8px;padding:12px;border-bottom:1px solid var(--line);flex-wrap:wrap;align-items:center}
+.map-head input{flex:1 1 240px}
+#map{height:min(62vh,560px);background:var(--field)}
+.map-foot{display:flex;gap:10px;padding:12px;border-top:1px solid var(--line);align-items:center;flex-wrap:wrap}
+.map-foot .readout{flex:1 1 260px;font-size:.9375rem;font-variant-numeric:tabular-nums}
+.map-msg{padding:8px 12px;font-size:.875rem;background:var(--field);border-bottom:1px solid var(--line)}
+.map-msg[hidden],#mapFallback[hidden]{display:none}
+#mapFallback{padding:16px;display:grid;gap:12px;max-width:62ch}
+#mapFallback p{margin:0}
+.leaflet-container{font:inherit}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <div class="title">
+      <h1 id="docTitle">Smoke Management Plan worksheet</h1>
+      <p>Mendocino County AQMD. Saves in this browser as you type.</p>
+    </div>
+    <span class="status" id="status">Not saved yet</span>
+    <div class="actions">
+      <button class="btn" id="tipsAll" aria-pressed="false">Show all explanations</button>
+      <button class="btn primary" id="exportMd">Export markdown</button>
+      <button class="btn" id="backup">Back up</button>
+      <button class="btn" id="restoreBtn">Restore</button>
+      <input type="file" id="restoreFile" accept=".json,application/json" hidden>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="toc" aria-label="Sections">
+    <ol id="toc"></ol>
+    <div class="pm-card" aria-live="polite">
+      <div class="big" id="pmSide">0.00</div>
+      <p>Estimated tons PM10. The large-burn tier starts at 5 tons or 100 acres.</p>
+    </div>
+  </nav>
+  <main id="main"></main>
+</div>
+
+<dialog id="mdDialog">
+  <strong>Markdown export</strong>
+  <p style="margin:6px 0 10px;color:var(--muted);font-size:.875rem" id="mdNote">Copy this text into a .md file.</p>
+  <textarea id="mdText" readonly></textarea>
+  <div class="row">
+    <button class="btn" id="mdCopy">Copy to clipboard</button>
+    <button class="btn primary" id="mdClose">Close</button>
+  </div>
+</dialog>
+<dialog id="mapDialog" aria-label="Pick location on map">
+  <div class="map-head">
+    <input type="text" id="mapSearch" aria-label="Address to find">
+    <button class="btn small" id="mapFind">Find</button>
+    <button class="btn small" id="mapClose">Close</button>
+  </div>
+  <div class="map-msg" id="mapMsg" hidden></div>
+  <div id="map"></div>
+  <div id="mapFallback" hidden>
+    <p><strong>The map can't load here.</strong> This viewer blocks map tiles and address lookup. Pick the point in Google Maps instead:</p>
+    <p>1. <a id="gmapsLink" target="_blank" rel="noopener">Open this address in Google Maps</a> in a new tab.<br>
+       2. Click the burn unit's center. Google shows coordinates like 38.88678, -123.15587 at the bottom. Click them to copy.<br>
+       3. Paste them below.</p>
+    <div class="f"><label for="pasteCoords">Paste coordinates (decimal degrees)</label>
+      <input type="text" id="pasteCoords" placeholder="38.88678, -123.15587"></div>
+  </div>
+  <div class="map-foot">
+    <span class="readout" id="mapReadout">Click the map to place the point.</span>
+    <button class="btn primary" id="mapUse" disabled>Use this location</button>
+  </div>
+</dialog>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function(){
+const KEY = "smp-yorkville-128-ridge-v1";
+
+const EV = [
+  ["Grass/Forb",0.007],["Oak (Black)",0.005],["Oak (Blue)",0.003],["Oak (White)",0.003],
+  ["Live Oak (Interior)",0.007],["Live Oak (Canyon)",0.007],["Hardwood (Stocked)",0.003],
+  ["Hardwood (Non-stocked)",0.003],["Mixed Chaparral/Montane",0.008],["Chamise",0.009],
+  ["Ceanothus",0.010],["Manzanita",0.009],["Mixed Conifer",0.006],["Ponderosa/Gray Pine",0.007],
+  ["Willow",0.007],["Wet Meadow",0.004]
+];
+const evOf = name => { const r = EV.find(e => e[0] === name); return r ? r[1] : 0; };
+
+const SECTIONS = [
+ {id:"project", title:"Project description", hint:"Required for every SMP. Matches the district's Project Description page.", fields:[
+  {k:"name",label:"Project name",wide:1},
+  {k:"address",label:"Burn location address",wide:1,actions:1},
+  {k:"lat",label:"Latitude (DMM)"},{k:"lon",label:"Longitude (DMM)"},
+  {k:"county",label:"County"},{k:"town",label:"Nearest town"},
+  {k:"elevTop",label:"Elevation, top (ft)",type:"number"},{k:"elevBottom",label:"Elevation, bottom (ft)",type:"number"},
+  {k:"landowner",label:"Landowner(s)",wide:1},
+  {k:"landownerAddr",label:"Landowner mailing address",wide:1},
+  {k:"permittee",label:"Permittee / field contact"},{k:"phone24",label:"24-hour phone",type:"tel"},
+  {k:"email",label:"Email",type:"email"},{k:"burnBoss",label:"Burn boss (CARX)"},
+  {k:"org",label:"Organization conducting the burn",wide:1},
+  {k:"burnDate",label:"Planned burn date",type:"date"},{k:"burnWindow",label:"Backup window"},
+  {k:"burnType",label:"Burn type",type:"select",opts:["Range improvement","Forest management","Wildland vegetation management"]},
+  {k:"hazard",label:"Primary purpose is fire hazard reduction",type:"select",opts:["Yes","No"]},
+  {k:"vegGrass",label:"Grass (%)",type:"number"},{k:"vegBrush",label:"Brush (%)",type:"number"},
+  {k:"vegLitter",label:"Timber litter (%)",type:"number"},{k:"vegSlash",label:"Timber slash (%)",type:"number"},
+  {k:"vegOther",label:"Other vegetation (describe)",wide:1},
+  {k:"vegCond",label:"Vegetation condition",type:"select",opts:["Broadcast","Understory","Hand pile","Machine pile","Landing pile"]},
+  {k:"acres",label:"Project area (acres)",type:"number"},
+  {k:"ignHours",label:"Preferred ignition hours"},{k:"duration",label:"Expected duration, ignition to extinction"},
+  {k:"acresPerHour",label:"Max acres per hour",type:"number"},{k:"acresPerDay",label:"Max acres per day",type:"number"},
+  {k:"hoursBetween",label:"Min hours between ignitions"},{k:"technique",label:"Ignition technique"},
+  {k:"intensity",label:"Expected fire intensity",type:"select",opts:["Low","High"]},
+  {k:"drying",label:"Fuel drying time and conditions before ignition",type:"textarea",wide:1},
+  {k:"objectives",label:"Goals and objectives",type:"textarea",wide:1}
+ ]},
+ {id:"emissions", title:"Emissions estimate", hint:"Acres × fuel loading (tons/acre) × emission value from the district's Table 2. Adjust the split between vegetation types to match the unit.", custom:"emissions"},
+ {id:"ssa", title:"Section A: Smoke sensitive areas", hint:"Required when smoke could reach roads, homes, or towns. Hwy 128 alone triggers this section.", fields:[
+  {k:"ssaList",label:"Smoke sensitive areas",type:"table",wide:1,cols:[{k:"area",label:"Area"},{k:"what",label:"What it is"},{k:"dist",label:"Distance (mi)"},{k:"dir",label:"Direction"}]},
+  {k:"dayTravel",label:"Smoke travel projection, day",type:"textarea",wide:1},
+  {k:"nightTravel",label:"Smoke travel projection, night",type:"textarea",wide:1},
+  {k:"mapRef",label:"Map number(s) attached",wide:1},
+  {k:"history",label:"Prescribed burning has occurred here before",type:"select",opts:["Yes","No","Don't know"]},
+  {k:"historyImpacts",label:"Past smoke impacts, if any"},
+  {k:"overnight",label:"Overnight or multi-day contact procedure with the district",type:"textarea",wide:1},
+  {k:"wx",label:"Weather observations (wind direction, wind speed, temperature, RH)",type:"table",wide:1,cols:[{k:"method",label:"Method"},{k:"loc",label:"Location"},{k:"begin",label:"Begin"},{k:"interval",label:"Interval"},{k:"end",label:"End"}]},
+  {k:"smoke",label:"Smoke behavior observations",type:"table",wide:1,cols:[{k:"method",label:"Method"},{k:"loc",label:"Location"},{k:"begin",label:"Begin"},{k:"interval",label:"Interval"},{k:"end",label:"End"}]},
+  {k:"notify",label:"Public notification methods",type:"checks",wide:1,opts:["Television","Radio","Newspaper","Posters/flyers","Telephone calls","Email/social media","Other"]},
+  {k:"notifyDetails",label:"Notification specifics",type:"textarea",wide:1},
+  {k:"signage",label:"Signage locations",type:"textarea",wide:1},
+  {k:"adjDistricts",label:"Adjacent air districts",type:"table",wide:1,cols:[{k:"district",label:"District"},{k:"contact",label:"Contact"},{k:"phone",label:"24-hour phone"}]}
+ ]},
+ {id:"rx", title:"Section B: Prescription and contingency", hint:"Formally required at 100+ acres or 5+ tons PM10. Worth filling now: the reviewer looks for it, and the larger unit will need it.", fields:[
+  {k:"surfDirIdeal",label:"Surface wind direction, ideal"},{k:"surfDirRange",label:"Surface wind direction, acceptable range"},
+  {k:"surfSpdIdeal",label:"Surface wind speed, ideal (mph)"},{k:"surfSpdRange",label:"Surface wind speed, min to max (mph)"},
+  {k:"transDirIdeal",label:"Transport wind direction, ideal"},{k:"transDirRange",label:"Transport wind direction, acceptable range"},
+  {k:"rhIdeal",label:"Relative humidity, ideal (%)"},{k:"rhRange",label:"Relative humidity, min to max (%)"},
+  {k:"tempRange",label:"Acceptable temperature range (°F)"},{k:"mixHeight",label:"Target mixing height"},
+  {k:"otherDispersion",label:"Other considerations for smoke dispersion",type:"textarea",wide:1},
+  {k:"contingency",label:"Contingency actions if smoke impacts occur or weather leaves prescription",type:"textarea",wide:1},
+  {k:"cutoff",label:"Interior contingency cutoff lines",type:"textarea",wide:1},
+  {k:"altUsed",label:"Alternatives to burning used, with tons treated",type:"textarea",wide:1},
+  {k:"altRejected",label:"Alternatives considered but rejected, and why",type:"textarea",wide:1}
+ ]},
+ {id:"contacts", title:"Contacts and notifications", hint:"The district requires an Authorized Contact List Form with every SMP.", fields:[
+  {k:"authContacts",label:"Authorized contacts",type:"table",wide:1,cols:[{k:"name",label:"Name"},{k:"role",label:"Role"},{k:"phone",label:"Phone"},{k:"email",label:"Email"}]},
+  {k:"neighbors",label:"Adjacent landowners",type:"table",wide:1,cols:[{k:"name",label:"Name"},{k:"phone",label:"Phone"},{k:"notified",label:"Date notified"}]},
+  {k:"agencies",label:"Agency notifications",type:"table",wide:1,cols:[{k:"agency",label:"Agency"},{k:"contact",label:"Contact"},{k:"phone",label:"Phone"},{k:"when",label:"When to call"}]}
+ ]},
+ {id:"checklist", title:"Filing checklist", hint:"Track what's done between now and the post-burn report.", fields:[
+  {k:"steps",label:"",type:"checklist",wide:1,opts:[
+   "CAL FIRE burn permit obtained",
+   "MCAQMD burn permit obtained",
+   "SMP filed with MCAQMD at least 30 days before the burn",
+   "$50 filing fee paid",
+   "Authorized Contact List Form submitted",
+   "Unit map attached (boundary, sensitive areas, smoke travel, signs)",
+   "SMP approved and SMP number received",
+   "Adjacent landowners notified",
+   "Public notice published",
+   "Signs placed on Hwy 128",
+   "Ignition request submitted online the day before",
+   "District called before ignition to confirm conditions",
+   "Post-burn report filed in January with acreage fee"
+  ]}
+ ]},
+ {id:"notes", title:"Notes", hint:"Anything else to carry into the final plan.", fields:[
+  {k:"notes",label:"",type:"textarea",wide:1}
+ ]}
+];
+
+const DEFAULTS = {
+  name:"Yorkville Schoolhouse Ranch 128 Ridge Burn",
+  address:"30010 Highway 128, Yorkville, CA 95494",
+  lat:"38° 53.207′ N", lon:"123° 09.352′ W",
+  county:"Mendocino", town:"Yorkville",
+  landowner:"Barbara Henderson and Eric Carlson",
+  burnBoss:"Kyle Farmer",
+  org:"Mendocino County Prescribed Burn Association (prescribed fire workshop burn)",
+  hazard:"Yes", vegCond:"Understory", acres:"9",
+  ignHours:"10:00 to 15:00, after test fire",
+  duration:"1 day of ignition; large downed logs may smolder overnight",
+  technique:"Drip torch", intensity:"Low",
+  drying:"Large downed woody material (12 to 18 in.) from the 2023 snow storm in the unit.",
+  objectives:"Training for Yorkville residents. Fuel reduction along ingress/egress and defensible space. 70 to 90% annual grass thatch reduction. 50 to 75% oak litter consumption.",
+  emis:[{veg:"Grass/Forb",acres:"4.5",load:"1.5"},{veg:"Oak (Black)",acres:"4.5",load:"10"}],
+  ssaList:[
+    {area:"Highway 128",what:"Public road",dist:"0",dir:"Adjacent"},
+    {area:"On-site structures (2)",what:"Residence and structure",dist:"",dir:""},
+    {area:"Neighboring residences",what:"Homes",dist:"",dir:""},
+    {area:"Hopland",what:"Town",dist:"~6 (verify)",dir:"N"},
+    {area:"Cloverdale",what:"Town (Sonoma Co.)",dist:"~9 (verify)",dir:"SE"},
+    {area:"Boonville",what:"Town",dist:"~14 (verify)",dir:"NW"}
+  ],
+  nightTravel:"Smoke from smoldering logs drains downslope into the Hwy 128 corridor under nighttime inversions.",
+  wx:[{method:"Belt weather kit",loc:"On site",begin:"Before test fire",interval:"Hourly",end:"End of ignition"}],
+  smoke:[{method:"Visual observers",loc:"Hwy 128, up and down canyon",begin:"Test fire",interval:"Continuous",end:"End of day"},
+         {method:"Test fire",loc:"Representative spot chosen by burn boss",begin:"Before ignition",interval:"Once",end:""}],
+  notify:["Telephone calls"],
+  notifyDetails:"Call adjacent landowners. MCPBA announcement to workshop network. Start before burn day and continue until burning ends.",
+  signage:"\"Prescribed Burn / Smoke Ahead\" signs on Hwy 128 in both directions.",
+  adjDistricts:[{district:"Northern Sonoma County APCD",contact:"",phone:""}],
+  contingency:"Stop ignition if smoke lays down on Hwy 128 or wind shifts toward structures. Hold the perimeter and begin mop-up.",
+  cutoff:"Gravel driveway (bottom and N side), dirt road (W side), semi-mowed two-track (S side), dirt trail (E side).",
+  altRejected:"Grazing and mowing considered. Neither meets the workshop training goal or the oak litter consumption objective.",
+  authContacts:[{name:"Kyle Farmer",role:"Burn boss",phone:"",email:""},
+                {name:"Eric Carlson",role:"Landowner",phone:"",email:""},
+                {name:"Barbara Henderson",role:"Landowner",phone:"",email:""}],
+  neighbors:[{name:"Jim Hill",phone:"",notified:""},{name:"Bernie Bernstein",phone:"",notified:""},
+             {name:"Vance Damran",phone:"",notified:""},{name:"Justin Hoffman",phone:"",notified:""}],
+  agencies:[{agency:"Mendocino County AQMD",contact:"",phone:"707-463-4354",when:"Pre-burn and day of burn"},
+            {agency:"CAL FIRE MEU ECC",contact:"",phone:"",when:"Day of burn"}],
+  steps:[]
+};
+
+
+const TIPS = {
+ name:"A short name the district uses to identify this burn on your SMP and on each day-of-burn request.",
+ address:"Street address closest to the burn unit. The driveway address that leads to the unit is correct here. \"Use my location\" fills latitude and longitude from your device's GPS, so use it while standing in the unit. \"Pick on map\" lets you click the unit's center on a map.",
+ lat:"Latitude of the unit's center in degrees and decimal minutes, e.g. 38° 53.207′ N. The district uses it to map the burn and check which smoke sensitive areas are nearby.",
+ lon:"Longitude of the unit's center in degrees and decimal minutes, e.g. 123° 09.352′ W.",
+ county:"County where the burn takes place. This determines which air district reviews the plan.",
+ town:"Closest town or community. Helps the district locate the burn and anticipate who might see or smell smoke.",
+ elevTop:"Highest point in the unit, in feet. Elevation range tells the district how smoke will rise by day and drain downhill at night. Read it from a topo map or Google Earth.",
+ elevBottom:"Lowest point in the unit, in feet. Smoke pools at low points overnight.",
+ landowner:"Name(s) on title for the property being burned.",
+ landownerAddr:"Mailing address for district correspondence, including the acreage fee invoice and the post-burn report reminder.",
+ permittee:"The person who holds the burn permit and is legally responsible for the burn. The district contacts this person about plan approval, burn-day authorization, and any smoke complaints. Usually the landowner or the burn boss. Choose someone who will be on site and reachable for the entire burn, including overnight while logs smolder.",
+ phone24:"A number where the district can reach the permittee at any hour from ignition until the burn is declared out, including overnight. A cell phone is typical.",
+ email:"Email for the permittee. SMP approval and responses to online burn requests go here.",
+ burnBoss:"The qualified person directing the burn on the ground. CARX is California's Certified Prescribed Fire Burn Boss credential. Add the certification number if the burn boss has one.",
+ org:"The group conducting the burn if it isn't only the landowner, such as a Prescribed Burn Association.",
+ burnDate:"Target ignition date. The SMP must be filed at least 30 days before this date. Ignition still requires a permissive burn day and district authorization.",
+ burnWindow:"Alternate dates if weather doesn't cooperate. Prescribed burns often slip, so give a realistic range, e.g. \"Dec 1 to Feb 28\".",
+ burnType:"State category for the burn. Range improvement: improving rangeland or grazing land. Forest management: managing timber stands. Wildland vegetation management: reducing wildland fuels or restoring habitat. Pick the one that matches the primary purpose.",
+ hazard:"Whether reducing wildfire fuel is the main reason for the burn. Affects how the district classifies and prioritizes it.",
+ vegGrass:"Percent of the unit's fuel that is grass (annual or perennial). The four percentages should total 100.",
+ vegBrush:"Percent that is shrubs such as chamise, manzanita, coyote brush, or poison oak.",
+ vegLitter:"Percent that is timber litter: fallen leaves, needles, bark, and twigs on the ground under trees. Oak leaf litter goes here.",
+ vegSlash:"Percent that is timber slash: cut or downed woody material such as branches and logs. The 2023 snow storm downfall goes here.",
+ vegOther:"Any fuel not covered by the percentages above.",
+ vegCond:"How the fuel is arranged. Broadcast: fire spreads across open ground. Understory: fire burns beneath a tree canopy. Pile options: material stacked by hand, by machine, or at a log landing. A burn under oaks is understory.",
+ acres:"Total area to be burned, measured on a map. The acreage fee is based on acres actually blackened, reported after the burn.",
+ ignHours:"The window when crews will be lighting fire. The district wants ignition done early enough for smoke to lift before evening. Burning past 3 PM is itself an SMP trigger.",
+ duration:"Time from first ignition until no smoke remains. Include smoldering time for large logs, which can run overnight or longer.",
+ acresPerHour:"The most area you'll ignite in any one hour. Limiting this limits how much smoke is produced at once. The district may cap it.",
+ acresPerDay:"The most area you'll burn in one day. For a single-day burn, usually the whole unit.",
+ hoursBetween:"For multi-day burns, the minimum gap between one ignition period and the next so smoke can clear. For a one-day burn, enter \"N/A, single day\".",
+ technique:"How fire will be lit: drip torch, propane torch, fusees, or aerial ignition. The district's burn request form uses these categories.",
+ intensity:"Low: fire backs or creeps through grass and litter with short flames and little lofted smoke. High: hotter fire, taller flames, smoke column. Most understory burns are low.",
+ drying:"Time since the last significant rain and how dry fuels will be at ignition. Wet fuels smolder and smoke more. Note heavy fuels like downed logs that will burn longer.",
+ objectives:"What the burn should accomplish, in measurable terms. Copy these from the burn plan.",
+ ssaList:"Places where people could be affected by smoke: roads, homes, towns, schools, hospitals, campgrounds. Give straight-line distance in miles and compass direction from the unit.",
+ dayTravel:"Where smoke is expected to go during the day, based on forecast winds. Daytime heating usually lifts smoke and carries it with the prevailing wind. Show the path on the map.",
+ nightTravel:"Where smoke goes after sunset. Cool air drains downhill and pools in valleys, carrying residual smoke. Name the drainages, roads, and homes it would reach.",
+ mapRef:"Page or figure number of the attached map showing the unit, sensitive areas, smoke paths, and sign locations.",
+ history:"Whether this ground has been burned before. Past burns help the district predict smoke behavior.",
+ historyImpacts:"Any smoke complaints or problems from previous burns here. Write \"None known\" if none.",
+ overnight:"How you'll stay in contact with the district if the burn smokes overnight or continues past day one: who calls, when, and what they report.",
+ wx:"How weather will be measured during the burn. Method: belt weather kit, portable station, or spot forecast. Location: where readings are taken. Begin, interval, end: when readings start, how often, and when they stop.",
+ smoke:"How smoke will be watched to confirm it's going where planned, usually lookouts positioned at sensitive areas. Same columns as the weather table.",
+ notify:"How the public will learn about the burn in advance. Check all that apply.",
+ notifyDetails:"Who gets notified, by whom, and when notification starts and ends.",
+ signage:"Where warning signs will be placed, usually on roads where smoke could reduce visibility. Mark them on the map.",
+ adjDistricts:"Air districts in neighboring counties that smoke could reach. MCAQMD coordinates with them. Northern Sonoma County APCD covers Cloverdale.",
+ surfDirIdeal:"Ground-level wind direction that carries smoke away from sensitive areas. Give the direction the wind blows from, e.g. \"SW\".",
+ surfDirRange:"Range of surface wind directions you'd still burn in, e.g. \"SW to NW\". Outside this range you don't ignite, or you stop.",
+ surfSpdIdeal:"Best ground-level wind speed for your fire behavior and smoke goals, in mph.",
+ surfSpdRange:"Lowest and highest acceptable surface wind speeds. Too little wind lets smoke pool. Too much makes fire harder to hold.",
+ transDirIdeal:"Wind direction a few thousand feet up, which carries smoke once it rises. Comes from the fire weather forecast or a spot forecast.",
+ transDirRange:"Acceptable range of transport wind directions.",
+ rhIdeal:"Best relative humidity for your fire behavior goals.",
+ rhRange:"Lowest and highest acceptable RH. Low RH means hotter, faster fire. High RH means poor consumption and more smoldering smoke.",
+ tempRange:"Lowest and highest acceptable air temperature during ignition.",
+ mixHeight:"How high smoke can rise before it hits a stable air layer, in feet. Higher means better dispersion. Found in the fire weather forecast.",
+ otherDispersion:"Anything else affecting smoke spread: inversions, fog, terrain channeling, time of day.",
+ contingency:"What you'll do if smoke goes where it shouldn't or weather leaves the prescription, e.g. stop ignition, hold the perimeter, begin mop-up.",
+ cutoff:"Roads, trails, or other breaks inside or around the unit where you could stop the fire early to reduce smoke.",
+ altUsed:"Non-burning treatments already done on this site, such as mowing, grazing, or chipping, and roughly how many tons of material they removed.",
+ altRejected:"Other methods you considered instead of burning, and why they don't work here.",
+ authContacts:"People authorized to speak with the district about this SMP and to submit burn requests. The district requires these on a separate Authorized Contact List Form.",
+ neighbors:"Landowners next to the unit who should be told before the burn. Record the date you notified each.",
+ agencies:"Agencies to notify before and on burn day, and when to call each.",
+ emisVeg:"Pick the closest vegetation type. The number in parentheses is the emission value: tons of PM10 released per ton of fuel burned.",
+ emisAcres:"Acres of this vegetation type within the unit.",
+ emisLoad:"Fuel loading: tons of burnable material per acre. Rough guides: annual grass 1 to 2, oak leaf litter 3 to 6, heavy downed wood adds more. The burn boss can estimate this on a site walk.",
+ emisFuel:"Acres × tons per acre. Calculated.",
+ emisPM:"Fuel tons × emission value. Calculated. This is the number the district uses to set the plan tier."
+};
+let tipSeq=0;
+function tipBtn(k){
+  if(!TIPS[k]) return "";
+  return `<button type="button" class="tipbtn" data-tip="tip_${k}" aria-expanded="false" aria-controls="tip_${k}" aria-label="Explain this field">?</button>`;
+}
+function tipBox(k){ return TIPS[k] ? `<div class="tip" id="tip_${k}" hidden>${esc(TIPS[k])}</div>` : ""; }
+
+/* ---------- state ---------- */
+let state;
+function load(){
+  try{ const raw = localStorage.getItem(KEY); if(raw) return JSON.parse(raw); }catch(e){}
+  return JSON.parse(JSON.stringify(DEFAULTS));
+}
+state = load();
+let saveTimer=null;
+const statusEl = document.getElementById("status");
+function scheduleSave(){
+  statusEl.textContent="Saving…"; statusEl.classList.remove("saved");
+  clearTimeout(saveTimer); saveTimer=setTimeout(saveNow,400);
+}
+function saveNow(){
+  try{
+    state._savedAt = new Date().toISOString();
+    localStorage.setItem(KEY, JSON.stringify(state));
+    showSaved();
+  }catch(e){ statusEl.textContent="Not saved: browser storage unavailable"; statusEl.classList.remove("saved"); }
+}
+function showSaved(){
+  if(!state._savedAt) return;
+  const d = new Date(state._savedAt);
+  statusEl.textContent = "Saved " + d.toLocaleDateString(undefined,{month:"short",day:"numeric"}) + ", " + d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});
+  statusEl.classList.add("saved");
+}
+
+/* ---------- rendering ---------- */
+const main = document.getElementById("main");
+const toc = document.getElementById("toc");
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let uid=0;
+
+function control(f){
+  const id = "f_"+f.k; const v = state[f.k] ?? "";
+  if(f.type==="textarea") return `<textarea id="${id}" data-k="${f.k}">${esc(v)}</textarea>`;
+  if(f.type==="select") return `<select id="${id}" data-k="${f.k}"><option value=""></option>${f.opts.map(o=>`<option${o===v?" selected":""}>${esc(o)}</option>`).join("")}</select>`;
+  const t = f.type || "text";
+  const extra = t==="number" ? ' step="any" inputmode="decimal"' : "";
+  return `<input id="${id}" type="${t}" data-k="${f.k}" value="${esc(v)}"${extra}>`;
+}
+
+function tableHTML(f){
+  const rows = state[f.k] || [];
+  const head = f.cols.map(c=>`<th scope="col">${esc(c.label)}</th>`).join("") + `<th scope="col"><span class="sr" style="position:absolute;left:-9999px">Remove</span></th>`;
+  const body = rows.map((r,i)=>`<tr>${f.cols.map(c=>`<td><input type="text" aria-label="${esc(c.label)}, row ${i+1}" data-t="${f.k}" data-r="${i}" data-c="${c.k}" value="${esc(r[c.k])}"></td>`).join("")}<td class="rm"><button class="x" data-del="${f.k}" data-r="${i}" aria-label="Remove row ${i+1}">×</button></td></tr>`).join("");
+  return `<div class="table-wrap"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>
+    <div class="tbl-foot"><button class="btn small" data-add="${f.k}">Add row</button></div>`;
+}
+
+function emissionsHTML(){
+  const rows = state.emis || [];
+  const opts = v => `<option value=""></option>` + EV.map(e=>`<option value="${esc(e[0])}"${e[0]===v?" selected":""}>${esc(e[0])} (${e[1].toFixed(3)})</option>`).join("");
+  const body = rows.map((r,i)=>`<tr>
+    <td><select aria-label="Vegetation type, row ${i+1}" data-t="emis" data-r="${i}" data-c="veg">${opts(r.veg)}</select></td>
+    <td><input type="number" step="any" inputmode="decimal" aria-label="Acres, row ${i+1}" data-t="emis" data-r="${i}" data-c="acres" value="${esc(r.acres)}"></td>
+    <td><input type="number" step="any" inputmode="decimal" aria-label="Tons per acre, row ${i+1}" data-t="emis" data-r="${i}" data-c="load" value="${esc(r.load)}"></td>
+    <td class="num" data-fuel="${i}"></td><td class="num" data-pm="${i}"></td>
+    <td class="rm"><button class="x" data-del="emis" data-r="${i}" aria-label="Remove row ${i+1}">×</button></td></tr>`).join("");
+  const th=(l,k)=>`<th><div class="lblrow">${l}${tipBtn(k)}</div></th>`;
+  return `<div class="tip-list">${["emisVeg","emisAcres","emisLoad","emisFuel","emisPM"].map(tipBox).join("")}</div><div class="table-wrap"><table>
+    <thead><tr>${th("Vegetation type (EV)","emisVeg")}${th("Acres","emisAcres")}${th("Tons/acre","emisLoad")}${th("Fuel (tons)","emisFuel")}${th("PM10 (tons)","emisPM")}<th></th></tr></thead>
+    <tbody>${body}</tbody>
+    <tfoot><tr><td>Total</td><td class="num" id="totAcres"></td><td></td><td class="num" id="totFuel"></td><td class="num" id="totPM"></td><td></td></tr></tfoot>
+  </table></div><div class="tbl-foot"><button class="btn small" data-add="emis">Add vegetation type</button></div>`;
+}
+
+function fieldHTML(f){
+  if(f.type==="table") return `<div class="f wide"><div class="lblrow"><span class="lbl">${esc(f.label)}</span>${tipBtn(f.k)}</div>${tipBox(f.k)}${tableHTML(f)}</div>`;
+  if(f.type==="checks"){
+    const sel = state[f.k] || [];
+    return `<div class="f wide"><div class="lblrow"><span class="lbl">${esc(f.label)}</span>${tipBtn(f.k)}</div>${tipBox(f.k)}<div class="checks">${f.opts.map(o=>`<label><input type="checkbox" data-ck="${f.k}" value="${esc(o)}"${sel.includes(o)?" checked":""}>${esc(o)}</label>`).join("")}</div></div>`;
+  }
+  if(f.type==="checklist"){
+    const sel = state[f.k] || [];
+    return `<div class="f wide checklist">${f.opts.map(o=>`<label><input type="checkbox" data-ck="${f.k}" value="${esc(o)}"${sel.includes(o)?" checked":""}><span>${esc(o)}</span></label>`).join("")}</div>`;
+  }
+  const acts = f.actions ? `<button type="button" class="actbtn" id="useLoc">Use my location</button><button type="button" class="actbtn" id="pickMap"${(state.address||"").trim()?"":" disabled"}>Pick on map</button>` : "";
+  const msg = f.actions ? `<span class="fieldmsg" id="locMsg" aria-live="polite"></span>` : "";
+  return `<div class="f${f.wide?" wide":""}">${f.label?`<div class="lblrow"><label for="f_${f.k}">${esc(f.label)}</label>${tipBtn(f.k)}${acts}</div>${tipBox(f.k)}`:""}${control(f)}${msg}</div>`;
+}
+
+function renderSection(s){
+  const inner = s.custom==="emissions" ? emissionsHTML() : `<div class="grid">${s.fields.map(fieldHTML).join("")}</div>`;
+  return `<section class="sec" id="${s.id}"><h2>${esc(s.title)}</h2><p class="sec-hint">${esc(s.hint)}</p><div class="sec-body">${inner}</div></section>`;
+}
+
+function renderAll(){
+  main.innerHTML = SECTIONS.map(renderSection).join("");
+  toc.innerHTML = SECTIONS.map(s=>`<li><a href="#${s.id}"><span>${esc(s.title.replace(/^Section [AB]: /,""))}</span><span class="count" data-count="${s.id}"></span><span class="bar"><span data-bar="${s.id}"></span></span></a></li>`).join("");
+  updateDerived();
+}
+let allTips=false;
+try{ allTips = localStorage.getItem(KEY+":tips")==="1"; }catch(e){}
+function applyTips(){
+  main.querySelectorAll(".tip").forEach(b=>b.hidden=!allTips);
+  main.querySelectorAll(".tipbtn").forEach(b=>b.setAttribute("aria-expanded",String(allTips)));
+  const t=document.getElementById("tipsAll");
+  t.textContent = allTips ? "Hide all explanations" : "Show all explanations";
+  t.setAttribute("aria-pressed",String(allTips));
+}
+document.getElementById("tipsAll").onclick=()=>{
+  allTips=!allTips; try{ localStorage.setItem(KEY+":tips", allTips?"1":"0"); }catch(e){}
+  applyTips();
+};
+function rerenderSection(id){
+  const s = SECTIONS.find(x=>x.id===id);
+  const el = document.getElementById(id);
+  const tmp = document.createElement("div"); tmp.innerHTML = renderSection(s);
+  el.replaceWith(tmp.firstElementChild);
+  if(allTips) applyTips();
+  updateDerived();
+}
+function sectionOfKey(k){
+  if(k==="emis") return "emissions";
+  return SECTIONS.find(s=>s.fields && s.fields.some(f=>f.k===k)).id;
+}
+
+/* ---------- derived ---------- */
+const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+function emissionTotals(){
+  let a=0,f=0,p=0; const per=[];
+  (state.emis||[]).forEach(r=>{ const fuel=num(r.acres)*num(r.load); const pm=fuel*evOf(r.veg); per.push({fuel,pm}); a+=num(r.acres); f+=fuel; p+=pm; });
+  return {a,f,p,per};
+}
+const filled = v => Array.isArray(v) ? v.some(x => typeof x==="string" ? x : Object.values(x).some(y=>String(y).trim())) : String(v??"").trim()!=="";
+function updateDerived(){
+  const t = emissionTotals();
+  t.per.forEach((x,i)=>{
+    const fe=main.querySelector(`[data-fuel="${i}"]`), pe=main.querySelector(`[data-pm="${i}"]`);
+    if(fe) fe.textContent = x.fuel.toFixed(1); if(pe) pe.textContent = x.pm.toFixed(3);
+  });
+  const set=(id,v)=>{const e=document.getElementById(id); if(e) e.textContent=v;};
+  set("totAcres",t.a.toFixed(1)); set("totFuel",t.f.toFixed(1)); set("totPM",t.p.toFixed(2));
+  set("pmSide",t.p.toFixed(2));
+  SECTIONS.forEach(s=>{
+    let done=0,total=0;
+    if(s.custom==="emissions"){ total=1; done = t.p>0 ? 1 : 0; }
+    else s.fields.forEach(f=>{
+      if(f.type==="checklist"){ total+=f.opts.length; done+=(state[f.k]||[]).length; }
+      else { total++; if(filled(state[f.k])) done++; }
+    });
+    const c=toc.querySelector(`[data-count="${s.id}"]`), b=toc.querySelector(`[data-bar="${s.id}"]`);
+    if(c) c.textContent = `${done}/${total}`; if(b) b.style.width = (total?done/total*100:0)+"%";
+  });
+  const h = document.getElementById("docTitle"); h.textContent = state.name ? state.name : "Smoke Management Plan worksheet";
+}
+
+/* ---------- events ---------- */
+main.addEventListener("input", e=>{
+  const el=e.target;
+  if(el.dataset.k){ state[el.dataset.k]=el.value;
+    if(el.dataset.k==="address"){ const b=document.getElementById("pickMap"); if(b) b.disabled=!el.value.trim(); } }
+  else if(el.dataset.t){ const arr=state[el.dataset.t]; arr[+el.dataset.r][el.dataset.c]=el.value; }
+  else if(el.dataset.ck){
+    const set = new Set(state[el.dataset.ck]||[]); el.checked?set.add(el.value):set.delete(el.value);
+    state[el.dataset.ck]=[...set];
+  } else return;
+  updateDerived(); scheduleSave();
+});
+main.addEventListener("click", e=>{
+  const tb=e.target.closest(".tipbtn");
+  if(tb){ const box=document.getElementById(tb.dataset.tip); const open=box.hidden; box.hidden=!open; tb.setAttribute("aria-expanded",String(open)); return; }
+  const add=e.target.closest("[data-add]"), del=e.target.closest("[data-del]");
+  if(add){
+    const k=add.dataset.add; state[k]=state[k]||[]; state[k].push({});
+    rerenderSection(sectionOfKey(k)); scheduleSave();
+    const rows=document.querySelectorAll(`[data-t="${k}"][data-r="${state[k].length-1}"]`); if(rows[0]) rows[0].focus();
+  }
+  if(del){
+    const k=del.dataset.del; state[k].splice(+del.dataset.r,1);
+    rerenderSection(sectionOfKey(k)); scheduleSave();
+  }
+});
+main.addEventListener("change", e=>{
+  const el=e.target;
+  if(el.tagName==="SELECT"){
+    if(el.dataset.k) state[el.dataset.k]=el.value;
+    else if(el.dataset.t) state[el.dataset.t][+el.dataset.r][el.dataset.c]=el.value;
+    updateDerived(); scheduleSave();
+  }
+});
+
+
+/* ---------- location ---------- */
+function toDMM(dec, isLat){
+  const hemi = isLat ? (dec>=0?"N":"S") : (dec>=0?"E":"W");
+  const a=Math.abs(dec); let d=Math.floor(a); let m=(a-d)*60;
+  if(m.toFixed(3)==="60.000"){ d+=1; m=0; }
+  const mm = m.toFixed(3).padStart(6,"0");
+  return `${isLat?d:String(d).padStart(3,"0")}° ${mm}′ ${hemi}`;
+}
+function fromDMM(str){
+  const m=String(str||"").match(/(-?\d+(?:\.\d+)?)\s*°\s*(?:(\d+(?:\.\d+)?)\s*['′]?)?\s*([NSEW])?/i);
+  if(!m) { const n=parseFloat(str); return isFinite(n)?n:null; }
+  let v=parseFloat(m[1])+(m[2]?parseFloat(m[2])/60:0);
+  if(m[3] && /[SW]/i.test(m[3])) v=-v;
+  return v;
+}
+function setCoords(lat,lon){
+  state.lat=toDMM(lat,true); state.lon=toDMM(lon,false);
+  const a=document.getElementById("f_lat"), b=document.getElementById("f_lon");
+  if(a) a.value=state.lat; if(b) b.value=state.lon;
+  updateDerived(); scheduleSave();
+}
+function locMsg(t,err){ const m=document.getElementById("locMsg"); if(m){ m.textContent=t; m.classList.toggle("err",!!err); } }
+
+async function reverseGeocode(lat,lon){
+  try{
+    const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`,{headers:{"Accept":"application/json"}});
+    if(!r.ok) return null; const j=await r.json(); return j.display_name||null;
+  }catch(e){ return null; }
+}
+async function geocode(q){
+  try{
+    const r=await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=us&q=${encodeURIComponent(q)}`,{headers:{"Accept":"application/json"}});
+    if(!r.ok) return null; const j=await r.json(); return j[0]?{lat:+j[0].lat,lon:+j[0].lon}:null;
+  }catch(e){ return null; }
+}
+
+main.addEventListener("click", e=>{
+  if(e.target.id==="useLoc"){
+    if(!("geolocation" in navigator)){ locMsg("This browser doesn't provide location.",true); return; }
+    locMsg("Getting location…");
+    navigator.geolocation.getCurrentPosition(async pos=>{
+      const {latitude:la, longitude:lo, accuracy:acc}=pos.coords;
+      setCoords(la,lo);
+      locMsg(`Latitude and longitude set from your device (±${Math.round(acc*3.28084)} ft).`);
+      if(!(state.address||"").trim()){
+        const addr=await reverseGeocode(la,lo);
+        if(addr){ state.address=addr; const f=document.getElementById("f_address"); if(f) f.value=addr;
+          const b=document.getElementById("pickMap"); if(b) b.disabled=false; scheduleSave(); }
+      }
+    }, err=>{
+      const why = err.code===1 ? "Location access was blocked. Allow location for this page in your browser settings, or enter coordinates by hand."
+                : err.code===3 ? "Location request timed out. Try again with a clear view of the sky."
+                : "Location isn't available right now.";
+      locMsg(why,true);
+    }, {enableHighAccuracy:true, timeout:20000, maximumAge:0});
+  }
+  if(e.target.id==="pickMap") openMap();
+});
+
+const mapDlg=document.getElementById("mapDialog"), mapMsgEl=document.getElementById("mapMsg"),
+      mapReadout=document.getElementById("mapReadout"), mapUse=document.getElementById("mapUse"),
+      mapFallback=document.getElementById("mapFallback"), mapEl=document.getElementById("map");
+let L_ready=null, map=null, marker=null, picked=null, tilesOk=false, tileErrs=0;
+function mapMsg(t){ mapMsgEl.textContent=t||""; mapMsgEl.hidden=!t; }
+function loadLeaflet(){
+  if(!L_ready) L_ready=new Promise((res,rej)=>{
+    if(window.L) return res(window.L);
+    const sc=document.createElement("script");
+    sc.src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js";
+    sc.onload=()=>res(window.L); sc.onerror=()=>rej(new Error("leaflet"));
+    document.head.appendChild(sc);
+  });
+  return L_ready;
+}
+function setPicked(lat,lon){
+  picked={lat,lon};
+  mapReadout.textContent=`${toDMM(lat,true)}, ${toDMM(lon,false)}  (${lat.toFixed(5)}, ${lon.toFixed(5)})`;
+  mapUse.disabled=false;
+}
+function showFallback(){
+  mapEl.style.display="none"; mapFallback.hidden=false; mapMsg("");
+  const q=document.getElementById("mapSearch").value||state.address||"";
+  const link=document.getElementById("gmapsLink");
+  const la=fromDMM(state.lat), lo=fromDMM(state.lon);
+  link.href = (la!=null&&lo!=null) ? `https://www.google.com/maps/search/?api=1&query=${la},${lo}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+  mapReadout.textContent="Paste coordinates to continue.";
+}
+document.getElementById("pasteCoords").addEventListener("input", e=>{
+  const m=e.target.value.match(/(-?\d{1,3}\.\d+)\s*[, ]\s*(-?\d{1,3}\.\d+)/);
+  if(m){ const la=+m[1], lo=+m[2];
+    if(Math.abs(la)<=90&&Math.abs(lo)<=180){ setPicked(la,lo); return; } }
+  picked=null; mapUse.disabled=true; mapReadout.textContent="Waiting for coordinates like 38.88678, -123.15587.";
+});
+async function centerOn(q){
+  const la=fromDMM(state.lat), lo=fromDMM(state.lon);
+  mapMsg("Looking up address…");
+  const g = q ? await geocode(q) : null;
+  if(g){ map.setView([g.lat,g.lon],16); mapMsg("Centered on the address. Click the burn unit's center."); return; }
+  if(la!=null&&lo!=null){ map.setView([la,lo],16); mapMsg("Address lookup isn't available, so the map is centered on the current coordinates."); return; }
+  map.setView([38.9,-123.2],12); mapMsg("Address lookup isn't available. Pan to the unit and click its center.");
+}
+async function openMap(){
+  document.getElementById("mapSearch").value=state.address||"";
+  picked=null; mapUse.disabled=true; mapReadout.textContent="Click the map to place the point.";
+  mapEl.style.display=""; mapFallback.hidden=true; document.getElementById("pasteCoords").value="";
+  if(mapDlg.showModal) mapDlg.showModal(); else mapDlg.setAttribute("open","");
+  let L;
+  try{ L=await loadLeaflet(); }catch(e){ showFallback(); return; }
+  if(!map){
+    map=L.map(mapEl,{zoomControl:true});
+    const sat=L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:"Imagery © Esri"});
+    const topo=L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",{maxZoom:17,attribution:"© OpenStreetMap contributors, SRTM | OpenTopoMap"});
+    [sat,topo].forEach(l=>{ l.on("tileload",()=>{tilesOk=true;}); l.on("tileerror",()=>{tileErrs++;}); });
+    sat.addTo(map);
+    L.control.layers({"Satellite":sat,"Topo":topo},null,{collapsed:false}).addTo(map);
+    map.on("click",ev=>{
+      const {lat,lng}=ev.latlng;
+      if(marker) marker.setLatLng(ev.latlng);
+      else marker=L.circleMarker(ev.latlng,{radius:9,color:"#ffffff",weight:3,fillColor:"#A3261C",fillOpacity:1}).addTo(map);
+      setPicked(lat,lng);
+    });
+  }
+  setTimeout(()=>map.invalidateSize(),50);
+  const la=fromDMM(state.lat), lo=fromDMM(state.lon);
+  if(la!=null&&lo!=null){
+    if(marker) marker.setLatLng([la,lo]); else marker=L.circleMarker([la,lo],{radius:9,color:"#ffffff",weight:3,fillColor:"#A3261C",fillOpacity:1}).addTo(map);
+  }
+  centerOn(state.address);
+  setTimeout(()=>{ if(!tilesOk && mapDlg.open) showFallback(); },6000);
+}
+document.getElementById("mapFind").onclick=()=>{ if(map && mapFallback.hidden) centerOn(document.getElementById("mapSearch").value); else showFallback(); };
+document.getElementById("mapSearch").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); document.getElementById("mapFind").click(); } });
+document.getElementById("mapClose").onclick=()=>mapDlg.close();
+mapUse.onclick=()=>{ if(!picked) return; setCoords(picked.lat,picked.lon); mapDlg.close(); locMsg("Latitude and longitude set from the map."); toast("Location set"); };
+
+/* ---------- markdown ---------- */
+function mdEsc(s){ return String(s??"").replace(/\|/g,"\\|").replace(/\n+/g," "); }
+function mdTable(cols,rows){
+  if(!rows||!rows.length||!filled(rows)) return "_None entered._\n";
+  let s = "| "+cols.map(c=>c.label).join(" | ")+" |\n| "+cols.map(()=>"---").join(" | ")+" |\n";
+  rows.forEach(r=>{ s += "| "+cols.map(c=>mdEsc(r[c.k])).join(" | ")+" |\n"; });
+  return s;
+}
+function toMarkdown(){
+  const blank = "_Not filled in_";
+  let md = `# Smoke Management Plan: ${state.name||"Untitled"}\n\nMendocino County Air Quality Management District  \nExported ${new Date().toLocaleString()}\n`;
+  SECTIONS.forEach(s=>{
+    md += `\n## ${s.title}\n\n`;
+    if(s.custom==="emissions"){
+      const t=emissionTotals();
+      md += "| Vegetation type | EV | Acres | Tons/acre | Fuel (tons) | PM10 (tons) |\n| --- | --- | --- | --- | --- | --- |\n";
+      (state.emis||[]).forEach((r,i)=>{ md += `| ${mdEsc(r.veg)} | ${evOf(r.veg).toFixed(3)} | ${mdEsc(r.acres)} | ${mdEsc(r.load)} | ${t.per[i].fuel.toFixed(1)} | ${t.per[i].pm.toFixed(3)} |\n`; });
+      md += `| **Total** |  | **${t.a.toFixed(1)}** |  | **${t.f.toFixed(1)}** | **${t.p.toFixed(2)}** |\n`;
+      md += `\nMethod: acres × fuel loading × emission value (MCAQMD Table 2/3, USFS Air Quality Conformity Handbook factors).\n`;
+      return;
+    }
+    let simple = [];
+    s.fields.forEach(f=>{
+      const v = state[f.k];
+      if(f.type==="table"){
+        if(simple.length){ md += simple.join("\n")+"\n\n"; simple=[]; }
+        md += `### ${f.label}\n\n` + mdTable(f.cols,v) + "\n";
+      } else if(f.type==="checks"){
+        simple.push(`- **${f.label}:** ${(v&&v.length)?v.join(", "):blank}`);
+      } else if(f.type==="checklist"){
+        md += f.opts.map(o=>`- [${(v||[]).includes(o)?"x":" "}] ${o}`).join("\n")+"\n";
+      } else if(f.type==="textarea" && !f.label){
+        md += (String(v||"").trim()||blank)+"\n";
+      } else if(f.type==="textarea"){
+        if(simple.length){ md += simple.join("\n")+"\n\n"; simple=[]; }
+        md += `**${f.label}**\n\n${String(v||"").trim()||blank}\n\n`;
+      } else {
+        simple.push(`- **${f.label}:** ${String(v??"").trim()||blank}`);
+      }
+    });
+    if(simple.length) md += simple.join("\n")+"\n";
+  });
+  return md.replace(/\n{3,}/g,"\n\n");
+}
+function slug(){ return (state.name||"smoke-management-plan").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,""); }
+
+/* ---------- downloads ---------- */
+let dlPromise=null;
+function getDownloads(){
+  if(!dlPromise){
+    dlPromise = (async()=>{
+      try{ if(window.claude && typeof window.claude.use==="function") return await window.claude.use("downloads"); }catch(e){}
+      return null;
+    })();
+  }
+  return dlPromise;
+}
+const toastEl=document.getElementById("toast");
+function toast(msg){ toastEl.textContent=msg; toastEl.classList.add("show"); clearTimeout(toastEl._t); toastEl._t=setTimeout(()=>toastEl.classList.remove("show"),2600); }
+
+const dlg=document.getElementById("mdDialog"), mdText=document.getElementById("mdText"), mdNote=document.getElementById("mdNote");
+function showText(text,note){ mdText.value=text; mdNote.textContent=note; if(dlg.showModal) dlg.showModal(); else dlg.setAttribute("open",""); }
+document.getElementById("mdClose").onclick=()=>dlg.close();
+document.getElementById("mdCopy").onclick=async()=>{
+  try{ await navigator.clipboard.writeText(mdText.value); toast("Copied"); }
+  catch(e){ mdText.select(); toast("Press Ctrl+C or ⌘C to copy"); }
+};
+
+async function offerFile(filename,data,label){
+  const dl = await getDownloads();
+  if(!dl){ showText(data,`Saving files isn't available in this view. Copy this text into ${filename}.`); return; }
+  try{ const r = await dl.save({filename,data}); if(r && r.status==="saved") toast(label+" saved"); }
+  catch(err){
+    const code = err && err.code;
+    if(code==="declined") return;
+    if(code==="rate_limited"){ toast("A save prompt is already open"); return; }
+    showText(data,`The file couldn't be saved here. Copy this text into ${filename}.`);
+  }
+}
+document.getElementById("exportMd").onclick=()=>{ saveNow(); offerFile(slug()+".md", toMarkdown(), "Markdown"); };
+document.getElementById("backup").onclick=()=>{ saveNow(); offerFile(slug()+"-backup.json", JSON.stringify(state,null,2), "Backup"); };
+
+const restoreFile=document.getElementById("restoreFile");
+document.getElementById("restoreBtn").onclick=()=>restoreFile.click();
+restoreFile.onchange=async()=>{
+  const file=restoreFile.files[0]; if(!file) return;
+  try{
+    const data=JSON.parse(await file.text());
+    if(typeof data!=="object"||Array.isArray(data)) throw new Error();
+    state=data; saveNow(); renderAll(); toast("Backup restored");
+  }catch(e){ toast("That file isn't a worksheet backup"); }
+  restoreFile.value="";
+};
+
+renderAll(); applyTips(); showSaved();
+})();
+</script>
+</body>
+</html>
