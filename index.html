@@ -58,7 +58,7 @@ nav.toc .bar span{display:block;height:100%;background:var(--oak);width:0;transi
 .pm-card .big{font-size:2rem;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
 .pm-card p{margin:6px 0 0;font-size:.8125rem;color:var(--muted)}
 
-main{min-width:0}
+main,.mainwrap{min-width:0}
 section.sec{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:24px 24px 28px;margin-bottom:24px}
 section.sec h2{margin:0 0 4px;font-size:1.25rem;font-weight:800;letter-spacing:-0.01em}
 section.sec .sec-hint{margin:0 0 18px;color:var(--muted);font-size:.9375rem;max-width:62ch}
@@ -715,6 +715,21 @@ print-color-adjust: exact;
 #mapFallback{padding:16px;display:grid;gap:12px;max-width:62ch}
 #mapFallback p{margin:0}
 .leaflet-container{font:inherit}
+.status.offline::before,.status.warn::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
+.status.offline::before{background:var(--muted)}
+.status.warn::before{background:var(--accent)}
+#shareDlg{width:min(720px,96vw)}
+#shareDlg h2{margin:0 0 4px;font-size:1.25rem;font-weight:800}
+#shareDlg h3{margin:22px 0 6px;font-size:1rem;font-weight:700}
+#shareDlg p{margin:0 0 10px;color:var(--muted);font-size:.9375rem;max-width:62ch}
+.inline{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.inline input,.inline select{flex:1 1 180px;width:auto}
+.who{font-weight:600;margin:4px 0 10px}
+.who.err{color:var(--accent)}
+.codecell{font-variant-numeric:tabular-nums;white-space:nowrap}
+body.readonly main input,body.readonly main select,body.readonly main textarea{opacity:.75}
+.ro-banner{display:none;background:var(--field);border:1px solid var(--line);border-left:3px solid var(--oak);padding:10px 14px;border-radius:0 8px 8px 0;margin-bottom:16px;font-size:.9375rem}
+body.readonly .ro-banner{display:block}
 </style>
 </head>
 <body>
@@ -726,6 +741,7 @@ print-color-adjust: exact;
     </div>
     <span class="status" id="status">Not saved yet</span>
     <div class="actions">
+      <button class="btn" id="shareBtn">Sharing</button>
       <button class="btn" id="tipsAll" aria-pressed="false">Show all explanations</button>
       <button class="btn primary" id="exportMd">Export markdown</button>
       <button class="btn" id="backup">Back up</button>
@@ -743,7 +759,7 @@ print-color-adjust: exact;
       <p>Estimated tons PM10. The large-burn tier starts at 5 tons or 100 acres.</p>
     </div>
   </nav>
-  <main id="main"></main>
+  <div class="mainwrap"><div class="ro-banner" id="roBanner">You have view-only access. Ask the owner for an editor code to make changes.</div><main id="main"></main></div>
 </div>
 
 <dialog id="mdDialog">
@@ -775,6 +791,30 @@ print-color-adjust: exact;
     <span class="readout" id="mapReadout">Click the map to place the point.</span>
     <button class="btn primary" id="mapUse" disabled>Use this location</button>
   </div>
+</dialog>
+<dialog id="shareDlg" aria-labelledby="shareTitle">
+  <h2 id="shareTitle">Sharing</h2>
+  <p>Edits sync to everyone with access. Each person signs in once per device with their own access code.</p>
+  <h3>Your access</h3>
+  <div class="who" id="whoLine">Not signed in. Changes are saved on this device only.</div>
+  <div class="inline" id="signInRow">
+    <input type="password" id="codeInput" autocomplete="current-password" aria-label="Access code" placeholder="Access code">
+    <button class="btn primary" id="signIn">Sign in</button>
+  </div>
+  <div class="inline" id="signOutRow" hidden><button class="btn" id="signOut">Sign out on this device</button></div>
+  <p style="margin-top:8px;font-size:.8125rem">Your code is stored in this browser only. Keep it in a password manager so you can sign in again after clearing the browser.</p>
+  <div id="peopleSec" hidden>
+    <h3>People with access</h3>
+    <p>Editors can change the worksheet. Viewers can read it. Removing someone takes effect immediately.</p>
+    <div class="table-wrap"><table><thead><tr><th>Name</th><th>Role</th><th>Access code</th><th></th></tr></thead><tbody id="peopleBody"></tbody></table></div>
+    <div class="inline" style="margin-top:10px">
+      <input type="text" id="newName" placeholder="Name" aria-label="New person's name">
+      <select id="newRole" aria-label="New person's role" style="flex:0 1 140px"><option value="editor">Editor</option><option value="viewer">Viewer</option></select>
+      <button class="btn" id="addPerson">Add person</button>
+    </div>
+    <div class="inline" style="margin-top:12px"><button class="btn primary" id="savePeople" disabled>Save changes</button><span class="fieldmsg" id="peopleMsg"></span></div>
+  </div>
+  <div class="row" style="display:flex;justify-content:flex-end;margin-top:18px"><button class="btn" id="shareClose">Close</button></div>
 </dialog>
 <div class="toast" id="toast" role="status"></div>
 
@@ -1010,6 +1050,7 @@ const statusEl = document.getElementById("status");
 function scheduleSave(){
   statusEl.textContent="Saving…"; statusEl.classList.remove("saved");
   clearTimeout(saveTimer); saveTimer=setTimeout(saveNow,400);
+  if(typeof schedulePush==="function") schedulePush();
 }
 function saveNow(){
   try{
@@ -1019,6 +1060,7 @@ function saveNow(){
   }catch(e){ statusEl.textContent="Not saved: browser storage unavailable"; statusEl.classList.remove("saved"); }
 }
 function showSaved(){
+  if(typeof sync!=="undefined" && sync.who){ showSyncStatus(); return; }
   if(!state._savedAt) return;
   const d = new Date(state._savedAt);
   statusEl.textContent = "Saved " + d.toLocaleDateString(undefined,{month:"short",day:"numeric"}) + ", " + d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});
@@ -1109,11 +1151,13 @@ function rerenderSection(id){
   const tmp = document.createElement("div"); tmp.innerHTML = renderSection(s);
   el.replaceWith(tmp.firstElementChild);
   if(allTips) applyTips();
+  if(typeof applyReadOnly==="function") applyReadOnly();
   updateDerived();
 }
 function sectionOfKey(k){
   if(k==="emis") return "emissions";
-  return SECTIONS.find(s=>s.fields && s.fields.some(f=>f.k===k)).id;
+  const s = SECTIONS.find(s=>s.fields && s.fields.some(f=>f.k===k));
+  return s ? s.id : null;
 }
 
 /* ---------- derived ---------- */
@@ -1317,6 +1361,253 @@ document.getElementById("mapSearch").addEventListener("keydown",e=>{ if(e.key===
 document.getElementById("mapClose").onclick=()=>mapDlg.close();
 mapUse.onclick=()=>{ if(!picked) return; setCoords(picked.lat,picked.lon); mapDlg.close(); locMsg("Latitude and longitude set from the map."); toast("Location set"); };
 
+
+/* ---------- shared sync (Cloudflare Worker + KV) ----------
+   The worksheet syncs as one JSON document with a version number. Each device keeps
+   the last synced copy ("base") so concurrent edits merge field by field: a field you
+   changed keeps your value, a field only someone else changed takes theirs. */
+const SYNC_URL = "https://smp-sync.eric-carlson.workers.dev";
+const CODE_KEY = KEY+":code", META_KEY = KEY+":sync";
+const clone = o => o==null ? o : JSON.parse(JSON.stringify(o));
+const same = (a,b) => JSON.stringify(a??null) === JSON.stringify(b??null);
+var sync = { code:"", who:null, version:0, base:null, inflight:false, again:false, timer:null,
+               status:"", kind:"", lastBy:null, lastAt:null };
+try{
+  sync.code = localStorage.getItem(CODE_KEY)||"";
+  const m = JSON.parse(localStorage.getItem(META_KEY)||"null");
+  if(m){ sync.version=m.version||0; sync.base=m.base||null; }
+}catch(e){}
+function saveMeta(){ try{ localStorage.setItem(META_KEY, JSON.stringify({version:sync.version, base:sync.base})); }catch(e){} }
+function docData(){ const d=clone(state); delete d._savedAt; return d; }
+function merge3(local, base, remote){
+  if(!remote) return local;
+  if(!base) return clone(remote);
+  const out={};
+  new Set([...Object.keys(local),...Object.keys(remote),...Object.keys(base)]).forEach(k=>{
+    if(k==="_savedAt") return;
+    const v = !same(local[k],base[k]) ? local[k] : remote[k];
+    if(v!==undefined) out[k]=clone(v);
+  });
+  return out;
+}
+function fmtTime(iso){ const d=new Date(iso); return d.toLocaleDateString(undefined,{month:"short",day:"numeric"})+", "+d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}); }
+function setSync(text,kind){ sync.status=text; sync.kind=kind; showSyncStatus(); }
+function showSyncStatus(){
+  if(!sync.who) return;
+  statusEl.textContent = sync.status; statusEl.className = "status " + (sync.kind||"");
+  statusEl.title = sync.lastAt ? `Last change by ${sync.lastBy||"unknown"}, ${fmtTime(sync.lastAt)}` : "";
+}
+async function api(path, opts={}){
+  return fetch(SYNC_URL+path, {...opts, cache:"no-store",
+    headers:{"Authorization":"Bearer "+sync.code, "Content-Type":"application/json"}});
+}
+
+function applyChanges(merged){
+  const changed = Object.keys({...merged, ...docData()}).filter(k=>k!=="_savedAt" && !same(state[k], merged[k]));
+  const savedAt = state._savedAt;
+  state = merged; state._savedAt = savedAt;
+  try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
+  const secs = new Set();
+  changed.forEach(k=>{
+    const sec = sectionOfKey(k); if(!sec) return;
+    const def = (SECTIONS.find(x=>x.id===sec).fields||[]).find(f=>f.k===k);
+    if(def && !["table","checks","checklist"].includes(def.type)){
+      const el=document.getElementById("f_"+k);
+      if(el && el!==document.activeElement) el.value = state[k] ?? "";
+      if(k==="address"){ const b=document.getElementById("pickMap"); if(b) b.disabled=!(state.address||"").trim(); }
+    } else secs.add(sec);
+  });
+  secs.forEach(id=>{
+    const el=document.getElementById(id);
+    if(el && el.contains(document.activeElement)) pendingSecs.add(id); else rerenderSection(id);
+  });
+  updateDerived();
+  return changed.length;
+}
+const pendingSecs = new Set();
+main.addEventListener("focusout", ()=>setTimeout(()=>{
+  [...pendingSecs].forEach(id=>{ const el=document.getElementById(id);
+    if(el && !el.contains(document.activeElement)){ pendingSecs.delete(id); rerenderSection(id); } });
+},0));
+
+async function pull(){
+  if(!sync.who || sync.inflight) return;
+  let res;
+  try{ res = await api("/doc"); }catch(e){ setSync("Offline. Saved on this device","offline"); return; }
+  if(res.status===401){ return lostAccess(); }
+  if(!res.ok){ setSync("Sync error ("+res.status+")","warn"); return; }
+  const remote = await res.json();
+  if(remote.data==null){
+    if(sync.who.role!=="viewer"){ sync.version=0; sync.base=null; push(); }
+    else setSync("Nothing shared yet","offline");
+    return;
+  }
+  sync.lastBy=remote.updatedBy; sync.lastAt=remote.updatedAt;
+  if(remote.version===sync.version){ if(!sync.timer && !sync.inflight) setSync("Synced","saved"); return; }
+  const local = docData();
+  const merged = merge3(local, sync.base, remote.data);
+  const n = applyChanges(merged);
+  sync.version = remote.version; sync.base = clone(remote.data); saveMeta();
+  if(!same(merged, remote.data) && sync.who.role!=="viewer") schedulePush(0);
+  else setSync("Synced","saved");
+  if(n && remote.updatedBy && remote.updatedBy!==sync.who.name) toast(`Updated with changes from ${remote.updatedBy}`);
+}
+
+function schedulePush(delay=2500){
+  if(!sync.who || sync.who.role==="viewer") return;
+  setSync("Syncing…",""); clearTimeout(sync.timer);
+  sync.timer=setTimeout(()=>{ sync.timer=null; push(); }, delay);
+}
+async function push(){
+  if(!sync.who || sync.who.role==="viewer") return;
+  if(sync.inflight){ sync.again=true; return; }
+  sync.inflight=true;
+  const sent = docData();
+  try{
+    const res = await api("/doc",{method:"PUT", body:JSON.stringify({baseVersion:sync.version, data:sent})});
+    if(res.ok){
+      const r = await res.json();
+      sync.version=r.version; sync.base=sent; sync.lastBy=r.updatedBy; sync.lastAt=r.updatedAt; saveMeta();
+      setSync("Synced "+new Date(r.updatedAt).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}),"saved");
+    } else if(res.status===409){
+      const current = await res.json();
+      applyChanges(merge3(docData(), sync.base, current.data));
+      sync.version=current.version; sync.base=clone(current.data); saveMeta();
+      if(current.updatedBy && current.updatedBy!==sync.who.name) toast(`Merged with changes from ${current.updatedBy}`);
+      sync.again=true;
+    } else if(res.status===401){ sync.inflight=false; return lostAccess(); }
+    else if(res.status===403){ sync.who.role="viewer"; applyReadOnly(); setSync("View only","offline"); }
+    else setSync("Sync error ("+res.status+")","warn");
+  }catch(e){
+    setSync("Offline. Saved on this device","offline");
+    clearTimeout(sync.retry); sync.retry=setTimeout(()=>push(),15000);
+  }finally{
+    sync.inflight=false;
+    if(sync.again){ sync.again=false; push(); }
+  }
+}
+
+function lostAccess(){
+  sync.who=null; applyReadOnly(); updateShareUI();
+  statusEl.textContent="Access code not accepted. Open Sharing to sign in."; statusEl.className="status warn";
+}
+async function connect(){
+  if(!sync.code){ sync.who=null; updateShareUI(); return false; }
+  setSync("Connecting…","");
+  let res;
+  try{ res = await api("/whoami"); }
+  catch(e){ statusEl.textContent="Offline. Saved on this device"; statusEl.className="status offline"; return false; }
+  if(res.status===401){ lostAccess(); return false; }
+  if(!res.ok){ statusEl.textContent="Sync error ("+res.status+")"; statusEl.className="status warn"; return false; }
+  sync.who = await res.json();
+  applyReadOnly(); updateShareUI();
+  await pull();
+  return true;
+}
+function applyReadOnly(){
+  const ro = !!(sync.who && sync.who.role==="viewer");
+  document.body.classList.toggle("readonly", ro);
+  main.querySelectorAll("input,select,textarea,button[data-add],button[data-del],.actbtn").forEach(el=>{ el.disabled = ro || (el.id==="pickMap" && !(state.address||"").trim()); });
+  document.getElementById("restoreBtn").disabled = ro;
+}
+setInterval(()=>{ if(document.visibilityState==="visible" && !sync.timer) pull(); }, 20000);
+document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible") pull(); });
+window.addEventListener("online", ()=>{ if(sync.who) push(); else connect(); });
+
+/* ---------- sharing dialog ---------- */
+const shareDlg=document.getElementById("shareDlg");
+const ROLE_LABEL={owner:"owner",editor:"editor",viewer:"viewer"};
+let people=null, peopleDirty=false;
+function updateShareUI(){
+  const line=document.getElementById("whoLine");
+  if(sync.who){ line.textContent=`Signed in as ${sync.who.name} (${ROLE_LABEL[sync.who.role]}).`; line.className="who"; }
+  else if(sync.code){ line.textContent="Signed out. This code wasn't accepted, or the sync service couldn't be reached."; line.className="who err"; }
+  else { line.textContent="Not signed in. Changes are saved on this device only."; line.className="who"; }
+  document.getElementById("signInRow").hidden=!!sync.who;
+  document.getElementById("signOutRow").hidden=!sync.who;
+  document.getElementById("peopleSec").hidden=!(sync.who && sync.who.role==="owner");
+}
+document.getElementById("shareBtn").onclick=async()=>{
+  updateShareUI(); shareDlg.showModal();
+  if(sync.who && sync.who.role==="owner") loadPeople();
+};
+document.getElementById("shareClose").onclick=()=>{
+  if(peopleDirty && !confirmClose()) return;
+  shareDlg.close();
+};
+let closeArmed=false;
+function confirmClose(){
+  if(closeArmed){ closeArmed=false; return true; }
+  closeArmed=true; peopleMsg("Unsaved changes to people. Click Close again to discard.",true);
+  setTimeout(()=>closeArmed=false,4000); return false;
+}
+document.getElementById("signIn").onclick=async()=>{
+  const v=document.getElementById("codeInput").value.trim(); if(!v) return;
+  sync.code=v;
+  // a new identity on this device: don't treat the old base as shared history
+  sync.version=0; sync.base=null; saveMeta();
+  const ok = await connect();
+  if(ok){ try{ localStorage.setItem(CODE_KEY,v); }catch(e){} document.getElementById("codeInput").value="";
+          toast("Signed in"); if(sync.who.role==="owner") loadPeople(); }
+  else { sync.code=""; updateShareUI(); }
+};
+document.getElementById("codeInput").addEventListener("keydown",e=>{ if(e.key==="Enter") document.getElementById("signIn").click(); });
+document.getElementById("signOut").onclick=()=>{
+  try{ localStorage.removeItem(CODE_KEY); }catch(e){}
+  sync.code=""; sync.who=null; people=null; applyReadOnly(); updateShareUI(); showSaved();
+  statusEl.className="status"+(state._savedAt?" saved":""); toast("Signed out on this device");
+};
+
+function peopleMsg(t,err){ const m=document.getElementById("peopleMsg"); m.textContent=t||""; m.classList.toggle("err",!!err); }
+async function loadPeople(){
+  peopleMsg("Loading…");
+  try{
+    const r=await api("/users"); if(!r.ok) throw new Error(r.status);
+    people=await r.json(); peopleDirty=false; renderPeople(); peopleMsg("");
+  }catch(e){ peopleMsg("Couldn't load the people list.",true); }
+}
+function renderPeople(){
+  const body=document.getElementById("peopleBody");
+  body.innerHTML = (people||[]).length ? people.map((p,i)=>`<tr>
+    <td>${esc(p.name)}</td>
+    <td><select data-pi="${i}" aria-label="Role for ${esc(p.name)}"><option value="editor"${p.role==="editor"?" selected":""}>Editor</option><option value="viewer"${p.role==="viewer"?" selected":""}>Viewer</option></select></td>
+    <td class="codecell">${esc(p.code)} <button class="btn small" data-copy="${i}">Copy</button></td>
+    <td class="rm"><button class="x" data-rmp="${i}" aria-label="Remove ${esc(p.name)}">×</button></td></tr>`).join("")
+    : `<tr><td colspan="4" style="color:var(--muted)">No one else has access yet. Add a person below.</td></tr>`;
+  document.getElementById("savePeople").disabled=!peopleDirty;
+}
+const WORDS=["oak","ember","ridge","creek","madrone","manzanita","bunchgrass","fescue","buckeye","toyon","ceanothus","laurel","tanoak","redwood","yarrow","sage","willow","alder","coyote","heron","quail","cedar","fir","lupine","poppy","thatch","drip","torch","ash","smoke","canyon","meadow","hollow","spring","granite","clover"];
+function makeCode(){
+  const r=new Uint32Array(3); crypto.getRandomValues(r);
+  const w1=r[0]%WORDS.length, w2=(w1+1+(r[1]%(WORDS.length-1)))%WORDS.length;
+  return `${WORDS[w1]}-${WORDS[w2]}-${10+(r[2]%90)}`;
+}
+document.getElementById("addPerson").onclick=()=>{
+  const name=document.getElementById("newName").value.trim();
+  if(!name){ peopleMsg("Enter a name first.",true); return; }
+  let code; do{ code=makeCode(); }while((people||[]).some(p=>p.code===code));
+  people=people||[]; people.push({name, role:document.getElementById("newRole").value, code});
+  document.getElementById("newName").value=""; peopleDirty=true; renderPeople();
+  peopleMsg(`Added ${name}. Save changes to activate the code.`);
+};
+document.getElementById("newName").addEventListener("keydown",e=>{ if(e.key==="Enter") document.getElementById("addPerson").click(); });
+document.getElementById("peopleBody").addEventListener("change",e=>{
+  const i=e.target.dataset.pi; if(i==null) return; people[+i].role=e.target.value; peopleDirty=true; renderPeople();
+});
+document.getElementById("peopleBody").addEventListener("click",async e=>{
+  const c=e.target.closest("[data-copy]"), r=e.target.closest("[data-rmp]");
+  if(c){ try{ await navigator.clipboard.writeText(people[+c.dataset.copy].code); toast("Code copied"); }catch(err){ toast("Select the code to copy it"); } }
+  if(r){ people.splice(+r.dataset.rmp,1); peopleDirty=true; renderPeople(); peopleMsg("Save changes to revoke access."); }
+});
+document.getElementById("savePeople").onclick=async()=>{
+  peopleMsg("Saving…");
+  try{
+    const r=await api("/users",{method:"PUT", body:JSON.stringify(people)});
+    if(!r.ok) throw new Error(await r.text());
+    peopleDirty=false; renderPeople(); peopleMsg("Saved."); toast("People updated");
+  }catch(e){ peopleMsg("Couldn't save: "+(e.message||"network error"),true); }
+};
+
 /* ---------- markdown ---------- */
 function mdEsc(s){ return String(s??"").replace(/\|/g,"\\|").replace(/\n+/g," "); }
 function mdTable(cols,rows){
@@ -1417,12 +1708,12 @@ restoreFile.onchange=async()=>{
   try{
     const data=JSON.parse(await file.text());
     if(typeof data!=="object"||Array.isArray(data)) throw new Error();
-    state=data; saveNow(); renderAll(); toast("Backup restored");
+    state=data; saveNow(); renderAll(); applyReadOnly(); schedulePush(); toast("Backup restored");
   }catch(e){ toast("That file isn't a worksheet backup"); }
   restoreFile.value="";
 };
 
-renderAll(); applyTips(); showSaved();
+renderAll(); applyTips(); showSaved(); applyReadOnly(); connect();
 })();
 </script>
 </body>
