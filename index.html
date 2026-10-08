@@ -736,8 +736,8 @@ body.readonly .ro-banner{display:block}
 <header class="top">
   <div class="top-inner">
     <div class="title">
-      <h1 id="docTitle">Smoke Management Plan worksheet</h1>
-      <p>Mendocino County AQMD. Saves in this browser as you type.</p>
+      <h1 id="docTitle">Yorkville Schoolhouse Ranch 2026 Prescribed Burn</h1>
+      <p>Mendocino County AQMD. Saves as you type.</p>
     </div>
     <span class="status" id="status">Not saved yet</span>
     <div class="actions">
@@ -1187,7 +1187,6 @@ function updateDerived(){
     const c=toc.querySelector(`[data-count="${s.id}"]`), b=toc.querySelector(`[data-bar="${s.id}"]`);
     if(c) c.textContent = `${done}/${total}`; if(b) b.style.width = (total?done/total*100:0)+"%";
   });
-  const h = document.getElementById("docTitle"); h.textContent = state.name ? state.name : "Smoke Management Plan worksheet";
 }
 
 /* ---------- events ---------- */
