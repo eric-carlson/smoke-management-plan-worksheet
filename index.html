@@ -1259,23 +1259,32 @@ const toc = document.getElementById("toc");
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 let uid=0;
 
+/* Autofill tokens for the applicant's own contact details. Every other field opts out,
+   so Safari and other browsers don't guess from nearby labels and fill the wrong box. */
+const AUTOFILL = {
+  org:"organization", permittee:"name", repTitle:"organization-title",
+  landownerAddr:"address-line1", mailCity:"address-level2", mailState:"address-level1", mailZip:"postal-code",
+  repPhone:"tel", phone24:"mobile tel", email:"email"
+};
 function control(f){
   const id = "f_"+f.k; const v = state[f.k] ?? "";
+  const ac = ` name="${f.k}" autocomplete="${AUTOFILL[f.k] ? "section-applicant "+AUTOFILL[f.k] : "off"}"`;
   if(f.type==="computed") return `<input id="${id}" type="text" readonly class="computed" aria-describedby="${id}_c" value="${esc(computedVal(f.k))}"><span class="fieldmsg" id="${id}_c">Calculated from the emissions estimate</span>`;
-  if(f.type==="textarea") return `<textarea id="${id}" data-k="${f.k}">${esc(v)}</textarea>`;
+  if(f.type==="textarea") return `<textarea id="${id}" data-k="${f.k}"${ac}>${esc(v)}</textarea>`;
   if(f.type==="select"){
     const legacy = v && !f.opts.includes(v) ? `<option value="${esc(v)}" selected>${esc(v)} (not on the 2024 form, choose another)</option>` : "";
-    return `<select id="${id}" data-k="${f.k}"><option value=""></option>${legacy}${f.opts.map(o=>`<option${o===v?" selected":""}>${esc(o)}</option>`).join("")}</select>`;
+    return `<select id="${id}" data-k="${f.k}"${ac}><option value=""></option>${legacy}${f.opts.map(o=>`<option${o===v?" selected":""}>${esc(o)}</option>`).join("")}</select>`;
   }
   const t = f.type || "text";
   const extra = t==="number" ? ' step="any" inputmode="decimal"' : "";
-  return `<input id="${id}" type="${t}" data-k="${f.k}" value="${esc(v)}"${extra}>`;
+  const inputmode = AUTOFILL[f.k]==="postal-code" ? ' inputmode="numeric"' : "";
+  return `<input id="${id}" type="${t}" data-k="${f.k}" value="${esc(v)}"${extra}${ac}${inputmode}>`;
 }
 
 function tableHTML(f){
   const rows = state[f.k] || [];
   const head = f.cols.map(c=>`<th scope="col">${esc(c.label)}</th>`).join("") + `<th scope="col"><span class="sr" style="position:absolute;left:-9999px">Remove</span></th>`;
-  const body = rows.map((r,i)=>`<tr>${f.cols.map(c=>`<td data-label="${esc(c.label)}"><input type="text" aria-label="${esc(c.label)}, row ${i+1}" data-t="${f.k}" data-r="${i}" data-c="${c.k}" value="${esc(r[c.k])}"></td>`).join("")}<td class="rm"><button class="x" data-del="${f.k}" data-r="${i}" aria-label="Remove row ${i+1}">×</button></td></tr>`).join("");
+  const body = rows.map((r,i)=>`<tr>${f.cols.map(c=>`<td data-label="${esc(c.label)}"><input type="text" autocomplete="off" aria-label="${esc(c.label)}, row ${i+1}" data-t="${f.k}" data-r="${i}" data-c="${c.k}" value="${esc(r[c.k])}"></td>`).join("")}<td class="rm"><button class="x" data-del="${f.k}" data-r="${i}" aria-label="Remove row ${i+1}">×</button></td></tr>`).join("");
   return `<div class="table-wrap"><table class="stack"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>
     <div class="tbl-foot"><button class="btn small" data-add="${f.k}">Add row</button></div>`;
 }
@@ -1622,13 +1631,13 @@ document.getElementById("modeUnit").onclick=()=>toggleMode("unit");
 
 /* ---------- drawing ---------- */
 function drawSaved(){
-  if(!map) return;
+  if(!map || !map._loaded) return;
   savedLayer.clearLayers();
   if(hasUnit() && mapMode!=="unit")
     L.polygon(state.unitPoly,{color:FIRE,weight:3,fillColor:FIRE,fillOpacity:.18,interactive:false}).addTo(savedLayer);
 }
 function drawTmp(rebuildHandles){
-  if(!map) return;
+  if(!map || !map._loaded) return;
   drawLayer.clearLayers();
   if(mapMode!=="unit"){ handleLayer.clearLayers(); return; }
   if(tmpPts.length>=2) L.polyline(tmpPts,{color:FIRE,weight:3,interactive:false}).addTo(drawLayer);
@@ -1723,11 +1732,13 @@ async function openMap(mode){
   if(la!=null&&lo!=null){
     if(marker) marker.setLatLng([la,lo]); else marker=L.circleMarker([la,lo],{radius:9,color:"#ffffff",weight:3,fillColor:FIRE,fillOpacity:1}).addTo(map);
   }
-  setMode(mode||"browse");
+  // Give the map a view before any shapes are added: Leaflet can't place a polygon on a map
+  // that has no center yet, and the failed add leaves its renderer broken for the session.
   // Prefer the saved outline, then saved coordinates: street-address geocoding is unreliable on rural roads
-  if(hasUnit()) map.fitBounds(L.polygon(state.unitPoly).getBounds(),{padding:[40,40],maxZoom:18});
+  if(hasUnit()) map.fitBounds(L.latLngBounds(state.unitPoly),{padding:[40,40],maxZoom:18});
   else if(la!=null&&lo!=null) map.setView([la,lo],17);
-  else centerOn(state.address);
+  else { map.setView([38.9,-123.2],12); centerOn(state.address); }
+  setMode(mode||"browse");
   setTimeout(()=>{ if(!tilesOk && mapDlg.open) showFallback(); },6000);
 }
 document.getElementById("mapFind").onclick=()=>{ if(map && mapFallback.hidden) centerOn(document.getElementById("mapSearch").value); else showFallback(); };
