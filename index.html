@@ -781,6 +781,9 @@ input.computed{background:transparent;border-style:dashed;font-variant-numeric:t
 .unit-sum{margin-left:auto;font-size:.875rem;color:var(--muted);font-variant-numeric:tabular-nums}
 .foot-btns{display:flex;gap:8px;flex-wrap:wrap}
 .vtx{width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid #A3261C;box-shadow:0 0 0 1px rgba(0,0,0,.35);cursor:grab}
+.whandle{width:22px;height:22px;border-radius:50%;background:#2F6FB0;border:3px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.4);cursor:grab;display:flex;align-items:center;justify-content:center;color:#fff;font:700 10px/1 system-ui,sans-serif}
+.whandle.ideal{background:#fff;border-color:#2F6FB0;color:#2F6FB0}
+.wlabel{font:700 12px/1.2 "Public Sans",system-ui,sans-serif;color:#fff;text-shadow:0 0 3px #000,0 0 3px #000;white-space:nowrap}
 .vtx.first{background:#A3261C;border-color:#fff}
 .leaflet-tooltip.closetip{font:600 12px/1.2 "Public Sans",system-ui,sans-serif;padding:3px 6px}
 #map.drawing{cursor:crosshair}
@@ -876,6 +879,7 @@ body.readonly .ro-banner{display:block}
   <div class="map-modes" role="toolbar" aria-label="Map mode">
     <button class="btn small modebtn" id="modeLoc" aria-pressed="false" title="Click the map to set the burn location's latitude and longitude. Click again to leave this mode.">Set location</button>
     <button class="btn small modebtn" id="modeUnit" aria-pressed="false" title="Click corners to outline the burn unit. Fills in project area and elevations. Click again to leave this mode.">Draw burn unit</button>
+    <button class="btn small modebtn" id="modeWind" aria-pressed="false" title="Set the permissible wind directions: drag the handles to set the acceptable range and the preferred direction. Fills in the Section B surface wind fields. Click again to leave this mode.">Wind directions</button>
     <span class="unit-sum" id="unitSum"></span>
   </div>
   <div class="map-msg" id="mapMsg" hidden></div>
@@ -895,6 +899,10 @@ body.readonly .ro-banner{display:block}
       <button class="btn" id="unitUndo" title="Remove the most recent corner (Backspace)">Undo corner</button>
       <button class="btn" id="unitRestart" title="Remove all corners and start the outline again">Start over</button>
       <button class="btn primary" id="unitFinish" title="Save the outline (Enter, double-click, or click the first corner)">Finish unit</button>
+    </span>
+    <span class="foot-btns" id="windBtns" hidden>
+      <button class="btn" id="windClear" title="Remove the wind directions from the map. The Section B fields are left as they are.">Clear</button>
+      <button class="btn primary" id="windSave" title="Save the wind directions and fill in the Section B surface wind fields">Save wind directions</button>
     </span>
     <span class="foot-btns" id="browseBtns" hidden><button class="btn" id="unitDelete" title="Remove the saved unit outline. Project area and elevations are left as they are.">Delete unit outline</button></span>
   </div>
@@ -1139,7 +1147,7 @@ const TIPS = {
  intensity:"Low: fire backs or creeps through grass and litter with short flames and little lofted smoke. High: hotter fire, taller flames, smoke column. Most understory burns are low.",
  drying:"Time since the last significant rain and how dry fuels will be at ignition. Wet fuels smolder and smoke more. Note heavy fuels like downed logs that will burn longer.",
  objectives:"What the burn should accomplish, in measurable terms. Copy these from the burn plan.",
- ssaList:"Places where people could be affected by smoke: roads, homes, towns, schools, hospitals, campgrounds. Give straight-line distance in miles and compass direction from the unit.",
+ ssaList:"Calculate distances looks up each area by name and fills in distance and direction from the burn unit's center. Rows it can't find, like a highway or neighbors, stay as entered. Places where people could be affected by smoke: roads, homes, towns, schools, hospitals, campgrounds. Give straight-line distance in miles and compass direction from the unit.",
  dayTravel:"Where smoke is expected to go during the day, based on forecast winds. Daytime heating usually lifts smoke and carries it with the prevailing wind. Show the path on the map.",
  nightTravel:"Where smoke goes after sunset. Cool air drains downhill and pools in valleys, carrying residual smoke. Name the drainages, roads, and homes it would reach.",
  mapRef:"Page or figure number of the attached map showing the unit, sensitive areas, smoke paths, and sign locations.",
@@ -1153,7 +1161,7 @@ const TIPS = {
  signage:"Where warning signs will be placed, usually on roads where smoke could reduce visibility. Mark them on the map.",
  adjDistricts:"Air districts in neighboring counties that smoke could reach. MCAQMD coordinates with them. Northern Sonoma County APCD covers Cloverdale.",
  surfDirIdeal:"Ground-level wind direction that carries smoke away from sensitive areas. Give the direction the wind blows from, e.g. \"SW\".",
- surfDirRange:"Range of surface wind directions you'd still burn in, e.g. \"SW to NW\". Outside this range you don't ignite, or you stop.",
+ surfDirRange:"Set this by dragging the wedge in the map's Wind directions mode, or type it. Range of surface wind directions you'd still burn in, e.g. \"SW to NW\". Outside this range you don't ignite, or you stop.",
  surfSpdIdeal:"Best ground-level wind speed for your fire behavior and smoke goals, in mph.",
  surfSpdRange:"Lowest and highest acceptable surface wind speeds. Too little wind lets smoke pool. Too much makes fire harder to hold.",
  transDirIdeal:"Wind direction a few thousand feet up, which carries smoke once it rises. Comes from the fire weather forecast or a spot forecast.",
@@ -1286,7 +1294,7 @@ function tableHTML(f){
   const head = f.cols.map(c=>`<th scope="col">${esc(c.label)}</th>`).join("") + `<th scope="col"><span class="sr" style="position:absolute;left:-9999px">Remove</span></th>`;
   const body = rows.map((r,i)=>`<tr>${f.cols.map(c=>`<td data-label="${esc(c.label)}"><input type="text" autocomplete="off" aria-label="${esc(c.label)}, row ${i+1}" data-t="${f.k}" data-r="${i}" data-c="${c.k}" value="${esc(r[c.k])}"></td>`).join("")}<td class="rm"><button class="x" data-del="${f.k}" data-r="${i}" aria-label="Remove row ${i+1}">×</button></td></tr>`).join("");
   return `<div class="table-wrap"><table class="stack"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>
-    <div class="tbl-foot"><button class="btn small" data-add="${f.k}">Add row</button></div>`;
+    <div class="tbl-foot"><button class="btn small" data-add="${f.k}">Add row</button>${f.k==="ssaList"?` <button class="btn small" id="calcDist" title="Look up each area by name and fill in its straight-line distance and compass direction from the burn unit">Calculate distances</button> <span class="fieldmsg" id="distMsg" aria-live="polite"></span>`:""}</div>`;
 }
 
 function emissionsHTML(){
@@ -1600,6 +1608,7 @@ async function centerOn(q){
 
 /* ---------- modes ---------- */
 const BANNERS={
+  wind:"Drag A and B to set the range of directions the wind may blow FROM (clockwise from A to B). Drag the star to the preferred direction. The gray wedge shows where smoke will go.",
   browse:"Choose Set location or Draw burn unit above.",
   loc:"Click the map to place the burn location. Click Set location again to stop.",
   unit:"Click to add corners around the unit. Drag a corner to move it. Finish with Enter, a double-click, or by clicking the first corner. Escape cancels."
@@ -1613,6 +1622,13 @@ function setMode(m){
   mapMode=m;
   document.getElementById("modeLoc").setAttribute("aria-pressed",String(m==="loc"));
   document.getElementById("modeUnit").setAttribute("aria-pressed",String(m==="unit"));
+  document.getElementById("modeWind").setAttribute("aria-pressed",String(m==="wind"));
+  document.getElementById("windBtns").hidden = m!=="wind";
+  if(m==="wind"){
+    if(!unitCenter()){ mapMode="browse"; document.getElementById("modeWind").setAttribute("aria-pressed","false"); document.getElementById("windBtns").hidden=true;
+      readout("Set the burn location or draw the unit first."); return; }
+    windTmp = state.wind ? {...state.wind} : {from:200,to:290,ideal:245};
+  }
   document.getElementById("locBtns").hidden = m!=="loc";
   document.getElementById("unitBtns").hidden = m!=="unit";
   document.getElementById("browseBtns").hidden = !(m==="browse" && hasUnit());
@@ -1623,11 +1639,13 @@ function setMode(m){
   if(m==="loc"){ picked=null; mapUse.disabled=true; readout(fromDMM(state.lat)!=null ? `Current: ${state.lat}, ${state.lon}` : "Click the map to place the point."); }
   if(m==="browse" && !mapReadout.dataset.keep) readout("");
   delete mapReadout.dataset.keep;
-  modeBanner(); drawSaved(); drawTmp(true); unitSummary();
+  modeBanner(); drawSaved(); drawTmp(true); unitSummary(); drawWind(m==="wind");
+  if(m==="wind") windReadout();
 }
 const toggleMode = m => setMode(mapMode===m ? "browse" : m);
 document.getElementById("modeLoc").onclick=()=>toggleMode("loc");
 document.getElementById("modeUnit").onclick=()=>toggleMode("unit");
+document.getElementById("modeWind").onclick=()=>toggleMode("wind");
 
 /* ---------- drawing ---------- */
 function drawSaved(){
@@ -1701,6 +1719,131 @@ mapDlg.addEventListener("keydown", e=>{
   if(mapMode==="unit" && (e.key==="Backspace"||e.key==="Delete")){ e.preventDefault(); document.getElementById("unitUndo").click(); }
 });
 
+/* ---------- shared geometry helpers ---------- */
+const PTS16=["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+const compass = d => PTS16[Math.round(((d%360)+360)%360/22.5)%16];
+const norm = d => ((d%360)+360)%360;
+function unitCenter(){
+  if(hasUnit()){ const n=state.unitPoly.length;
+    return [state.unitPoly.reduce((a,p)=>a+p[0],0)/n, state.unitPoly.reduce((a,p)=>a+p[1],0)/n]; }
+  const la=fromDMM(state.lat), lo=fromDMM(state.lon);
+  return (la!=null&&lo!=null) ? [la,lo] : null;
+}
+function bearing(a,b){
+  const r=Math.PI/180, y=Math.sin((b[1]-a[1])*r)*Math.cos(b[0]*r),
+        x=Math.cos(a[0]*r)*Math.sin(b[0]*r)-Math.sin(a[0]*r)*Math.cos(b[0]*r)*Math.cos((b[1]-a[1])*r);
+  return norm(Math.atan2(y,x)/r);
+}
+function miles(a,b){
+  const r=Math.PI/180, dl=(b[0]-a[0])*r, dn=(b[1]-a[1])*r;
+  const h=Math.sin(dl/2)**2+Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dn/2)**2;
+  return 3958.8*2*Math.asin(Math.sqrt(h));
+}
+function destPt(c,brg,m){
+  const R=6371000, r=Math.PI/180, d=m/R, t=brg*r, la=c[0]*r, lo=c[1]*r;
+  const la2=Math.asin(Math.sin(la)*Math.cos(d)+Math.cos(la)*Math.sin(d)*Math.cos(t));
+  const lo2=lo+Math.atan2(Math.sin(t)*Math.sin(d)*Math.cos(la),Math.cos(d)-Math.sin(la)*Math.sin(la2));
+  return [la2/r,lo2/r];
+}
+
+/* ---------- wind directions ----------
+   Stored as directions the wind blows FROM (meteorological convention), in degrees:
+   state.wind = {from, to, ideal}; the acceptable range runs clockwise from "from" to "to". */
+let windTmp=null, windLayer=null, windHandles=null;
+const span = (a,b) => norm(b-a);
+const inRange = (d,w) => span(w.from,d) <= span(w.from,w.to);
+function windRadius(){
+  if(!map) return 400;
+  const b=map.getBounds(), c=map.getCenter();
+  return Math.max(150, Math.min(c.distanceTo([b.getNorth(),c.lng]), c.distanceTo([c.lat,b.getEast()]))*0.55);
+}
+function wedge(c,a,b,r,steps=40){
+  const pts=[c], s=span(a,b);
+  for(let i=0;i<=steps;i++) pts.push(destPt(c, a+s*i/steps, r));
+  return pts;
+}
+function windText(w){ return `${compass(w.from)} (${Math.round(w.from)}°) clockwise to ${compass(w.to)} (${Math.round(w.to)}°)`; }
+function drawWind(withHandles){
+  if(!map || !map._loaded) return;
+  // withHandles: true = redraw handles, false = remove them, null = leave them (during a drag)
+  windLayer.clearLayers(); if(withHandles!==null) windHandles.clearLayers();
+  const w = mapMode==="wind" ? windTmp : state.wind, c=unitCenter();
+  if(!w || !c) return;
+  const r=windRadius();
+  // upwind wedge: where acceptable winds come from
+  L.polygon(wedge(c,w.from,w.to,r),{color:"#2F6FB0",weight:2,fillColor:"#2F6FB0",fillOpacity:.22,interactive:false}).addTo(windLayer);
+  // downwind wedge: where the smoke goes
+  L.polygon(wedge(c,w.from+180,w.to+180,r*0.8),{color:"#7a7a7a",weight:1,dashArray:"5 5",fillColor:"#9a9a9a",fillOpacity:.25,interactive:false}).addTo(windLayer);
+  L.polyline([destPt(c,w.ideal,r),c,destPt(c,w.ideal+180,r*0.8)],{color:"#2F6FB0",weight:3,interactive:false}).addTo(windLayer);
+  const lbl=(pt,t)=>L.marker(pt,{interactive:false,icon:L.divIcon({className:"",html:`<span class="wlabel">${t}</span>`,iconSize:null})}).addTo(windLayer);
+  lbl(destPt(c,w.from+span(w.from,w.to)/2,r*0.6),"Wind from");
+  lbl(destPt(c,w.from+180+span(w.from,w.to)/2,r*0.5),"Smoke");
+  if(withHandles){
+    [["from","A"],["to","B"],["ideal","★"]].forEach(([k,t])=>{
+      const h=L.marker(destPt(c,w[k],r),{draggable:true,keyboard:false,
+        icon:L.divIcon({className:"",html:`<div class="whandle${k==="ideal"?" ideal":""}">${t}</div>`,iconSize:[22,22],iconAnchor:[11,11]})}).addTo(windHandles);
+      h.on("drag",ev=>{
+        const ll=ev.target.getLatLng(); windTmp[k]=Math.round(bearing(c,[ll.lat,ll.lng]));
+        if(k!=="ideal" && !inRange(windTmp.ideal,windTmp)) windTmp.ideal=norm(windTmp.from+span(windTmp.from,windTmp.to)/2);
+        if(k==="ideal" && !inRange(windTmp.ideal,windTmp)) windTmp.ideal = span(windTmp.to,windTmp.ideal)<span(windTmp.ideal,windTmp.from)?windTmp.to:windTmp.from;
+        drawWind(null); windReadout();
+      });
+      h.on("dragend",()=>drawWind(true));
+    });
+  }
+}
+function windReadout(){
+  if(!windTmp) return;
+  readout(`Acceptable: ${windText(windTmp)}. Preferred: ${compass(windTmp.ideal)} (${Math.round(windTmp.ideal)}°).`);
+}
+document.getElementById("windSave").onclick=()=>{
+  if(!windTmp) return;
+  state.wind={...windTmp};
+  setField("surfDirRange", windText(state.wind));
+  setField("surfDirIdeal", `${compass(state.wind.ideal)} (${Math.round(state.wind.ideal)}°)`);
+  mapReadout.dataset.keep="1"; setMode("browse");
+  readout(`Wind directions saved. Section B surface wind fields updated.`); toast("Wind directions saved");
+};
+document.getElementById("windClear").onclick=()=>{
+  delete state.wind; updateDerived(); scheduleSave();
+  windTmp={from:200,to:290,ideal:245}; drawWind(true); windReadout();
+  mapReadout.dataset.keep="1"; setMode("browse"); readout("Wind directions removed from the map.");
+};
+
+/* ---------- distances to smoke sensitive areas ---------- */
+async function geocodeNear(q,c){
+  const vb=[c[1]-0.6,c[0]+0.5,c[1]+0.6,c[0]-0.5].join(",");
+  try{
+    const r=await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=us&viewbox=${vb}&bounded=1&q=${encodeURIComponent(q)}`,{headers:{"Accept":"application/json"}});
+    if(!r.ok) return null; const j=await r.json(); return j[0]?[+j[0].lat,+j[0].lon]:null;
+  }catch(e){ return null; }
+}
+main.addEventListener("click", async e=>{
+  if(e.target.id!=="calcDist" || isRO()) return;
+  const btn=e.target, msg=()=>document.getElementById("distMsg");
+  const c=unitCenter();
+  if(!c){ msg().textContent="Set the burn location or draw the unit first."; msg().classList.add("err"); return; }
+  btn.disabled=true;
+  const rows=state.ssaList||[], skipped=[]; let done=0;
+  for(let i=0;i<rows.length;i++){
+    const name=String(rows[i].area||"").replace(/\(.*?\)/g,"").trim();
+    if(!name){ continue; }
+    if(msg()) msg().textContent=`Looking up ${name}…`;
+    const g=await geocodeNear(name+", California",c);
+    if(g){
+      const d=miles(c,g);
+      rows[i].dist = d<0.1 ? "<0.1" : d.toFixed(d<10?1:0);
+      rows[i].dir = d<0.1 ? "Adjacent" : compass(bearing(c,g));
+      done++;
+    } else skipped.push(name);
+    await new Promise(r=>setTimeout(r,1100));   // Nominatim allows one request per second
+  }
+  rerenderSection("ssa"); scheduleSave();
+  const m=document.getElementById("distMsg");
+  if(m){ m.classList.toggle("err",!done);
+    m.textContent = `Updated ${done} row${done===1?"":"s"}.` + (skipped.length?` No map match, left as entered: ${skipped.join(", ")}.`:""); }
+});
+
 /* ---------- open ---------- */
 async function openMap(mode){
   document.getElementById("mapSearch").value=state.address||"";
@@ -1717,7 +1860,9 @@ async function openMap(mode){
     [sat,topo].forEach(l=>{ l.on("tileload",()=>{tilesOk=true;}); l.on("tileerror",()=>{tileErrs++;}); });
     sat.addTo(map);
     L.control.layers({"Satellite":sat,"Topo":topo},null,{collapsed:false}).addTo(map);
-    savedLayer=L.layerGroup().addTo(map); drawLayer=L.layerGroup().addTo(map); handleLayer=L.layerGroup().addTo(map);
+    savedLayer=L.layerGroup().addTo(map); windLayer=L.layerGroup().addTo(map); drawLayer=L.layerGroup().addTo(map);
+    handleLayer=L.layerGroup().addTo(map); windHandles=L.layerGroup().addTo(map);
+    map.on("zoomend",()=>drawWind(mapMode==="wind"));
     map.on("click",ev=>{
       if(mapMode==="loc"){
         if(marker) marker.setLatLng(ev.latlng);
@@ -1946,7 +2091,7 @@ main.addEventListener("pointerdown", e=>{ if(isRO() && e.target.matches && e.tar
 main.addEventListener("click", e=>{
   if(!isRO()) return;
   const t=e.target;
-  if((t.matches && t.matches("input[type=checkbox]")) || t.closest("[data-add],[data-del],.actbtn")){
+  if((t.matches && t.matches("input[type=checkbox]")) || t.closest("[data-add],[data-del],.actbtn,#calcDist")){
     e.preventDefault(); e.stopImmediatePropagation(); roPrompt();
   }
 }, true);
@@ -2069,7 +2214,7 @@ document.getElementById("savePeople").onclick=async()=>{
 
 /* ---------- history ---------- */
 const historyDlg=document.getElementById("historyDlg");
-const SPECIAL_LABELS={emis:["Emissions estimate","emissions"], unitPoly:["Unit boundary","project"], steps:["Filing checklist","checklist"], notes:["Notes","notes"]};
+const SPECIAL_LABELS={emis:["Emissions estimate","emissions"], unitPoly:["Unit boundary","project"], wind:["Permissible wind directions","rx"], steps:["Filing checklist","checklist"], notes:["Notes","notes"]};
 function fieldInfo(k){
   if(SPECIAL_LABELS[k]) return {label:SPECIAL_LABELS[k][0], sec:SPECIAL_LABELS[k][1]};
   for(const s of SECTIONS){ const f=(s.fields||[]).find(f=>f.k===k); if(f) return {label:f.label||s.title, sec:s.id}; }
@@ -2173,6 +2318,9 @@ function toMarkdown(){
       }
     });
     if(simple.length) md += simple.join("\n")+"\n";
+    if(s.id==="rx" && state.wind){
+      md += `\n### Permissible wind directions\n\nWind from ${windText(state.wind)}. Preferred: ${compass(state.wind.ideal)} (${Math.round(state.wind.ideal)}°). Smoke travels toward ${compass(state.wind.from+180)} to ${compass(state.wind.to+180)}.\n`;
+    }
     if(s.id==="project" && hasUnit()){
       md += `\n### Unit boundary\n\nDrawn on the worksheet map: ${state.unitPoly.length} corners, ${polyAcres(state.unitPoly).toFixed(1)} acres.\n\n| Corner | Latitude | Longitude |\n| --- | --- | --- |\n`;
       state.unitPoly.forEach((p,i)=>{ md += `| ${i+1} | ${toDMM(p[0],true)} | ${toDMM(p[1],false)} |\n`; });
