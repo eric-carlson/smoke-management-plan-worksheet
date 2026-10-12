@@ -866,6 +866,29 @@ input.computed{background:transparent;border-style:dashed;font-variant-numeric:t
 #mapFallback{padding:16px;display:grid;gap:12px;max-width:62ch}
 #mapFallback p{margin:0}
 .leaflet-container{font:inherit}
+.lyr{position:relative}
+.lyr-btn{white-space:nowrap;display:flex;align-items:center;gap:6px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:6px;
+  padding:6px 10px;font:600 .875rem/1.2 "Public Sans",system-ui,sans-serif;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+.lyr-btn svg{width:16px;height:16px}
+.lyr-btn .lyr-hid{font-weight:500;color:var(--muted)}
+.lyr-panel{position:absolute;top:calc(100% + 6px);right:0;width:250px;max-height:var(--lyr-max,360px);overflow-y:auto;background:var(--surface);color:var(--ink);
+  border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.3);padding:10px 12px;font:.875rem/1.4 "Public Sans",system-ui,sans-serif;cursor:auto}
+.lyr-panel[hidden]{display:none}
+.lyr-h{font-weight:700;margin:2px 0 6px}
+.lyr-h + .lyr-seg{margin-bottom:12px}
+.lyr-seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.lyr-seg button{flex:1;white-space:nowrap;border:0;background:var(--field);color:var(--ink);padding:6px 4px;font:inherit;font-size:.8125rem;cursor:pointer}
+.lyr-seg button + button{border-left:1px solid var(--line)}
+.lyr-seg button[aria-pressed="true"]{background:var(--oak);color:#fff;font-weight:600}
+.lyr-row{display:flex;align-items:center;gap:8px;padding:4px 0}
+.lyr-row input{width:16px;height:16px;accent-color:var(--oak);margin:0}
+.lyr-row .sw{width:14px;height:10px;border-radius:2px;flex:none}
+.lyr-row .cnt{margin-left:auto;color:var(--muted);font-variant-numeric:tabular-nums}
+.lyr-row.forced{opacity:.6}
+.lyr-foot{display:flex;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+.lyr-foot button{border:0;background:none;color:var(--oak);font:inherit;font-weight:600;cursor:pointer;padding:2px 0}
+.leaflet-tooltip.flabel{background:rgba(255,255,255,.88);border:0;box-shadow:none;padding:1px 5px;font:600 11px/1.3 "Public Sans",system-ui,sans-serif;color:#1c2420}
+.leaflet-tooltip.flabel::before{display:none}
 .status.offline::before,.status.warn::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
 .status.offline::before{background:var(--muted)}
 .status.warn::before{background:var(--accent)}
@@ -1937,7 +1960,7 @@ function setMode(m){
   if(m==="loc"){ picked=null; mapUse.disabled=true; readout(fromDMM(state.lat)!=null ? `Current: ${state.lat}, ${state.lon}` : "Click the map to place the point."); }
   if(m==="browse" && !mapReadout.dataset.keep) readout("");
   delete mapReadout.dataset.keep;
-  modeBanner(); drawSaved(); drawTmp(true); unitSummary(); drawWind(m==="wind"); drawFeatures();
+  modeBanner(); drawSaved(); drawTmp(true); unitSummary(); drawWind(m==="wind"); drawFeatures(); syncMarker(); refreshLayersUi();
   if(m==="feat") readout(featCountText());
   if(m==="wind") windReadout();
 }
@@ -1954,7 +1977,7 @@ document.getElementById("modeFeat").onclick=()=>toggleMode("feat");
 function drawSaved(){
   if(!map || !map._loaded) return;
   savedLayer.clearLayers();
-  if(hasUnit() && mapMode!=="unit")
+  if(hasUnit() && mapMode!=="unit" && layerOn("unit"))
     L.polygon(state.unitPoly,{color:FIRE,weight:3,fillColor:FIRE,fillOpacity:.18,interactive:false}).addTo(savedLayer);
 }
 function drawTmp(rebuildHandles){
@@ -2017,6 +2040,7 @@ mapDlg.addEventListener("cancel", e=>{
   if(mapMode!=="browse"){ e.preventDefault(); setMode("browse"); }
 });
 mapPanel.addEventListener("keydown", e=>{
+  if(e.key==="Escape" && layersOpen()){ e.preventDefault(); closeLayers(); return; }
   if(e.key==="Escape" && mapMode!=="browse"){
     e.preventDefault();
     if(mapMode==="feat" && (featPending || featLine.length || featSel)){ featPending=null; featLine=[]; clearSel(); featUi(); drawFeatures(); readout(featCountText()); }
@@ -2078,7 +2102,7 @@ function drawWind(withHandles){
   if(!map || !map._loaded) return;
   // withHandles: true = redraw handles, false = remove them, null = leave them (during a drag)
   windLayer.clearLayers(); if(withHandles!==null) windHandles.clearLayers();
-  const w = mapMode==="wind" ? windTmp : state.wind, c=unitCenter();
+  const w = mapMode==="wind" ? windTmp : (layerOn("wind") ? state.wind : null), c=unitCenter();
   if(!w || !c) return;
   const r=windRadius();
   // upwind wedge: where acceptable winds come from
@@ -2243,7 +2267,7 @@ function afterFeatChange(msg){
 }
 featAddEl.onclick=()=>featCommit();
 featNameEl.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); featCommit(); } });
-featKindEl.addEventListener("change",()=>{
+featKindEl.addEventListener("change",()=>{ refreshLayersUi();
   const k=FKINDS[featKindEl.value];
   if(!k){ featPending=null; featLine=[]; featPrevKind="select"; featUi(); drawFeatures(); return; }
   if(featSel && featSel.t!==k.t){ featSel=null; featNameEl.value=""; }
@@ -2277,9 +2301,10 @@ function drawFeatures(){
   featLayer.clearLayers(); featTmp.clearLayers();
   const editing = mapMode==="feat";
   lines().forEach(l=>{
+    if(!layerOn(groupOf(l.kind))) return;
     const k=FKINDS[l.kind]||FKINDS.road, sel=featSel && featSel.t==="ln" && featSel.id===l.id;
     const pl=L.polyline(l.pts,{color:k.color,weight:sel?7:4,opacity:.95,dashArray:k.dash||null,interactive:editing})
-      .bindTooltip(`${l.name||k.label} (${fmtLen(lineLenM(l.pts))})`,{sticky:true}).addTo(featLayer);
+      .bindTooltip(showNames() ? (l.name||k.label) : `${l.name||k.label} (${fmtLen(lineLenM(l.pts))})`, showNames()?{permanent:true,direction:"center",className:"flabel"}:{sticky:true}).addTo(featLayer);
     if(editing) pl.on("click",ev=>{ L.DomEvent.stopPropagation(ev);
       if(isLineKind() && !featSel) return featMapClick(ev.latlng);
       if(featKindEl.value!=="select" && !featSel) return featMapClick(ev.latlng);
@@ -2291,9 +2316,10 @@ function drawFeatures(){
     });
   });
   feats().forEach(f=>{
+    if(!layerOn(groupOf(f.kind))) return;
     const sel=featSel && featSel.t==="pt" && featSel.id===f.id;
     const m=L.marker([f.lat,f.lon],{icon:pinIcon(f.kind,sel?"sel":""),draggable:editing,keyboard:false,interactive:editing||mapMode==="browse"})
-      .bindTooltip(f.name||FKINDS[f.kind].label,{direction:"top",offset:[0,-10]}).addTo(featLayer);
+      .bindTooltip(f.name||FKINDS[f.kind].label, showNames()?{permanent:true,direction:"right",offset:[10,0],className:"flabel"}:{direction:"top",offset:[0,-10]}).addTo(featLayer);
     if(editing){
       m.on("click",ev=>{ L.DomEvent.stopPropagation(ev);
         if(isLineKind() && !featSel) return featMapClick(L.latLng(f.lat,f.lon));   // snap the line to this point
@@ -2521,6 +2547,104 @@ document.getElementById("recalcBtn").onclick=async e=>{
 };
 
 /* ---------- open ---------- */
+
+/* ---------- map layers: base map and what shows ----------
+   Visibility is personal (saved in this browser), not shared. The layer you're editing
+   always shows, whatever the setting. */
+let BASES=null, currentBase="Satellite", lyrRoot=null;
+const LAYER_GROUPS=[
+  {k:"unit",label:"Burn unit",color:FIRE,count:()=>hasUnit()?1:0},
+  {k:"wind",label:"Wind and smoke",color:"#2F6FB0",count:()=>state.wind?1:0},
+  {k:"loc",label:"Burn location point",color:FIRE,count:()=>fromDMM(state.lat)!=null?1:0},
+  {k:"access",label:"Gates and access route",color:FKINDS.access.color,count:()=>feats().filter(f=>f.kind==="gate").length+lines().filter(l=>l.kind==="access").length},
+  {k:"control",label:"Control lines",color:FKINDS.road.color,count:()=>lines().filter(l=>CONTROL.includes(l.kind)).length},
+  {k:"water",label:"Water sources",color:FKINDS.water.color,count:()=>feats().filter(f=>f.kind==="water").length},
+  {k:"structure",label:"Structures",color:FKINDS.structure.color,count:()=>feats().filter(f=>f.kind==="structure").length},
+  {k:"medical",label:"Medical point and helispot",color:FKINDS.medical.color,count:()=>feats().filter(f=>f.kind==="medical"||f.kind==="helispot").length},
+  {k:"staging",label:"Staging and signs",color:FKINDS.staging.color,count:()=>feats().filter(f=>f.kind==="staging"||f.kind==="sign").length},
+  {k:"other",label:"Other points",color:FKINDS.other.color,count:()=>feats().filter(f=>f.kind==="other").length}
+];
+function groupOf(kind){
+  if(kind==="gate"||kind==="access") return "access";
+  if(CONTROL.includes(kind)) return "control";
+  if(kind==="medical"||kind==="helispot") return "medical";
+  if(kind==="staging"||kind==="sign") return "staging";
+  return kind==="water"||kind==="structure" ? kind : "other";
+}
+let layerPrefs={hidden:[],names:false};
+try{ const v=JSON.parse(localStorage.getItem(KEY+":layers")||"null"); if(v) layerPrefs={hidden:v.hidden||[],names:!!v.names}; }catch(e){}
+const saveLayerPrefs=()=>{ try{ localStorage.setItem(KEY+":layers",JSON.stringify(layerPrefs)); }catch(e){} };
+function forcedGroup(){
+  if(mapMode==="unit") return "unit";
+  if(mapMode==="wind") return "wind";
+  if(mapMode==="loc") return "loc";
+  if(mapMode==="feat"){ const sel=selItem(); const k=sel?sel.kind:featKindEl.value; return FKINDS[k]?groupOf(k):null; }
+  return null;
+}
+const layerOn = g => g===forcedGroup() || !layerPrefs.hidden.includes(g);
+const showNames = () => layerPrefs.names;
+function redrawAll(){ drawSaved(); drawWind(mapMode==="wind"); drawFeatures(); syncMarker(); refreshLayersUi(); }
+function setBase(name){
+  if(!BASES || !BASES[name] || name===currentBase) return;
+  map.removeLayer(BASES[currentBase]); BASES[name].addTo(map); BASES[name].bringToBack();
+  currentBase=name; try{ localStorage.setItem(KEY+":base",name); }catch(e){}
+  refreshLayersUi();
+}
+const layersOpen = () => lyrRoot && !lyrRoot.querySelector(".lyr-panel").hidden;
+function closeLayers(){ if(!lyrRoot) return; lyrRoot.querySelector(".lyr-panel").hidden=true; lyrRoot.querySelector(".lyr-btn").setAttribute("aria-expanded","false"); }
+function openLayers(){
+  const panel=lyrRoot.querySelector(".lyr-panel");
+  panel.style.setProperty("--lyr-max", Math.max(160, mapEl.clientHeight-70)+"px");
+  refreshLayersUi(); panel.hidden=false; lyrRoot.querySelector(".lyr-btn").setAttribute("aria-expanded","true");
+}
+function refreshLayersUi(){
+  if(!lyrRoot) return;
+  const forced=forcedGroup();
+  // only list layers that have something on the map, so the panel stays short
+  const groups=LAYER_GROUPS.map(g=>({...g,n:g.count()})).filter(g=>g.n>0);
+  const hiddenN=groups.filter(g=>!layerOn(g.k)).length;
+  lyrRoot.querySelector(".lyr-hid").textContent = hiddenN ? `(${hiddenN} hidden)` : "";
+  lyrRoot.querySelectorAll(".lyr-seg button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.base===currentBase)));
+  const list=lyrRoot.querySelector(".lyr-list");
+  list.innerHTML = groups.length ? groups.map(g=>`<label class="lyr-row${g.k===forced?" forced":""}"${g.k===forced?' title="Shown while you edit it"':""}>
+      <input type="checkbox" data-lyr="${g.k}"${layerOn(g.k)?" checked":""}${g.k===forced?" disabled":""}>
+      <span class="sw" style="background:${g.color}"></span><span>${esc(g.label)}</span><span class="cnt">${g.n}</span></label>`).join("")
+    : `<div style="color:var(--muted)">Nothing drawn on the map yet.</div>`;
+  lyrRoot.querySelector("[data-names]").checked=layerPrefs.names;
+}
+function addLayersControl(){
+  const Ctl=L.Control.extend({options:{position:"topright"},onAdd(){
+    const d=L.DomUtil.create("div","lyr");
+    d.innerHTML=`<button type="button" class="lyr-btn" aria-expanded="false" aria-haspopup="true" title="Choose the base map and which layers show">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1 1 4.5 8 8l7-3.5L8 1Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="m1 8 7 3.5L15 8M1 11.5 8 15l7-3.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+        Layers <span class="lyr-hid"></span></button>
+      <div class="lyr-panel" hidden role="group" aria-label="Map layers">
+        <div class="lyr-h">Base map</div>
+        <div class="lyr-seg">${Object.keys(BASES).map(n=>`<button type="button" data-base="${n}" title="${{"Satellite":"Esri aerial imagery","Topo":"Esri topographic map","USGS topo":"USGS topo map with contours and section lines"}[n]}">${n==="USGS topo"?"USGS":n}</button>`).join("")}</div>
+        <div class="lyr-h">Show on map</div>
+        <div class="lyr-list"></div>
+        <label class="lyr-row" style="margin-top:6px"><input type="checkbox" data-names><span>Feature names</span></label>
+        <div class="lyr-foot"><button type="button" data-showall>Show all</button><button type="button" data-done>Done</button></div>
+      </div>`;
+    L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
+    d.querySelector(".lyr-btn").onclick=()=> layersOpen() ? closeLayers() : openLayers();
+    d.addEventListener("click",e=>{
+      const b=e.target.closest("[data-base]"); if(b) setBase(b.dataset.base);
+      if(e.target.closest("[data-showall]")){ layerPrefs.hidden=[]; saveLayerPrefs(); redrawAll(); }
+      if(e.target.closest("[data-done]")) closeLayers();
+    });
+    d.addEventListener("change",e=>{
+      const c=e.target.closest("[data-lyr]");
+      if(c){ const k=c.dataset.lyr; layerPrefs.hidden=layerPrefs.hidden.filter(x=>x!==k); if(!c.checked) layerPrefs.hidden.push(k); saveLayerPrefs(); redrawAll(); }
+      if(e.target.matches("[data-names]")){ layerPrefs.names=e.target.checked; saveLayerPrefs(); drawFeatures(); }
+    });
+    lyrRoot=d; refreshLayersUi(); return d;
+  }});
+  new Ctl().addTo(map);
+  // close when clicking anywhere else
+  document.addEventListener("pointerdown",e=>{ if(layersOpen() && !lyrRoot.contains(e.target)) closeLayers(); });
+}
+
 /* ---------- where the map lives ----------
    One map panel moves between three places: the sticky side column on wide screens,
    the preview card on narrow screens, and the full-screen dialog when expanded. */
@@ -2550,7 +2674,8 @@ function syncMarker(){
   if(!map || !map._loaded) return;
   const la=fromDMM(state.lat), lo=fromDMM(state.lon);
   if(la!=null&&lo!=null){
-    if(marker) marker.setLatLng([la,lo]); else marker=L.circleMarker([la,lo],{radius:9,color:"#ffffff",weight:3,fillColor:FIRE,fillOpacity:1,interactive:false}).addTo(map);
+    if(marker) marker.setLatLng([la,lo]); else marker=L.circleMarker([la,lo],{radius:9,color:"#ffffff",weight:3,fillColor:FIRE,fillOpacity:1,interactive:false});
+    if(layerOn("loc")) marker.addTo(map); else marker.remove();
   } else if(marker){ marker.remove(); marker=null; }
 }
 function fitToSite(){
@@ -2590,13 +2715,18 @@ function buildMap(L){
     // Create the map with a view already set. Leaflet can't place any shape (the location marker,
     // the unit outline, features) on a map without a center, and a failed add breaks its renderer.
     const c0 = unitCenter() || [38.9,-123.2];
-    map=L.map(mapEl,{zoomControl:true, center:c0, zoom: unitCenter()?16:12});
+    map=L.map(mapEl,{zoomControl:true, center:c0, zoom: unitCenter()?16:12, maxZoom:19});
     const sat=L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:"Imagery © Esri"});
-    const topo=L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",{maxZoom:17,attribution:"© OpenStreetMap contributors, SRTM | OpenTopoMap"});
-    [sat,topo].forEach(l=>{ l.on("tileload",()=>{tilesOk=true;}); l.on("tileerror",()=>{tileErrs++;}); });
+    // Topo maps: Esri World Topo (same server as the imagery) and USGS topo, which also shows
+    // contour lines and Public Land Survey section lines. maxNativeZoom lets them enlarge past their last level.
+    const topo=L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,maxNativeZoom:18,attribution:"Topo © Esri"});
+    const usgs=L.tileLayer("https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,maxNativeZoom:16,attribution:"USGS The National Map"});
+    [sat,topo,usgs].forEach(l=>{ l.on("tileload",()=>{tilesOk=true;}); l.on("tileerror",()=>{tileErrs++;}); });
+    BASES={"Satellite":sat,"Topo":topo,"USGS topo":usgs};
     let base="Satellite"; try{ base=localStorage.getItem(KEY+":base")||base; }catch(e){}
-    (base==="Topo"?topo:sat).addTo(map);
-    L.control.layers({"Satellite":sat,"Topo":topo},null,{collapsed:false}).addTo(map);
+    if(!BASES[base]) base="Satellite";
+    currentBase=base; BASES[base].addTo(map);
+    addLayersControl();
     savedLayer=L.layerGroup().addTo(map); windLayer=L.layerGroup().addTo(map); drawLayer=L.layerGroup().addTo(map);
     featLayer=L.layerGroup().addTo(map); handleLayer=L.layerGroup().addTo(map); windHandles=L.layerGroup().addTo(map);
     featTmp=L.layerGroup().addTo(map);
@@ -2610,7 +2740,6 @@ function buildMap(L){
       else if(mapMode==="feat") featMapClick(ev.latlng);
     });
     map.on("dblclick",()=>{ if(mapMode==="unit") finishUnit(); else if(mapMode==="feat" && featLine.length) featCommit(); });
-    map.on("baselayerchange",ev=>{ try{ localStorage.setItem(KEY+":base", ev.name); }catch(e){} });
   }
   setTimeout(()=>map.invalidateSize(),50);
   syncMarker(); fitToSite();
