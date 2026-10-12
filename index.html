@@ -193,9 +193,9 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-w
     border:1px solid var(--line);border-radius:12px;padding:20px 18px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
   #shareDlg[open]{overflow-y:auto}
   #shareDlg .dlg-foot{position:sticky;bottom:-20px;background:var(--surface);padding-bottom:4px}
-  #mapDialog{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
-  #mapDialog[open]{display:flex;flex-direction:column}
-  #mapDialog #map{flex:1 1 auto;height:auto;min-height:0}
+  #mapDialog{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px);width:100%;height:100%}
+  #mapDialog .map-panel #map{min-height:0}
+  #mapInline .map-panel{height:240px}
   #mapFallback{overflow-y:auto}
   .map-foot .btn{min-height:44px}
   .map-msg{font-size:.8125rem;padding:6px 12px}
@@ -788,7 +788,52 @@ print-color-adjust: exact;
 .fieldmsg{font-size:.8125rem;color:var(--muted)}
 input.computed{background:transparent;border-style:dashed;font-variant-numeric:tabular-nums}
 .fieldmsg.err{color:var(--accent)}
-#mapDialog{width:min(980px,96vw);padding:0;overflow:hidden}
+#mapDialog{width:min(1280px,96vw);height:min(900px,92vh);padding:0;overflow:hidden}
+#mapDialog[open]{display:flex;flex-direction:column}
+.map-panel{display:flex;flex-direction:column;min-height:0;background:var(--surface)}
+#mapDialog .map-panel{flex:1 1 auto;height:100%}
+.map-panel #map{flex:1 1 auto;height:auto;min-height:220px}
+.map-open{display:none}
+#mapSide{display:none}
+#mapExpand,#mapClose{display:none}
+#mapDialog #mapClose{display:inline-flex}
+#mapSide #mapExpand{display:inline-flex}
+.map-card{display:none;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 14px 14px;margin-bottom:24px}
+.map-card-head{display:flex;align-items:baseline;gap:12px;margin:0 0 10px}
+.map-card-head h2{margin:0;font-size:1.125rem;font-weight:800}
+.map-card-sum{color:var(--muted);font-size:.875rem}
+/* Preview card: map only, with a cover button so page scrolling never drags the map */
+#mapInline .map-panel{position:relative;height:300px;border-radius:8px;overflow:hidden}
+#mapInline .map-head,#mapInline .map-modes,#mapInline .map-msg,#mapInline .map-foot,#mapInline #mapFallback{display:none}
+#mapInline .map-open{display:flex;position:absolute;inset:0;z-index:1000;border:0;background:transparent;cursor:pointer;align-items:flex-end;justify-content:flex-end;padding:12px}
+#mapInline .map-open span{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px 14px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+#mapInline .leaflet-control-container{display:none}
+/* Docked side column */
+#mapSide .map-panel{height:100%;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+#mapSide .map-panel.flash{box-shadow:0 0 0 3px var(--oak)}
+@media (min-width:1000px){
+  .layout{max-width:1760px;grid-template-columns:minmax(0,1fr) minmax(380px,44%);grid-template-areas:"toc toc" "main map";gap:16px 24px}
+  nav.toc{grid-area:toc;position:static;min-width:0}
+  nav.toc ol{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+  nav.toc li{flex:none}
+  nav.toc a{background:var(--surface);border:1px solid var(--line);grid-template-columns:auto auto}
+  nav.toc .bar{display:none}
+  .pm-card{display:none}
+  .mainwrap{grid-area:main;min-width:0}
+  #mapSide{display:block;grid-area:map;position:sticky;top:calc(var(--hdr,100px) + 12px);height:calc(100vh - var(--hdr,100px) - 28px);align-self:start;min-width:0}
+}
+@media (min-width:1360px){
+  .layout{grid-template-columns:200px minmax(0,1fr) minmax(420px,40%);grid-template-areas:"toc main map";gap:28px}
+  nav.toc{position:sticky;top:calc(var(--hdr,100px) + 12px);align-self:start}
+  nav.toc ol{display:block;overflow:visible;padding:0}
+  nav.toc a{background:none;border:0;grid-template-columns:1fr auto}
+  nav.toc a:hover{background:var(--surface)}
+  nav.toc .bar{display:block}
+  .pm-card{display:block}
+}
+@media (max-width:999px){
+  .map-card{display:block}
+}
 .map-head{display:flex;gap:8px;padding:12px;border-bottom:1px solid var(--line);flex-wrap:wrap;align-items:center}
 .map-head input{flex:1 1 240px}
 #map{height:min(62vh,560px);background:var(--field)}
@@ -890,7 +935,10 @@ body.readonly .ro-banner{display:block}
       <p>Estimated tons PM10. The large-burn tier starts at 5 tons or 100 acres.</p>
     </div>
   </nav>
-  <div class="mainwrap"><div class="ro-banner" id="roBanner"><span id="roText"></span> <button class="btn small" id="roSignIn">Sign in</button></div><main id="main"></main></div>
+  <aside id="mapSide" aria-label="Site map"></aside>
+  <div class="mainwrap">
+    <section class="map-card" id="mapCard" aria-label="Site map"><div class="map-card-head"><h2>Site map</h2><span class="map-card-sum" id="mapCardSum"></span></div><div id="mapInline"></div></section>
+    <div class="ro-banner" id="roBanner"><span id="roText"></span> <button class="btn small" id="roSignIn">Sign in</button></div><main id="main"></main></div>
 </div>
 
 <dialog id="mdDialog">
@@ -903,9 +951,11 @@ body.readonly .ro-banner{display:block}
   </div>
 </dialog>
 <dialog id="mapDialog" aria-label="Map">
+<div id="mapPanel" class="map-panel">
   <div class="map-head">
     <input type="text" id="mapSearch" aria-label="Address to find">
     <button class="btn small" id="mapFind">Find</button>
+    <button class="btn small" id="mapExpand" title="Open the map full screen for detailed drawing">Expand</button>
     <button class="btn small" id="mapClose">Close</button>
   </div>
   <div class="map-modes" role="toolbar" aria-label="Map mode">
@@ -946,6 +996,8 @@ body.readonly .ro-banner{display:block}
     </span>
     <span class="foot-btns" id="browseBtns" hidden><button class="btn" id="recalcBtn" title="Look up slope, aspect, elevation, township/range/section, county, and nearest town again for the saved unit or location">Recalculate</button><button class="btn" id="unitDelete" title="Remove the saved unit outline. Project area and elevations are left as they are.">Delete unit outline</button></span>
   </div>
+  <button type="button" class="map-open" id="mapOpenBtn" aria-label="Open the site map"><span>Open map</span></button>
+</div>
 </dialog>
 <dialog id="shareDlg" aria-labelledby="shareTitle">
   <h2 id="shareTitle">Sharing</h2>
@@ -1616,6 +1668,7 @@ function markEmpty(){
 }
 function updateDerived(){
   markEmpty();
+  if(typeof mapCardSummary==="function") mapCardSummary();
   main.querySelectorAll(".mapcalc").forEach(el=>{
     const k=el.id.slice(3), ls=mapCalc(k);
     el.innerHTML = ls.length ? `<ul>${ls.map(l=>`<li>${esc(l)}</li>`).join("")}</ul>` : `<span class="muted">${esc(MAPCALC_HINT[k]||"")}</span>`;
@@ -1701,6 +1754,7 @@ function setCoords(lat,lon){
   const a=document.getElementById("f_lat"), b=document.getElementById("f_lon");
   if(a) a.value=state.lat; if(b) b.value=state.lon;
   ["pickMap","drawUnit"].forEach(id=>{ const pb=document.getElementById(id); if(pb) pb.disabled=false; });
+  if(typeof syncMarker==="function") syncMarker();
   updateDerived(); scheduleSave();
 }
 function locMsg(t,err){ const m=document.getElementById("locMsg"); if(m){ m.textContent=t; m.classList.toggle("err",!!err); } }
@@ -1743,6 +1797,8 @@ main.addEventListener("click", e=>{
   if(e.target.id==="drawUnit") openMap("unit");
 });
 
+const mapPanel=document.getElementById("mapPanel"), mapSideHost=document.getElementById("mapSide"), mapInlineHost=document.getElementById("mapInline");
+const wideMQ=window.matchMedia("(min-width:1000px)");
 const mapDlg=document.getElementById("mapDialog"), mapMsgEl=document.getElementById("mapMsg"),
       mapReadout=document.getElementById("mapReadout"), mapUse=document.getElementById("mapUse"),
       mapFallback=document.getElementById("mapFallback"), mapEl=document.getElementById("map");
@@ -1885,7 +1941,10 @@ function setMode(m){
   if(m==="feat") readout(featCountText());
   if(m==="wind") windReadout();
 }
-const toggleMode = m => setMode(mapMode===m ? "browse" : m);
+const toggleMode = m => {
+  if(m!=="browse" && mapMode!==m && isRO()) return roPrompt();
+  setMode(mapMode===m ? "browse" : m);
+};
 document.getElementById("modeLoc").onclick=()=>toggleMode("loc");
 document.getElementById("modeUnit").onclick=()=>toggleMode("unit");
 document.getElementById("modeWind").onclick=()=>toggleMode("wind");
@@ -1947,6 +2006,7 @@ document.getElementById("unitRestart").onclick=()=>{ tmpPts=[]; drawTmp(true); r
 document.getElementById("unitFinish").onclick=()=>finishUnit();
 let delArmed=false;
 document.getElementById("unitDelete").onclick=e=>{
+  if(isRO()) return roPrompt();
   if(!delArmed){ delArmed=true; e.target.textContent="Click again to delete"; setTimeout(()=>{ delArmed=false; e.target.textContent="Delete unit outline"; },3000); return; }
   delArmed=false; e.target.textContent="Delete unit outline";
   delete state.unitPoly; updateDerived(); scheduleSave(); setMode("browse"); readout("Unit outline deleted.");
@@ -1956,7 +2016,7 @@ mapDlg.addEventListener("cancel", e=>{
   if(mapMode==="feat" && (featPending || featLine.length || featSel)){ e.preventDefault(); featPending=null; featLine=[]; clearSel(); featUi(); drawFeatures(); readout(featCountText()); return; }
   if(mapMode!=="browse"){ e.preventDefault(); setMode("browse"); }
 });
-mapDlg.addEventListener("keydown", e=>{
+mapPanel.addEventListener("keydown", e=>{
   if(e.key==="Escape" && mapMode!=="browse"){
     e.preventDefault();
     if(mapMode==="feat" && (featPending || featLine.length || featSel)){ featPending=null; featLine=[]; clearSel(); featUi(); drawFeatures(); readout(featCountText()); }
@@ -2461,20 +2521,81 @@ document.getElementById("recalcBtn").onclick=async e=>{
 };
 
 /* ---------- open ---------- */
+/* ---------- where the map lives ----------
+   One map panel moves between three places: the sticky side column on wide screens,
+   the preview card on narrow screens, and the full-screen dialog when expanded. */
+let mapExpanded=false, mapReady=null;
+function mapHost(){ return mapExpanded ? mapDlg : (wideMQ.matches ? mapSideHost : mapInlineHost); }
+function placeMap(){
+  const host=mapHost();
+  if(mapPanel.parentElement!==host) host.appendChild(mapPanel);
+  if(map) setTimeout(()=>map.invalidateSize(),30);
+}
+function expandMap(){
+  if(mapExpanded) return;
+  mapExpanded=true; placeMap();
+  if(!mapDlg.open){ if(mapDlg.showModal) mapDlg.showModal(); else mapDlg.setAttribute("open",""); }
+}
+function collapseMap(){ if(mapDlg.open) mapDlg.close(); else afterCollapse(); }
+function afterCollapse(){
+  mapExpanded=false; placeMap();
+  if(!wideMQ.matches && mapMode!=="browse") setMode("browse");   // the preview card is view-only
+}
+mapDlg.addEventListener("close", afterCollapse);
+wideMQ.addEventListener("change", ()=>{ if(!mapExpanded){ placeMap(); if(!wideMQ.matches && mapMode!=="browse") setMode("browse"); } });
+document.getElementById("mapExpand").onclick=()=>expandMap();
+document.getElementById("mapOpenBtn").onclick=()=>openMap();
+const mapVisible = () => mapExpanded || wideMQ.matches || (mapInlineHost.getBoundingClientRect().bottom>0);
+function syncMarker(){
+  if(!map || !map._loaded) return;
+  const la=fromDMM(state.lat), lo=fromDMM(state.lon);
+  if(la!=null&&lo!=null){
+    if(marker) marker.setLatLng([la,lo]); else marker=L.circleMarker([la,lo],{radius:9,color:"#ffffff",weight:3,fillColor:FIRE,fillOpacity:1,interactive:false}).addTo(map);
+  } else if(marker){ marker.remove(); marker=null; }
+}
+function fitToSite(){
+  const la=fromDMM(state.lat), lo=fromDMM(state.lon);
+  // Prefer the saved outline, then saved coordinates: street-address geocoding is unreliable on rural roads
+  if(hasUnit()) map.fitBounds(L.latLngBounds(state.unitPoly),{padding:[40,40],maxZoom:18});
+  else if(la!=null&&lo!=null) map.setView([la,lo],17);
+  else { map.setView([38.9,-123.2],12); if(state.address) centerOn(state.address); }
+}
+function mapCardSummary(){
+  const el=document.getElementById("mapCardSum"); if(!el) return;
+  const p=(state.features||[]).length, l=(state.lines||[]).length;
+  el.textContent = [hasUnit()?`Unit ${polyAcres(state.unitPoly).toFixed(1)} ac`:"No unit drawn yet", p?`${p} point${p===1?"":"s"}`:"", l?`${l} line${l===1?"":"s"}`:""].filter(Boolean).join(", ");
+}
+/* Load Leaflet and build the map once; later calls return the same promise. */
+function ensureMap(){
+  if(!mapReady) mapReady=(async()=>{
+    document.getElementById("mapSearch").value=state.address||"";
+    let L;
+    try{ L=await loadLeaflet(); }catch(e){ showFallback(); return false; }
+    buildMap(L);
+    return true;
+  })();
+  return mapReady;
+}
+/* Open the map in a given mode: in place on wide screens, full screen on narrow ones. */
 async function openMap(mode){
-  document.getElementById("mapSearch").value=state.address||"";
-  picked=null; mapUse.disabled=true; readout("");
-  mapEl.style.display=""; mapFallback.hidden=true; document.querySelector(".map-modes").hidden=false;
-  document.getElementById("pasteCoords").value="";
-  if(mapDlg.showModal) mapDlg.showModal(); else mapDlg.setAttribute("open","");
-  let L;
-  try{ L=await loadLeaflet(); }catch(e){ showFallback(); return; }
+  if(!wideMQ.matches) expandMap();
+  else { mapPanel.classList.add("flash"); setTimeout(()=>mapPanel.classList.remove("flash"),900); }
+  if(!(await ensureMap())) return;
+  setTimeout(()=>map.invalidateSize(),60);
+  if(mode && mode!==mapMode) setMode(mode);
+  if(mode && mode!=="browse" && wideMQ.matches){ const m=document.querySelector(".map-modes button[aria-pressed=true]"); if(m) m.focus({preventScroll:true}); }
+}
+function buildMap(L){
   if(!map){
-    map=L.map(mapEl,{zoomControl:true});
+    // Create the map with a view already set. Leaflet can't place any shape (the location marker,
+    // the unit outline, features) on a map without a center, and a failed add breaks its renderer.
+    const c0 = unitCenter() || [38.9,-123.2];
+    map=L.map(mapEl,{zoomControl:true, center:c0, zoom: unitCenter()?16:12});
     const sat=L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:"Imagery © Esri"});
     const topo=L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",{maxZoom:17,attribution:"© OpenStreetMap contributors, SRTM | OpenTopoMap"});
     [sat,topo].forEach(l=>{ l.on("tileload",()=>{tilesOk=true;}); l.on("tileerror",()=>{tileErrs++;}); });
-    sat.addTo(map);
+    let base="Satellite"; try{ base=localStorage.getItem(KEY+":base")||base; }catch(e){}
+    (base==="Topo"?topo:sat).addTo(map);
     L.control.layers({"Satellite":sat,"Topo":topo},null,{collapsed:false}).addTo(map);
     savedLayer=L.layerGroup().addTo(map); windLayer=L.layerGroup().addTo(map); drawLayer=L.layerGroup().addTo(map);
     featLayer=L.layerGroup().addTo(map); handleLayer=L.layerGroup().addTo(map); windHandles=L.layerGroup().addTo(map);
@@ -2489,30 +2610,22 @@ async function openMap(mode){
       else if(mapMode==="feat") featMapClick(ev.latlng);
     });
     map.on("dblclick",()=>{ if(mapMode==="unit") finishUnit(); else if(mapMode==="feat" && featLine.length) featCommit(); });
+    map.on("baselayerchange",ev=>{ try{ localStorage.setItem(KEY+":base", ev.name); }catch(e){} });
   }
   setTimeout(()=>map.invalidateSize(),50);
-  const la=fromDMM(state.lat), lo=fromDMM(state.lon);
-  if(la!=null&&lo!=null){
-    if(marker) marker.setLatLng([la,lo]); else marker=L.circleMarker([la,lo],{radius:9,color:"#ffffff",weight:3,fillColor:FIRE,fillOpacity:1}).addTo(map);
-  }
-  // Give the map a view before any shapes are added: Leaflet can't place a polygon on a map
-  // that has no center yet, and the failed add leaves its renderer broken for the session.
-  // Prefer the saved outline, then saved coordinates: street-address geocoding is unreliable on rural roads
-  if(hasUnit()) map.fitBounds(L.latLngBounds(state.unitPoly),{padding:[40,40],maxZoom:18});
-  else if(la!=null&&lo!=null) map.setView([la,lo],17);
-  else { map.setView([38.9,-123.2],12); centerOn(state.address); }
-  setMode(mode||"browse");
-  setTimeout(()=>{ if(!tilesOk && mapDlg.open) showFallback(); },6000);
+  syncMarker(); fitToSite();
+  setMode("browse");
+  setTimeout(()=>{ if(!tilesOk && mapVisible()) showFallback(); },6000);
 }
 document.getElementById("mapFind").onclick=()=>{ if(map && mapFallback.hidden) centerOn(document.getElementById("mapSearch").value); else showFallback(); };
 document.getElementById("mapSearch").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); document.getElementById("mapFind").click(); } });
-document.getElementById("mapClose").onclick=()=>{ setMode("browse"); mapDlg.close(); };
+document.getElementById("mapClose").onclick=()=>collapseMap();
 mapUse.onclick=()=>{
   if(!picked) return; setCoords(picked.lat,picked.lon);
-  if(!mapFallback.hidden){ mapDlg.close(); }
+  if(!mapFallback.hidden){ collapseMap(); }
   else { mapReadout.dataset.keep="1"; setMode("browse"); readout(`Location set: ${state.lat}, ${state.lon}`); }
   locMsg("Latitude and longitude set from the map."); toast("Location set");
-  if(!hasUnit()) recalcFromMap().then(t=>{ locMsg("Latitude and longitude set from the map. "+t); if(mapDlg.open) readout(`Location set. ${t}`); });
+  if(!hasUnit()) recalcFromMap().then(t=>{ locMsg("Latitude and longitude set from the map. "+t); readout(`Location set. ${t}`); });
 };
 
 
@@ -2578,7 +2691,11 @@ function applyChanges(merged){
     if(el && el.contains(document.activeElement)) pendingSecs.add(id); else rerenderSection(id);
   });
   updateDerived();
-  if(map && map._loaded && mapDlg.open && mapMode==="browse"){ drawSaved(); drawFeatures(); }
+  if(map && map._loaded){
+    syncMarker();
+    if(mapMode==="browse"){ drawSaved(); drawFeatures(); drawWind(false); unitSummary(); }
+    else if(mapMode==="feat" && !featPending && !featLine.length && !featSel) drawFeatures();
+  }
   return changed.length;
 }
 const pendingSecs = new Set();
@@ -3134,6 +3251,15 @@ restoreFile.onchange=async()=>{
 
 renderAll(); applyTips(); showSaved(); applyReadOnly();
 connect().then(()=>{ if(!sync.who) openSignIn(); });
+const hdrEl=document.querySelector("header.top");
+const setHdr=()=>document.documentElement.style.setProperty("--hdr", hdrEl.offsetHeight+"px");
+setHdr(); if(window.ResizeObserver) new ResizeObserver(setHdr).observe(hdrEl);
+placeMap();
+// Build the map once its spot is on screen (immediately in the side column)
+if(window.IntersectionObserver){
+  const io=new IntersectionObserver(es=>{ if(es.some(x=>x.isIntersecting)){ io.disconnect(); ensureMap(); } });
+  io.observe(mapSideHost); io.observe(mapInlineHost);
+} else ensureMap();
 })();
 </script>
 </body>
