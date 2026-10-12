@@ -193,14 +193,13 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-w
     border:1px solid var(--line);border-radius:12px;padding:20px 18px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
   #shareDlg[open]{overflow-y:auto}
   #shareDlg .dlg-foot{position:sticky;bottom:-20px;background:var(--surface);padding-bottom:4px}
-  #mapDialog{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px);width:100%;height:100%}
+  dialog#mapDialog{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px);width:100%;height:100%;max-width:100%;max-height:100%}
   #mapDialog .map-panel #map{min-height:0}
   #mapInline .map-panel{height:240px}
   #mapFallback{overflow-y:auto}
-  .map-foot .btn{min-height:44px}
-  .map-msg{font-size:.8125rem;padding:6px 12px}
-  .map-head{padding:8px 12px}
-  .map-modes{padding:6px 12px}
+  .ib{width:40px;height:40px}
+  .map-bar #featKind,.map-bar #featName,.bar-search input{height:40px}
+  .bar-search input{width:150px}
 }
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 .leaflet-pane,
@@ -792,7 +791,7 @@ input.computed{background:transparent;border-style:dashed;font-variant-numeric:t
 #mapDialog[open]{display:flex;flex-direction:column}
 .map-panel{display:flex;flex-direction:column;min-height:0;background:var(--surface)}
 #mapDialog .map-panel{flex:1 1 auto;height:100%}
-.map-panel #map{flex:1 1 auto;height:auto;min-height:220px}
+
 .map-open{display:none}
 #mapSide{display:none}
 #mapExpand,#mapClose{display:none}
@@ -804,7 +803,7 @@ input.computed{background:transparent;border-style:dashed;font-variant-numeric:t
 .map-card-sum{color:var(--muted);font-size:.875rem}
 /* Preview card: map only, with a cover button so page scrolling never drags the map */
 #mapInline .map-panel{position:relative;height:300px;border-radius:8px;overflow:hidden}
-#mapInline .map-head,#mapInline .map-modes,#mapInline .map-msg,#mapInline .map-foot,#mapInline #mapFallback{display:none}
+#mapInline .map-bar,#mapInline .map-status,#mapInline #mapFallback{display:none}
 #mapInline .map-open{display:flex;position:absolute;inset:0;z-index:1000;border:0;background:transparent;cursor:pointer;align-items:flex-end;justify-content:flex-end;padding:12px}
 #mapInline .map-open span{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px 14px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.2)}
 #mapInline .leaflet-control-container{display:none}
@@ -834,14 +833,39 @@ input.computed{background:transparent;border-style:dashed;font-variant-numeric:t
 @media (max-width:999px){
   .map-card{display:block}
 }
-.map-head{display:flex;gap:8px;padding:12px;border-bottom:1px solid var(--line);flex-wrap:wrap;align-items:center}
-.map-head input{flex:1 1 240px}
+.map-bar{display:flex;align-items:center;gap:6px 8px;padding:6px 8px;border-bottom:1px solid var(--line);flex-wrap:wrap;background:var(--surface)}
+.bar-group,.bar-ctx,.bar-right,.bar-search,.map-bar .foot-btns{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.map-bar .foot-btns[hidden],.bar-search[hidden]{display:none}
+.bar-group{padding-right:8px;border-right:1px solid var(--line)}
+.bar-ctx{flex:1 1 0;min-width:0}
+@media (max-width:999px){
+  /* full-screen map on small screens: modes and search/close on the first row, mode tools on the second */
+  .bar-right{order:1}
+  .bar-ctx{order:2;flex-basis:100%}
+  .bar-ctx:not(:has(.foot-btns:not([hidden]))){display:none}
+}
+.bar-right{margin-left:auto}
+.ib{width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;padding:0;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink);cursor:pointer;flex:none}
+.ib svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ib:hover:not(:disabled){border-color:var(--muted)}
+.ib[aria-pressed="true"]{background:var(--oak);border-color:var(--oak);color:#fff}
+.ib.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.ib.armed{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.ib:disabled{opacity:.4;cursor:not-allowed}
+.ib[hidden]{display:none}
+.map-bar #featKind{width:auto;max-width:136px;height:34px;padding:4px 6px;font-size:.875rem}
+.map-bar #featName{width:auto;flex:1 1 70px;min-width:60px;max-width:150px;height:34px;padding:4px 8px;font-size:.875rem}
+.bar-search input{width:190px;height:34px;padding:4px 8px;font-size:.875rem}
+.map-wrap{position:relative;flex:1 1 auto;min-height:220px}
+.map-wrap #map{position:absolute;inset:0;height:auto;min-height:0}
+.map-wrap #mapFallback{position:absolute;inset:0;z-index:1100;background:var(--surface);overflow-y:auto}
+.map-status{position:absolute;left:8px;bottom:24px;z-index:1200;max-width:min(560px,calc(100% - 16px));display:flex;flex-direction:column;align-items:flex-start;gap:3px;pointer-events:none}
+.map-status > div{background:color-mix(in srgb,var(--surface) 92%,transparent);color:var(--ink);border-radius:6px;padding:4px 9px;font-size:.8125rem;line-height:1.35;box-shadow:0 1px 5px rgba(0,0,0,.28);pointer-events:auto}
+.map-status .readout{font-variant-numeric:tabular-nums;font-weight:600}
+.map-status .readout:empty{display:none}
+.map-status .map-msg{color:var(--muted)}
 #map{height:min(62vh,560px);background:var(--field)}
-.map-foot{display:flex;gap:10px;padding:12px;border-top:1px solid var(--line);align-items:center;flex-wrap:wrap}
-.map-foot .readout{flex:1 1 260px;font-size:.9375rem;font-variant-numeric:tabular-nums}
-.map-msg{padding:8px 12px;font-size:.875rem;background:var(--field);border-bottom:1px solid var(--line)}
 .map-msg[hidden],#mapFallback[hidden]{display:none}
-.map-modes{display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);align-items:center;flex-wrap:wrap}
 .modebtn[aria-pressed="true"]{background:var(--oak);border-color:var(--oak);color:#fff}
 .unit-sum{margin-left:auto;font-size:.875rem;color:var(--muted);font-variant-numeric:tabular-nums}
 .foot-btns{display:flex;gap:8px;flex-wrap:wrap}
@@ -975,49 +999,58 @@ body.readonly .ro-banner{display:block}
 </dialog>
 <dialog id="mapDialog" aria-label="Map">
 <div id="mapPanel" class="map-panel">
-  <div class="map-head">
-    <input type="text" id="mapSearch" aria-label="Address to find">
-    <button class="btn small" id="mapFind">Find</button>
-    <button class="btn small" id="mapExpand" title="Open the map full screen for detailed drawing">Expand</button>
-    <button class="btn small" id="mapClose">Close</button>
-  </div>
-  <div class="map-modes" role="toolbar" aria-label="Map mode">
-    <button class="btn small modebtn" id="modeLoc" aria-pressed="false" title="Click the map to set the burn location's latitude and longitude. Click again to leave this mode.">Set location</button>
-    <button class="btn small modebtn" id="modeUnit" aria-pressed="false" title="Click corners to outline the burn unit. Fills in project area and elevations. Click again to leave this mode.">Draw burn unit</button>
-    <button class="btn small modebtn" id="modeWind" aria-pressed="false" title="Set the permissible wind directions: drag the handles to set the acceptable range and the preferred direction. Fills in the Section B surface wind fields. Click again to leave this mode.">Wind directions</button>
-    <button class="btn small modebtn" id="modeFeat" aria-pressed="false" title="Place gates, water sources, structures, signs, staging, medical points, and helispots, and draw the access route and control lines. Distances and lengths are calculated into the worksheet. Click again to leave this mode.">Site features</button>
-    <span class="unit-sum" id="unitSum"></span>
-  </div>
-  <div class="map-msg" id="mapMsg" hidden></div>
-  <div id="map"></div>
-  <div id="mapFallback" hidden>
-    <p><strong>The map can't load here.</strong> This viewer blocks map tiles and address lookup. Pick the point in Google Maps instead:</p>
-    <p>1. <a id="gmapsLink" target="_blank" rel="noopener">Open this address in Google Maps</a> in a new tab.<br>
-       2. Click the burn unit's center. Google shows coordinates like 38.88678, -123.15587 at the bottom. Click them to copy.<br>
-       3. Paste them below.</p>
-    <div class="f"><label for="pasteCoords">Paste coordinates (decimal degrees)</label>
-      <input type="text" id="pasteCoords" placeholder="38.88678, -123.15587"></div>
-  </div>
-  <div class="map-foot">
-    <span class="readout" id="mapReadout" aria-live="polite"></span>
-    <span class="foot-btns" id="locBtns" hidden><button class="btn primary" id="mapUse" disabled>Use this location</button></span>
-    <span class="foot-btns" id="unitBtns" hidden>
-      <button class="btn" id="unitUndo" title="Remove the most recent corner (Backspace)">Undo corner</button>
-      <button class="btn" id="unitRestart" title="Remove all corners and start the outline again">Start over</button>
-      <button class="btn primary" id="unitFinish" title="Save the outline (Enter, double-click, or click the first corner)">Finish unit</button>
+  <div class="map-bar" role="toolbar" aria-label="Map tools">
+    <span class="bar-group" id="barModes">
+      <button type="button" class="ib modebtn" id="modeLoc" title="Set location: click the map to place the burn location" aria-label="Set location: click the map to place the burn location" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></svg></button>
+      <button type="button" class="ib modebtn" id="modeUnit" title="Draw burn unit: click corners to outline the unit; fills in area, elevation, slope, and aspect" aria-label="Draw burn unit: click corners to outline the unit; fills in area, elevation, slope, and aspect" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8l7-4 7 5-2 10H7Z"/><circle cx="5" cy="8" r="1.7" fill="currentColor"/><circle cx="12" cy="4" r="1.7" fill="currentColor"/><circle cx="19" cy="9" r="1.7" fill="currentColor"/><circle cx="17" cy="19" r="1.7" fill="currentColor"/><circle cx="7" cy="19" r="1.7" fill="currentColor"/></svg></button>
+      <button type="button" class="ib modebtn" id="modeWind" title="Wind directions: drag handles to set the acceptable range and preferred direction" aria-label="Wind directions: drag handles to set the acceptable range and preferred direction" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h15a3 3 0 1 1-3 3"/><path d="M3 16h7"/></svg></button>
+      <button type="button" class="ib modebtn" id="modeFeat" title="Site features: gates, water, structures, signs, staging, medical points, access route, and control lines" aria-label="Site features: gates, water, structures, signs, staging, medical points, access route, and control lines" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4"/><path d="M5 4h12l-2.5 4.5L17 13H5"/></svg></button>
     </span>
-    <span class="foot-btns" id="windBtns" hidden>
-      <button class="btn" id="windClear" title="Remove the wind directions from the map. The Section B fields are left as they are.">Clear</button>
-      <button class="btn primary" id="windSave" title="Save the wind directions and fill in the Section B surface wind fields">Save wind directions</button>
+    <span class="bar-ctx">
+      <span class="foot-btns" id="locBtns" hidden><button type="button" class="ib primary" id="mapUse" title="Use this location" aria-label="Use this location" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></button></span>
+      <span class="foot-btns" id="unitBtns" hidden>
+        <button type="button" class="ib" id="unitUndo" title="Undo last corner (Backspace)" aria-label="Undo last corner (Backspace)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5"/><path d="M4 12h10a5 5 0 0 1 0 10h-3"/></svg></button>
+        <button type="button" class="ib" id="unitRestart" title="Start over: remove all corners" aria-label="Start over: remove all corners"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 4 6 6-9 9H6l-3-3Z"/><path d="m9 9 6 6"/><path d="M12 19h8"/></svg></button>
+        <button type="button" class="ib primary" id="unitFinish" title="Finish unit (Enter, double-click, or click the first corner)" aria-label="Finish unit (Enter, double-click, or click the first corner)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></button>
+      </span>
+      <span class="foot-btns" id="windBtns" hidden>
+        <button type="button" class="ib" id="windClear" title="Remove the wind directions from the map (Section B fields are kept)" aria-label="Remove the wind directions from the map (Section B fields are kept)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></svg></button>
+        <button type="button" class="ib primary" id="windSave" title="Save wind directions and fill in the Section B wind fields" aria-label="Save wind directions and fill in the Section B wind fields"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></button>
+      </span>
+      <span class="foot-btns" id="featBtns" hidden>
+        <select id="featKind" aria-label="Feature type" title="Feature type"></select>
+        <input type="text" id="featName" placeholder="Name" aria-label="Feature name" title="Feature name (optional)" autocomplete="off">
+        <button type="button" class="ib" id="featUndo" title="Undo last point (Backspace)" aria-label="Undo last point (Backspace)" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5"/><path d="M4 12h10a5 5 0 0 1 0 10h-3"/></svg></button>
+        <button type="button" class="ib" id="featDelete" title="Delete the selected feature" aria-label="Delete the selected feature" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></svg></button>
+        <button type="button" class="ib primary" id="featAdd" title="Add" aria-label="Add" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></button>
+      </span>
+      <span class="foot-btns" id="browseBtns" hidden>
+        <button type="button" class="ib" id="recalcBtn" title="Recalculate: look up slope, aspect, elevation, township/range/section, county, and town again" aria-label="Recalculate: look up slope, aspect, elevation, township/range/section, county, and town again"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/></svg></button>
+        <button type="button" class="ib" id="unitDelete" title="Delete the unit outline (project area and elevations are kept)" aria-label="Delete the unit outline (project area and elevations are kept)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></svg></button>
+      </span>
     </span>
-    <span class="foot-btns" id="featBtns" hidden>
-      <select id="featKind" aria-label="Feature type"></select>
-      <input type="text" id="featName" placeholder="Name (optional)" aria-label="Feature name" autocomplete="off">
-      <button class="btn" id="featUndo" hidden title="Remove the last point of the line (Backspace)">Undo point</button>
-      <button class="btn" id="featDelete" hidden title="Delete the selected feature">Delete</button>
-      <button class="btn primary" id="featAdd" disabled>Add</button>
+    <span class="bar-right">
+      <span class="bar-search" id="barSearch" hidden>
+        <input type="text" id="mapSearch" aria-label="Address to find" placeholder="Address">
+        <button type="button" class="ib" id="mapFind" title="Find this address" aria-label="Find this address"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>
+      </span>
+      <button type="button" class="ib" id="mapSearchBtn" title="Find an address" aria-label="Find an address" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg></button>
+      <button type="button" class="ib" id="mapExpand" title="Expand the map to full screen" aria-label="Expand the map to full screen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+      <button type="button" class="ib" id="mapClose" title="Close the full-screen map" aria-label="Close the full-screen map"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
     </span>
-    <span class="foot-btns" id="browseBtns" hidden><button class="btn" id="recalcBtn" title="Look up slope, aspect, elevation, township/range/section, county, and nearest town again for the saved unit or location">Recalculate</button><button class="btn" id="unitDelete" title="Remove the saved unit outline. Project area and elevations are left as they are.">Delete unit outline</button></span>
+    <span id="unitSum" hidden></span>
+  </div>
+  <div class="map-wrap">
+    <div id="map"></div>
+    <div id="mapFallback" hidden>
+      <p><strong>The map can't load here.</strong> This viewer blocks map tiles and address lookup. Pick the point in Google Maps instead:</p>
+      <p>1. <a id="gmapsLink" target="_blank" rel="noopener">Open this address in Google Maps</a> in a new tab.<br>
+         2. Click the burn unit's center. Google shows coordinates like 38.88678, -123.15587 at the bottom. Click them to copy.<br>
+         3. Paste them below, then press the check button.</p>
+      <div class="f"><label for="pasteCoords">Paste coordinates (decimal degrees)</label>
+        <input type="text" id="pasteCoords" placeholder="38.88678, -123.15587"></div>
+    </div>
+    <div class="map-status" aria-live="polite"><div class="readout" id="mapReadout"></div><div class="map-msg" id="mapMsg" hidden></div></div>
   </div>
   <button type="button" class="map-open" id="mapOpenBtn" aria-label="Open the site map"><span>Open map</span></button>
 </div>
@@ -1898,7 +1931,7 @@ function setPicked(lat,lon){
 }
 function showFallback(){
   mapEl.style.display="none"; mapFallback.hidden=false; mapMsg("");
-  document.querySelector(".map-modes").hidden=true;
+  document.getElementById("barModes").hidden=true;
   ["unitBtns","browseBtns","featBtns","windBtns"].forEach(id=>document.getElementById(id).hidden=true);
   document.getElementById("locBtns").hidden=false;
   const q=document.getElementById("mapSearch").value||state.address||"";
@@ -1924,14 +1957,19 @@ async function centerOn(q){
 
 /* ---------- modes ---------- */
 const BANNERS={
-  feat:"Pick a type and click the map. For lines, click along the route, then Finish line. Clicking an existing point snaps a line to it. To change a feature, choose Select and edit.",
-  wind:"Drag A and B to set the range of directions the wind may blow FROM (clockwise from A to B). Drag the star to the preferred direction. The gray wedge shows where smoke will go.",
-  browse:"Choose a mode above.",
-  loc:"Click the map to place the burn location. Click Set location again to stop.",
-  unit:"Click to add corners around the unit. Drag a corner to move it. Finish with Enter, a double-click, or by clicking the first corner. Escape cancels."
+  browse:()=> hasUnit() ? `Unit ${polyAcres(state.unitPoly).toFixed(1)} ac. Pick a tool above.` : "Pick a tool above to set the location or draw the unit.",
+  feat:"Pick a type, click the map, then ✓. For lines, click along the route; clicking a point snaps to it. To change a feature, pick Select and edit.",
+  wind:"Drag A and B to set the range the wind may blow from (clockwise A to B), and the star to the preferred direction. Gray shows where smoke goes. Save with ✓.",
+  loc:"Click the map to place the burn location, then ✓.",
+  unit:"Click corners around the unit; drag one to move it. Finish with ✓, Enter, or a double-click. Escape cancels."
 };
-function modeBanner(){ mapMsg(BANNERS[mapMode]); }
+function modeBanner(){ const b=BANNERS[mapMode]; mapMsg(typeof b==="function" ? b() : b); }
 function unitSummary(){
+  if(mapMode==="browse"){
+    modeBanner();
+    document.getElementById("browseBtns").hidden = !(hasUnit() || fromDMM(state.lat)!=null);
+    document.getElementById("unitDelete").hidden = !hasUnit();
+  }
   document.getElementById("unitSum").textContent = hasUnit()
     ? `Unit: ${polyAcres(state.unitPoly).toFixed(1)} ac, ${state.unitPoly.length} corners` : "";
 }
@@ -2030,8 +2068,9 @@ document.getElementById("unitFinish").onclick=()=>finishUnit();
 let delArmed=false;
 document.getElementById("unitDelete").onclick=e=>{
   if(isRO()) return roPrompt();
-  if(!delArmed){ delArmed=true; e.target.textContent="Click again to delete"; setTimeout(()=>{ delArmed=false; e.target.textContent="Delete unit outline"; },3000); return; }
-  delArmed=false; e.target.textContent="Delete unit outline";
+  const btn=e.currentTarget;
+  if(!delArmed){ delArmed=true; btn.classList.add("armed"); readout("Click the trash button again to delete the unit outline."); setTimeout(()=>{ delArmed=false; btn.classList.remove("armed"); },3000); return; }
+  delArmed=false; btn.classList.remove("armed");
   delete state.unitPoly; updateDerived(); scheduleSave(); setMode("browse"); readout("Unit outline deleted.");
 };
 // Escape cancels the drawing in progress (or leaves location mode) instead of closing the map
@@ -2228,7 +2267,8 @@ function featUi(){
   featNameEl.hidden = featKindEl.value==="select" && !sel;
   document.getElementById("featUndo").hidden = !(kind && kind.t==="ln" && featLine.length);
   document.getElementById("featDelete").hidden = !sel;
-  featAddEl.textContent = sel ? "Save" : (kind && kind.t==="ln" ? "Finish line" : "Add");
+  const addLbl = sel ? "Save changes" : (kind && kind.t==="ln" ? "Finish line (Enter or double-click)" : "Add point (Enter)");
+  featAddEl.title=addLbl; featAddEl.setAttribute("aria-label",addLbl);
   featAddEl.disabled = !(sel || featPending || featLine.length>=2);
 }
 function featMapClick(ll){
@@ -2279,8 +2319,9 @@ document.getElementById("featUndo").onclick=()=>{ featLine.pop(); featUi(); draw
 let featDelArmed=false;
 document.getElementById("featDelete").onclick=e=>{
   const sel=selItem(); if(!sel) return;
-  if(!featDelArmed){ featDelArmed=true; e.target.textContent="Click again to delete"; setTimeout(()=>{ featDelArmed=false; e.target.textContent="Delete"; },3000); return; }
-  featDelArmed=false; e.target.textContent="Delete";
+  const btn=e.currentTarget;
+  if(!featDelArmed){ featDelArmed=true; btn.classList.add("armed"); readout(`Click the trash button again to delete ${sel.name||FKINDS[sel.kind].label}.`); setTimeout(()=>{ featDelArmed=false; btn.classList.remove("armed"); },3000); return; }
+  featDelArmed=false; btn.classList.remove("armed");
   if(featSel.t==="pt") state.features=feats().filter(x=>x.id!==sel.id); else state.lines=lines().filter(x=>x.id!==sel.id);
   clearSel(); afterFeatChange(`${sel.name||FKINDS[sel.kind].label} deleted.`);
 };
@@ -2708,7 +2749,7 @@ async function openMap(mode){
   if(!(await ensureMap())) return;
   setTimeout(()=>map.invalidateSize(),60);
   if(mode && mode!==mapMode) setMode(mode);
-  if(mode && mode!=="browse" && wideMQ.matches){ const m=document.querySelector(".map-modes button[aria-pressed=true]"); if(m) m.focus({preventScroll:true}); }
+  if(mode && mode!=="browse" && wideMQ.matches){ const m=document.querySelector(".map-bar .modebtn[aria-pressed=true]"); if(m) m.focus({preventScroll:true}); }
 }
 function buildMap(L){
   if(!map){
@@ -2746,6 +2787,11 @@ function buildMap(L){
   setMode("browse");
   setTimeout(()=>{ if(!tilesOk && mapVisible()) showFallback(); },6000);
 }
+document.getElementById("mapSearchBtn").onclick=()=>{
+  const box=document.getElementById("barSearch"), open=box.hidden;
+  box.hidden=!open; document.getElementById("mapSearchBtn").setAttribute("aria-expanded",String(open));
+  if(open){ const i=document.getElementById("mapSearch"); i.value=i.value||state.address||""; i.focus(); i.select(); }
+};
 document.getElementById("mapFind").onclick=()=>{ if(map && mapFallback.hidden) centerOn(document.getElementById("mapSearch").value); else showFallback(); };
 document.getElementById("mapSearch").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); document.getElementById("mapFind").click(); } });
 document.getElementById("mapClose").onclick=()=>collapseMap();
