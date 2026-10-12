@@ -11,6 +11,7 @@
 :root{
   --bg:#ECEEE8; --surface:#FFFFFF; --ink:#1C2420; --muted:#5D6862; --line:#C7CDC3;
   --field:#F7F8F5; --accent:#A3261C; --accent-ink:#FFFFFF; --oak:#4E6A3A; --focus:#2F6FB0;
+  --empty-bg:#FFF6E5; --empty-line:#C9933A; --empty-dot:#B87A16;
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
 }
@@ -18,11 +19,13 @@
   :root:not([data-theme="light"]){
     --bg:#141917; --surface:#1D2420; --ink:#E6EAE4; --muted:#9BA69F; --line:#36413B;
     --field:#232B27; --accent:#E2604F; --accent-ink:#1A0E0C; --oak:#9DBB82; --focus:#7DB1E8;
+    --empty-bg:#2D2819; --empty-line:#A07A35; --empty-dot:#D9A441;
   }
 }
 :root[data-theme="dark"]{
   --bg:#141917; --surface:#1D2420; --ink:#E6EAE4; --muted:#9BA69F; --line:#36413B;
   --field:#232B27; --accent:#E2604F; --accent-ink:#1A0E0C; --oak:#9DBB82; --focus:#7DB1E8;
+  --empty-bg:#2D2819; --empty-line:#A07A35; --empty-dot:#D9A441;
 }
 *,*::before,*::after{box-sizing:inherit}
 [hidden]{display:none!important}
@@ -72,6 +75,12 @@ input[type=text],input[type=number],input[type=date],input[type=tel],input[type=
   width:100%;background:var(--field);border:1px solid var(--line);border-radius:6px;padding:8px 10px}
 textarea{min-height:84px;resize:vertical;line-height:1.45}
 input:focus,select:focus,textarea:focus{border-color:var(--focus)}
+/* Unfilled fields: dashed amber border and tint, plus a dot before the label */
+main .is-empty{background:var(--empty-bg);border-style:dashed;border-color:var(--empty-line)}
+main .is-empty:focus{border-style:solid;border-color:var(--focus)}
+.f.unfilled > .lblrow > label::before,.f.unfilled > .lblrow > .lbl::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--empty-dot);margin-right:6px;vertical-align:2px}
+.f.unfilled .checks{padding:6px 8px;border:1px dashed var(--empty-line);border-radius:6px;background:var(--empty-bg)}
+
 .checks{display:flex;flex-wrap:wrap;gap:8px 18px}
 .checks label{display:flex;align-items:center;gap:7px;font-weight:400;font-size:.9375rem}
 .checks input{width:18px;height:18px;accent-color:var(--oak)}
@@ -1384,7 +1393,28 @@ function emissionTotals(){
   return {a,f,p,per};
 }
 const filled = v => Array.isArray(v) ? v.some(x => typeof x==="string" ? x : Object.values(x).some(y=>String(y).trim())) : String(v??"").trim()!=="";
+/* Fields that only apply sometimes ("if other", "if different", optional extras) aren't flagged when empty */
+const OPTIONAL = new Set(["thp","facilityId","ownershipOther","vegCondOther","vegOther","landowner","burnWindow",
+  "pileSize","historyImpacts","otherDispersion","altUsed","notes","hoursBetween","mapRef"]);
+const blankVal = v => String(v??"").trim()==="";
+function markEmpty(){
+  main.querySelectorAll("input[data-k],select[data-k],textarea[data-k]").forEach(el=>{
+    const opt = OPTIONAL.has(el.dataset.k);
+    const empty = !opt && blankVal(el.value);
+    el.classList.toggle("is-empty", empty);
+    const f=el.closest(".f"); if(f) f.classList.toggle("unfilled", empty);
+  });
+  main.querySelectorAll("input[data-t],select[data-t]").forEach(el=>el.classList.toggle("is-empty", blankVal(el.value)));
+  SECTIONS.forEach(s=>(s.fields||[]).forEach(f=>{
+    if(f.type!=="checks" && f.type!=="table") return;
+    const v=state[f.k];
+    const empty = f.type==="checks" ? !(v&&v.length) : !filled(v||[]);
+    const lbl=[...main.querySelectorAll(".f .lbl")].find(x=>x.textContent===f.label);
+    if(lbl) lbl.closest(".f").classList.toggle("unfilled", empty && !OPTIONAL.has(f.k));
+  }));
+}
 function updateDerived(){
+  markEmpty();
   const t = emissionTotals();
   t.per.forEach((x,i)=>{
     const fe=main.querySelector(`[data-fuel="${i}"]`), pe=main.querySelector(`[data-pm="${i}"]`);
