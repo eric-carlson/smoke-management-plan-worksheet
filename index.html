@@ -1893,15 +1893,30 @@ function setCoords(lat,lon){
 }
 function locMsg(t,err){ const m=document.getElementById("locMsg"); if(m){ m.textContent=t; m.classList.toggle("err",!!err); } }
 
+/* OpenStreetMap requests go through the sync Worker when signed in: OSM sometimes refuses browser
+   requests from github.io pages, and the Worker identifies the app as OSM's usage policy asks and
+   caches answers. Signed out, or if the Worker doesn't have the relay yet, they go direct. */
+let osmRelayMissing=false;
+const useRelay = () => !!(sync && sync.code) && !osmRelayMissing;
+async function nomFetch(kind,qs){
+  if(useRelay()){
+    try{
+      const r=await fetch(`${SYNC_URL}/osm/nominatim/${kind}?${qs}`,{headers:{"Authorization":"Bearer "+sync.code}});
+      if(r.status!==404 && r.status!==401) return r;
+      if(r.status===404) osmRelayMissing=true;
+    }catch(e){}
+  }
+  return fetch(`https://nominatim.openstreetmap.org/${kind}?${qs}`,{headers:{"Accept":"application/json"}});
+}
 async function reverseGeocode(lat,lon){
   try{
-    const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`,{headers:{"Accept":"application/json"}});
+    const r=await nomFetch("reverse",`format=jsonv2&lat=${lat}&lon=${lon}`);
     if(!r.ok) return null; const j=await r.json(); return j.display_name||null;
   }catch(e){ return null; }
 }
 async function geocode(q){
   try{
-    const r=await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=us&q=${encodeURIComponent(q)}`,{headers:{"Accept":"application/json"}});
+    const r=await nomFetch("search",`format=jsonv2&limit=1&countrycodes=us&q=${encodeURIComponent(q)}`);
     if(!r.ok) return null; const j=await r.json(); return j[0]?{lat:+j[0].lat,lon:+j[0].lon}:null;
   }catch(e){ return null; }
 }
@@ -2342,7 +2357,7 @@ document.getElementById("windClear").onclick=()=>{
 async function geocodeNear(q,c){
   const vb=[c[1]-0.6,c[0]+0.5,c[1]+0.6,c[0]-0.5].join(",");
   try{
-    const r=await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=us&viewbox=${vb}&bounded=1&q=${encodeURIComponent(q)}`,{headers:{"Accept":"application/json"}});
+    const r=await nomFetch("search",`format=jsonv2&limit=1&countrycodes=us&viewbox=${vb}&bounded=1&q=${encodeURIComponent(q)}`);
     if(!r.ok) return null; const j=await r.json(); return j[0]?[+j[0].lat,+j[0].lon]:null;
   }catch(e){ return null; }
 }
@@ -2845,6 +2860,14 @@ async function overpass(q){
   // after every server has failed, skip Overpass for 10 minutes rather than making each search wait
   if(Date.now()<overpassDownUntil){ const err=new Error("overpass"); err.detail=overpassWhy; throw err; }
   let why="";
+  if(useRelay()){
+    try{
+      const r=await fetch(`${SYNC_URL}/osm/overpass`,{method:"POST",body:"data="+encodeURIComponent(q),headers:{"Authorization":"Bearer "+sync.code,"Content-Type":"application/x-www-form-urlencoded"}});
+      if(r.ok) return (await r.json()).elements||[];
+      if(r.status===404) osmRelayMissing=true;
+      else if(r.status!==401){ why=(await r.text()).slice(0,200); overpassDownUntil=Date.now()+600000; overpassWhy=why; const err=new Error("overpass"); err.detail=why; throw err; }
+    }catch(e){ if(e.message==="overpass") throw e; }
+  }
   for(const url of OVERPASS){
     try{
       // Overpass asks browser apps to send a referrer; it answers 406 when overloaded or when the request looks anonymous
@@ -2884,7 +2907,7 @@ async function nearestTown(c){
   return cand[0] ? cand[0].name : "";
 }
 async function placeLookup(c){
-  const rev=async z=>{ const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=${z}&lat=${c[0]}&lon=${c[1]}`,{headers:{"Accept":"application/json"}}); return (await r.json()).address||{}; };
+  const rev=async z=>{ const r=await nomFetch("reverse",`format=jsonv2&zoom=${z}&lat=${c[0]}&lon=${c[1]}`); return (await r.json()).address||{}; };
   const a=await rev(10);
   let town=""; try{ town=await nearestTown(c); }
   catch(e){ // Overpass busy: nearest city, town, or village from Nominatim (no hamlets, so no map-label places)
@@ -2963,7 +2986,7 @@ async function nominatimNearby(c,rMi,phrases,progress){
     const [ph,what,lbl]=phrases[i];
     if(progress) progress(lbl||ph);
     try{
-      const r=await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=40&bounded=1&viewbox=${vb}&q=${encodeURIComponent(ph)}`,{headers:{"Accept":"application/json"}});
+      const r=await nomFetch("search",`format=jsonv2&limit=40&bounded=1&viewbox=${vb}&q=${encodeURIComponent(ph)}`);
       if(r.ok) (await r.json()).forEach(j=>{
         const name=j.name||String(j.display_name||"").split(",")[0]; if(!name) return;
         const p=[+j.lat,+j.lon], mi=miles(c,p); if(mi>rMi) return;
