@@ -789,7 +789,8 @@ print-color-adjust: exact;
 .fieldmsg{font-size:.8125rem;color:var(--muted)}
 input.computed{background:transparent;border-style:dashed;font-variant-numeric:tabular-nums}
 .fieldmsg.err{color:var(--accent)}
-#mapDialog{width:min(1280px,96vw);height:min(900px,92vh);padding:0;overflow:hidden}
+/* full screen means the whole window, minus a small margin so it still reads as a layer over the page */
+#mapDialog{width:calc(100vw - 24px);height:calc(100dvh - 24px);max-width:none;max-height:none;margin:auto;padding:0;overflow:hidden}
 #mapDialog[open]{display:flex;flex-direction:column}
 .map-panel{display:flex;flex-direction:column;min-height:0;background:var(--surface)}
 #mapDialog .map-panel{flex:1 1 auto;height:100%}
@@ -1305,7 +1306,7 @@ const SECTIONS = [
   {k:"bpAccess",label:"Unit access",type:"textarea",wide:1},
   {k:"calcAccessBp",label:"Access from the map",type:"mapcalc",wide:1},
   {k:"bpValues",label:"Plan to protect values at risk",type:"textarea",wide:1},
-  {k:"calcValues",label:"Structures from the map",type:"mapcalc",wide:1}
+  {k:"calcValues",label:"Values at risk from the map",type:"mapcalc",wide:1}
  ]},
  {id:"bpRx", bp:1, title:"Burn plan: prescription and operations", hint:"Sections 3, 4, and 5. Wind direction comes from the map's Wind directions mode or Section B.", fields:[
   {k:"rxTable",label:"Prescription",type:"grid",wide:1,
@@ -1596,7 +1597,7 @@ Object.assign(TIPS, {
  calcSigns:"Locations of signs placed in the map's Site features mode, with distance and direction from the unit.",
  calcLines:"Lengths of roads, trails, mowed lines, hand lines, and other control lines drawn in the map's Site features mode. 1 chain = 66 ft.",
  calcWater:"Water sources placed in the map's Site features mode, with distance and direction from the unit edge. Add capacity to the name, e.g. \"Tanks, 20,000 gal\".",
- calcValues:"Structures placed in the map's Site features mode, with distance and direction from the unit edge.",
+ calcValues:"Structures, power and utility lines, and poles placed in the map's Site features mode, with distance and direction from the unit edge. A line that passes through the unit is marked as crossing it.",
  calcPerimeter:"Unit perimeter from the drawn outline, and the total length of mapped control lines. Compare with production rates to check holding resources.",
  calcStaging:"Staging areas placed in the map's Site features mode."
 });
@@ -2409,6 +2410,8 @@ const FKINDS={
   medical:{label:"Medical meeting point",t:"pt",color:"#FFFFFF",ink:"#000",ch:"+"},
   helispot:{label:"Helispot",t:"pt",color:OI.black,ink:"#fff",ch:"H"},
   sign:{label:"Sign",t:"pt",color:OI.yellow,ink:"#000",ch:"!"},
+  powerPole:{label:"Power pole",t:"pt",color:OI.blue,ink:"#fff",ch:"P"},
+  utilPole:{label:"Utility pole (phone, cable)",t:"pt",color:OI.sky,ink:"#000",ch:"U"},
   other:{label:"Other point",t:"pt",color:"#BBBBBB",ink:"#000",ch:"•"},
   access:{label:"Access route",t:"ln",color:OI.sky,dash:"12 6"},
   road:{label:"Road (control line)",t:"ln",color:OI.orange},
@@ -2417,9 +2420,12 @@ const FKINDS={
   hand:{label:"Hand line",t:"ln",color:OI.vermillion,dash:"10 4"},
   dozer:{label:"Dozer line",t:"ln",color:OI.purple},
   wet:{label:"Wet line",t:"ln",color:"#FFFFFF",dash:"1 7"},
-  natural:{label:"Natural barrier",t:"ln",color:OI.purple,dash:"12 4 2 4"}
+  natural:{label:"Natural barrier",t:"ln",color:OI.purple,dash:"12 4 2 4"},
+  powerLine:{label:"Power line",t:"ln",color:OI.blue,dash:"14 5 3 5"},
+  utilLine:{label:"Utility line (phone, cable)",t:"ln",color:OI.sky,dash:"2 5"}
 };
 const CONTROL=["road","trail","mowed","hand","dozer","wet","natural"];
+const UTILITY=["powerPole","utilPole","powerLine","utilLine"];
 let featLayer=null, featTmp=null, featPending=null, featLine=[], featSel=null, featPrevKind="gate";
 const isLineKind = () => (FKINDS[featKindEl.value]||{}).t==="ln";
 let featVtx=null, unitVtx=null, featEditSession=false;
@@ -2712,6 +2718,17 @@ function distFromUnit(pt){
   }
   return {m:best,inside:false};
 }
+// where a line runs relative to the unit: crosses it, or how close it comes and on which side
+function lineRel(pts){
+  const c=unitCenter(); let best={m:Infinity,inside:false}, at=pts[0];
+  for(let i=1;i<pts.length;i++){
+    const a=pts[i-1], b=pts[i], n=Math.max(1,Math.ceil(miles(a,b)*1609.344/10));
+    for(let j=0;j<=n;j++){ const p=[a[0]+(b[0]-a[0])*j/n, a[1]+(b[1]-a[1])*j/n], d=distFromUnit(p);
+      if(d.inside) return "crosses the unit";
+      if(d.m<best.m){ best=d; at=p; } }
+  }
+  return `closest point ${fmtDist(best.m)} ${c?compass(bearing(c,at)):""} of the unit`.replace("  "," ");
+}
 function whereRel(pt){
   const d=distFromUnit(pt), c=unitCenter();
   if(d.inside) return "inside the unit";
@@ -2733,7 +2750,7 @@ const MAPCALC_HINT={
   calcSigns:"Place signs in the map's Site features mode to list their locations.",
   calcLines:"Draw roads, trails, mowed lines, and other control lines in the map's Site features mode to measure them.",
   calcWater:"Place water sources in the map's Site features mode to calculate distances to the unit.",
-  calcValues:"Place structures in the map's Site features mode to calculate distances to the unit.",
+  calcValues:"Place structures, power lines, and utility lines in the map's Site features mode to calculate distances to the unit.",
   calcPerimeter:"Draw the burn unit to measure its perimeter.",
   calcStaging:"Place staging areas in the map's Site features mode to list them."
 };
@@ -2755,7 +2772,19 @@ function mapCalc(k){
   }
   if(k==="calcSigns") ofKind("sign").forEach(f=>out.push(`${nm(f,"Sign")}: ${dmm(f.lat,f.lon)}, ${whereRel([f.lat,f.lon])}`));
   if(k==="calcWater") ofKind("water").forEach(f=>out.push(`${nm(f,"Water source")}: ${whereRel([f.lat,f.lon])} (${dmm(f.lat,f.lon)})`));
-  if(k==="calcValues") ofKind("structure").forEach(f=>out.push(`${nm(f,"Structure")}: ${whereRel([f.lat,f.lon])}`));
+  if(k==="calcValues"){
+    ofKind("structure").forEach(f=>out.push(`${nm(f,"Structure")}: ${whereRel([f.lat,f.lon])}`));
+    lines().filter(l=>l.kind==="powerLine"||l.kind==="utilLine").forEach(l=>{
+      const lbl=l.kind==="powerLine"?"Power line":"Utility line", rel=lineRel(l.pts);
+      out.push(`${l.name?`${lbl}, ${l.name}`:lbl}: ${fmtDist(lineLenM(l.pts))} long, ${rel}`); });
+    [["powerPole","Power pole"],["utilPole","Utility pole"]].forEach(([kk,lbl])=>{
+      const ps=ofKind(kk); if(!ps.length) return;
+      const near=ps.map(f=>({f,d:distFromUnit([f.lat,f.lon])})).sort((a,b)=>a.d.m-b.d.m);
+      const inside=near.filter(x=>x.d.inside).length;
+      if(ps.length<=3) near.forEach(x=>out.push(`${nm(x.f,lbl)}: ${whereRel([x.f.lat,x.f.lon])}`));
+      else out.push(`${ps.length} ${lbl.toLowerCase()}s${inside?`, ${inside} inside the unit`:""}; nearest ${whereRel([near[0].f.lat,near[0].f.lon])}`);
+    });
+  }
   if(k==="calcStaging") ofKind("staging").forEach(f=>out.push(`${nm(f,"Staging area")}: ${dmm(f.lat,f.lon)}, ${whereRel([f.lat,f.lon])}`));
   if(k==="calcLines"){
     const cl=lines().filter(l=>CONTROL.includes(l.kind));
@@ -3111,11 +3140,13 @@ const LAYER_GROUPS=[
   {k:"control",label:"Control lines",color:FKINDS.road.color,count:()=>lines().filter(l=>CONTROL.includes(l.kind)).length},
   {k:"water",label:"Water sources",color:FKINDS.water.color,count:()=>feats().filter(f=>f.kind==="water").length},
   {k:"structure",label:"Structures",color:FKINDS.structure.color,count:()=>feats().filter(f=>f.kind==="structure").length},
+  {k:"utility",label:"Power and utility lines",color:FKINDS.powerLine.color,count:()=>feats().filter(f=>UTILITY.includes(f.kind)).length+lines().filter(l=>UTILITY.includes(l.kind)).length},
   {k:"medical",label:"Medical point and helispot",color:FKINDS.medical.color,count:()=>feats().filter(f=>f.kind==="medical"||f.kind==="helispot").length},
   {k:"staging",label:"Staging and signs",color:FKINDS.staging.color,count:()=>feats().filter(f=>f.kind==="staging"||f.kind==="sign").length},
   {k:"other",label:"Other points",color:FKINDS.other.color,count:()=>feats().filter(f=>f.kind==="other").length}
 ];
 function groupOf(kind){
+  if(UTILITY.includes(kind)) return "utility";
   if(kind==="gate"||kind==="access") return "access";
   if(CONTROL.includes(kind)) return "control";
   if(kind==="medical"||kind==="helispot") return "medical";
