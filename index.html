@@ -1035,7 +1035,7 @@ body.readonly .ro-banner{display:block}
       <button class="btn" id="historyBtn" title="See who changed which parts of the worksheet, and when.">History</button>
       <button class="btn" id="tipsAll" aria-pressed="false" title="Open the explanation under every field at once. Use the ? next to a field to open just that one.">Show all explanations</button>
       <button class="btn" id="exportBp" title="Download the burn plan as a Word (.docx) file: the California Standardized Prescribed Fire Plan filled in from this worksheet, with the unit boundary, go/no-go checklist, medical plan, and contingency plan attachments.">Export burn plan</button>
-      <button class="btn" id="exportMd" title="Download the smoke management plan sections as a Markdown (.md) file you can print, email, or copy into the district's SMP form.">Export SMP</button>
+      <button class="btn" id="exportMd" title="Download the district's SMP application (PDF) filled in from this worksheet, with the site map in Section VII and Sections A and B, the emissions estimate, and notifications as attached pages. Sign and date page 1 before submitting.">Export SMP</button>
       <button class="btn" id="backup" title="Download a JSON copy of everything entered. Use it with Restore to move your work to another browser or device.">Back up</button>
       <button class="btn" id="restoreBtn" title="Load a JSON backup made with Back up. This replaces what's on screen, and syncs to everyone if you're signed in as an editor.">Restore</button>
       <input type="file" id="restoreFile" accept=".json,application/json" hidden>
@@ -4231,6 +4231,247 @@ function downloadBlob(filename,blob,label){
   toast(label+" saved");
 }
 
+/* ---------- SMP application as the district's own PDF ----------
+   smp-application-template.pdf is MCAQMD's fillable 2024 SMP application. The app fills its form
+   fields, puts the site map in the Section VII box, and appends attachment pages for Section A,
+   Section B, the emissions estimate, and anything too long for its box on the form. */
+let PDFLIB_ready=null;
+function loadPdfLib(){
+  if(!PDFLIB_ready) PDFLIB_ready=new Promise((res,rej)=>{
+    if(window.PDFLib) return res(window.PDFLib);
+    const sc=document.createElement("script");
+    sc.src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js";
+    sc.onload=()=>res(window.PDFLib); sc.onerror=()=>{ PDFLIB_ready=null; rej(new Error("pdf-lib")); };
+    document.head.appendChild(sc);
+  });
+  return PDFLIB_ready;
+}
+// PDF standard fonts only cover the Windows Latin character set
+const PDF_SUBS={"′":"'","″":'"',"≈":"~","≤":"<=","≥":">=","→":"->","↑":"^","−":"-"," ":" "," ":" ","☐":"[ ]","☒":"[x]","□":"[ ]","⌂":"","…":"..."};
+function pdfSafe(font,s){
+  return String(s??"").replace(/[′″≈≤≥→↑−  ☐☒□⌂…]/g,c=>PDF_SUBS[c]).split("").map(ch=>{
+    if(ch==="\n") return ch;
+    try{ font.widthOfTextAtSize(ch,10); return ch; }catch(e){ return "?"; }
+  }).join("");
+}
+async function exportSmpPdf(){
+  const PDFLib=await loadPdfLib();
+  const {PDFDocument,StandardFonts,rgb}=PDFLib;
+  const res=await fetch("smp-application-template.pdf",{cache:"no-cache"});
+  if(!res.ok) throw new Error("template");
+  const doc=await PDFDocument.load(await res.arrayBuffer(),{ignoreEncryption:true});
+  const form=doc.getForm();
+  const helv=await doc.embedFont(StandardFonts.Helvetica);
+  const times=await doc.embedFont(StandardFonts.TimesRoman), timesB=await doc.embedFont(StandardFonts.TimesRomanBold), timesI=await doc.embedFont(StandardFonts.TimesRomanItalic);
+  const v = k => String(state[k]??"").trim();
+  const has = (k,o) => (state[k]||[]).includes(o);
+  const rows = k => (state[k]||[]).filter(r=>Object.values(r||{}).some(x=>String(x??"").trim()));
+  const usDate = d => d ? new Date(d+"T12:00:00").toLocaleDateString("en-US") : "";
+  const cont=[];   // [where on the form, full text] for answers too long for their box
+  const setText=(name,val,where)=>{
+    let f; try{ f=form.getTextField(name); }catch(e){ console.warn("No field",name); return; }
+    if(!f.acroField.getDefaultAppearance()) f.acroField.setDefaultAppearance("/Helv 10 Tf 0 g");   // a few fields in the form lack one
+    const s=pdfSafe(helv,String(val??"").trim().replace(/\s*\n+\s*/g,"; "));
+    if(!s){ return; }
+    const w=f.acroField.getWidgets()[0].getRectangle(), room=w.width-4;
+    let size=Math.min(10, Math.max(6,w.height-5));
+    while(size>8 && helv.widthOfTextAtSize(s,size)>room) size-=0.5;
+    if(helv.widthOfTextAtSize(s,size)>room && where){
+      cont.push([where,String(val).trim()]);
+      const note=` (see attached)`;
+      let cut=s; while(cut.length>10 && helv.widthOfTextAtSize(cut+"..."+note,size)>room) cut=cut.slice(0,-1);
+      f.setText(cut.replace(/\s+\S*$/,"")+"..."+note);
+    } else f.setText(s);
+    f.setFontSize(size);
+  };
+  const check=(name,on)=>{ if(!on) return; try{ const c=form.getCheckBox(name); c.check(); c.updateAppearances(); }catch(e){ console.warn("No checkbox",name); } };
+
+  // Section I
+  const types=["Potential to impact sensitive receptors","Burning past 3:00 P.M. and overnight burns","More than 10 acres broadcast or 50 tons piled fuels","Burning 100+ acres"];
+  ["Smoke Management Plan SMP Potential to impact a sensitive receptor complete","Smoke Management Plan SMP  Burning past 300 PM and overnight burns",
+   "Smoke Management Plan SMP More than 10 acres broadcast or 50 tons piled fuels","Smoke Management Plan SMP  Burning 100 acres complete Sections A B C"]
+   .forEach((n,i)=>check(n,has("appType",types[i])));
+  // Section III
+  const dba=[v("org"), v("permitTo") && v("permitTo")!==v("org") ? `permit to ${v("permitTo")}` : ""].filter(Boolean).join("; ");
+  setText("Name of Business or Organization DBA Permit Will be Issued to",dba,"Section III, business or organization (DBA) / permit will be issued to");
+  setText("Legal Owner if different from DBA",v("landowner"),"Section III, legal owner");
+  const own={"Corporation":"Corporation","Partnership":"Partnership","Sole proprietor":"Sole Proprietor","Government agency":"Government Agency","Other":"Other check"}[v("ownership")];
+  if(own) check(own,true);
+  if(v("ownership")==="Other") setText("Other",v("ownershipOther"),"Section III, type of ownership (other)");
+  setText("Mailing Address",v("landownerAddr"),"Section III, mailing address");
+  setText("Mailing City",v("mailCity")); setText("State",v("mailState")); setText("Mailing ZIP",v("mailZip"));
+  // Section IV
+  setText("Purpose of the Open BurningRow1",v("objectives"),"Section IV, purpose of the open burning");
+  setText("Start Date",usDate(v("burnDate"))); setText("Completion Date",usDate(v("endDate")));
+  // Section V (signature and date are left for the owner/operator)
+  setText("Printed Name",v("permittee")); setText("Title",v("repTitle"));
+  setText("Telephone Number",v("repPhone")); setText("Cell Phone Number",v("phone24"));
+  setText("Email address",v("email")); setText("Facility ID",v("facilityId"));
+  // Section VI
+  setText("Site Address",v("address"),"Section VI, site address"); setText("Nearest Town",v("town"),"Section VI, nearest city/town");
+  setText("THP",v("thp")); setText("APNs",v("apn"),"Section VI, APN(s)");
+  setText("T",v("legalT")); setText("R",v("legalR")); setText("Sec",v("legalSec"),"Section VI, legal section(s)");
+  setText("Top Elevation",v("elevTop")); setText("Bottom Elevation",v("elevBottom"));
+  const route=[v("access"), ...mapCalc("calcAccess")].filter(Boolean).join("\n");
+  setText("Route to Property if no Street Address",route,"Section VI, access route to property");
+  setText("Project Area acres",v("acres")); setText("Number of Piles",v("numPiles"));
+  const ps=v("pileSize").match(/(\d+(?:\.\d+)?)\s*(?:ft)?\s*[x×X*]\s*(\d+(?:\.\d+)?)/);
+  if(ps){ setText("Pile Size_L",ps[1]); setText("Pile Size_W",ps[2]); }
+  setText("Broadcast Area acres",v("broadcastAcres"));
+  setText("Vegetation Fuel Load per Acre",computedVal("fuelPerAcre") ? computedVal("fuelPerAcre")+" tons" : "");
+  setText("Total Project Fuel Loading",computedVal("fuelTotal"));
+  [["vegBrush","Brush","Brush %"],["vegSlash","Timber Slash","Timber %"],["vegLitter","Underbrush","Underbrush %"],["vegGrass","Grass","Grass %"]]
+    .forEach(([k,cb,pct])=>{ if(num(v(k))>0){ check(cb,true); setText(pct,v(k)); } });
+  if(v("vegOther")){ check("Other Describe",true); setText("Other Describe-%",v("vegOther"),"Section VI, other vegetation"); }
+  const cond={"Machine pile":"Machine Pile","Slash / landing pile":"Slash  Landing Pile","Treated":"Treated","Hand pile":"Hand Pile","Broadcast / standing brush":"Broadcast Standing Brush","Other":"Other_2"}[v("vegCond")];
+  if(cond) check(cond,true);
+  if(v("vegCond")==="Other") setText("Other Conditions",v("vegCondOther"),"Section VI, vegetation condition (other)");
+  setText("Ignition Technique",v("technique"),"Section VI, ignition technique");
+  check("High",v("intensity")==="High"); check("Low",v("intensity")==="Low");
+  setText("Expected Burn Duration ignition to complete extinction",v("duration"),"Section VI, expected burn duration");
+  check("Sensitive Receptors",has("attach","Section A attached (burn could impact smoke sensitive areas)"));
+  check("Greater than 100 acres",has("attach","Section B attached (over 100 acres or over 5 tons PM10)"));
+  // Authorized contacts (page 5)
+  const ac=rows("authContacts");
+  ["","_2","_3","_4","_5","_6","_7","_8"].forEach((sfx,i)=>{ const r=ac[i]; if(!r) return;
+    setText("NAME"+sfx,[r.name,r.role].filter(Boolean).join(", "),`Authorized contacts, line ${i+1}`); setText("PHONE"+sfx,r.phone); });
+  const extraContacts=ac.slice(8);
+
+  // Section VII: the site map in the map box
+  const mapField="Mark burn pile locations access roads approximate boundaries for broadcast burns etc N";
+  let mapNote="";
+  try{
+    if(siteBounds("site")){
+      const m=await renderSiteMap({kind:"site",base:currentBase||"Satellite",W:1600,H:1150});
+      if(m){
+        const img=await doc.embedPng(new Uint8Array(await m.blob.arrayBuffer()));
+        const f=form.getTextField(mapField), r=f.acroField.getWidgets()[0].getRectangle(), pg=doc.getPages()[2];
+        const sc=Math.min((r.width-8)/img.width,(r.height-8)/img.height), w=img.width*sc, h=img.height*sc;
+        form.removeField(f);
+        pg.drawImage(img,{x:r.x+(r.width-w)/2, y:r.y+(r.height-h)/2, width:w, height:h});
+        mapNote = m.base ? "" : "The base map couldn't be loaded, so the map shows features only.";
+        lastMapBases=[m.base];
+      }
+    }
+  }catch(e){ console.warn("Map not added",e); }
+  form.updateFieldAppearances(helv);
+
+  /* ---- attachment pages ---- */
+  const W=612, H=792, M=54, LH=13.5;
+  let pg=null, y=0, pageNo=0;
+  const project=pdfSafe(times,v("name")||"Smoke management plan");
+  const newPage=()=>{
+    pg=doc.addPage([W,H]); pageNo++; y=H-M;
+    pg.drawText(pdfSafe(times,`SMP application attachment: ${project}`),{x:M,y:H-34,size:9,font:timesI,color:rgb(.3,.3,.3)});
+    pg.drawText(`Attachment page ${pageNo}`,{x:W-M-times.widthOfTextAtSize(`Attachment page ${pageNo}`,9),y:H-34,size:9,font:times,color:rgb(.3,.3,.3)});
+  };
+  const need=h=>{ if(!pg || y-h<M) newPage(); };
+  const wrap=(text,font,size,width)=>{
+    const out=[];
+    pdfSafe(font,text).split("\n").forEach(par=>{
+      let line="";
+      par.split(/\s+/).forEach(word=>{
+        const t=line?line+" "+word:word;
+        if(font.widthOfTextAtSize(t,size)<=width) line=t;
+        else { if(line) out.push(line); line=word; while(font.widthOfTextAtSize(line,size)>width && line.length>1){ let i=line.length-1; while(i>1 && font.widthOfTextAtSize(line.slice(0,i),size)>width) i--; out.push(line.slice(0,i)); line=line.slice(i); } }
+      });
+      out.push(line);
+    });
+    return out;
+  };
+  const para=(text,{font=times,size=11,indent=0,gap=4}={})=>{
+    wrap(text,font,size,W-2*M-indent).forEach(l=>{ need(LH); pg.drawText(l,{x:M+indent,y:y-size,size,font}); y-=LH; }); y-=gap;
+  };
+  const title=t=>{ if(pg && y<H-M-10) { need(120); } if(!pg) newPage(); para(t,{font:timesB,size:14,gap:6}); };
+  const sectionTitle=t=>{ need(60); y-=4; para(t,{font:timesB,size:12,gap:2}); };
+  const kv=(label,val)=>{ if(!String(val??"").trim()) return;
+    // value follows the label on the same line; a very long label puts the value on the next line
+    const lw=timesB.widthOfTextAtSize(pdfSafe(timesB,label+": "),11), same=lw<W-2*M-120, x0=same?lw:12;
+    need(LH); pg.drawText(pdfSafe(timesB,label+":"),{x:M,y:y-11,size:11,font:timesB});
+    if(!same) y-=LH;
+    wrap(String(val),times,11,W-2*M-x0).forEach((l,i)=>{ if(i||!same) need(LH); pg.drawText(l,{x:M+x0,y:y-11,size:11,font:times}); y-=LH; }); y-=2; };
+  const block=(label,val)=>{ if(!String(val??"").trim()) return; need(LH*2); para(label,{font:timesB,size:11,gap:1}); para(String(val),{indent:12}); };
+  const table=(cols,data,widths)=>{
+    if(!data.length) return;
+    const tw=W-2*M, ws=widths.map(w=>w*tw), size=10, pad=3, lh=12;
+    const drawRow=(cells,bold)=>{
+      const font=bold?timesB:times, lines=cells.map((c,i)=>wrap(String(c??""),font,size,ws[i]-2*pad));
+      const h=Math.max(...lines.map(l=>l.length))*lh+2*pad;
+      if(!pg || y-h<M){ newPage(); if(!bold) drawRow(cols,true); }
+      let x=M;
+      lines.forEach((ls,i)=>{ pg.drawRectangle({x,y:y-h,width:ws[i],height:h,borderColor:rgb(0,0,0),borderWidth:.6,color:bold?rgb(.9,.9,.9):undefined});
+        ls.forEach((l,j)=>pg.drawText(l,{x:x+pad,y:y-pad-size-j*lh+1,size,font})); x+=ws[i]; });
+      y-=h;
+    };
+    need(40); drawRow(cols,true); data.forEach(r=>drawRow(r,false)); y-=10;
+  };
+
+  if(cont.length){
+    title("Continued from the application form");
+    cont.forEach(([where,text])=>block(where,text));
+  }
+  if(mapNote || hasUnit()){
+    title("Burn location");
+    kv("Burn unit center (DMM)",[v("lat"),v("lon")].filter(Boolean).join(", "));
+    kv("County",v("county"));
+    if(mapNote) para(mapNote,{font:timesI});
+    if(hasUnit()) table(["Corner","Latitude","Longitude"],state.unitPoly.map((p,i)=>[String(i+1),toDMM(p[0],true),toDMM(p[1],false)]),[.16,.42,.42]);
+  }
+  {
+    const extra=[["Project name",v("name")],["Burn boss (CARX)",v("burnBoss")],["Burn type",v("burnType")],["Primary purpose is fire hazard reduction",v("hazard")],
+      ["Primary purpose is wildlife or game habitat",v("wildlife")],["Backup burn window",v("burnWindow")],["Preferred ignition hours",v("ignHours")],
+      ["Minimum hours between ignitions",v("hoursBetween")],["Maximum acres per hour",v("acresPerHour")],["Maximum acres per day",v("acresPerDay")]].filter(([,x])=>x);
+    if(extra.length || v("drying")){ title("Additional project information"); extra.forEach(([l,x])=>kv(l,x)); block("Fuel drying time and conditions before ignition",v("drying")); }
+  }
+  {
+    const t=emissionTotals();
+    if(t.f){
+      title("Emissions estimate");
+      table(["Vegetation type","EV","Acres","Tons/acre","Fuel (tons)","PM10 (tons)"],
+        (state.emis||[]).map((r,i)=>[r.veg||"",evOf(r.veg).toFixed(3),r.acres||"",r.load||"",t.per[i].fuel.toFixed(1),t.per[i].pm.toFixed(3)])
+          .concat([["Total","",t.a.toFixed(1),"",t.f.toFixed(1),t.p.toFixed(2)]]),[.34,.1,.12,.14,.15,.15]);
+      para("Method: acres x fuel loading x emission value (MCAQMD Table 2/3, USFS Air Quality Conformity Handbook factors).",{size:10,font:timesI});
+    }
+  }
+  const secA=SECTIONS.find(s=>s.id==="ssa"), secB=SECTIONS.find(s=>s.id==="rx");
+  const renderSection=(sec,heading)=>{
+    if(!sec.fields.some(f=>filled(state[f.k]) || (f.type==="mapcalc" && mapCalc(f.k).length))) return;
+    title(heading);
+    sec.fields.forEach(f=>{
+      const val=state[f.k];
+      if(f.type==="table"){ const rs=rows(f.k); if(rs.length){ sectionTitle(f.label); table(f.cols.map(c=>c.label),rs.map(r=>f.cols.map(c=>r[c.k]||"")),f.cols.map(()=>1/f.cols.length)); } }
+      else if(f.type==="checks"){ if((val||[]).length) kv(f.label,val.join(", ")); }
+      else if(f.type==="mapcalc"){ const ls=mapCalc(f.k); if(ls.length) block(f.label,ls.map(l=>"- "+l).join("\n")); }
+      else if(f.type==="textarea") block(f.label,val);
+      else kv(f.label,val);
+    });
+    if(sec.id==="rx" && state.wind) kv("Permissible wind directions",`Wind from ${windText(state.wind)}; preferred ${compass(state.wind.ideal)} (${Math.round(state.wind.ideal)} deg). Smoke travels toward ${compass(state.wind.from+180)} to ${compass(state.wind.to+180)}.`);
+  };
+  renderSection(secA,"Section A: Smoke sensitive areas, meteorology, and notification");
+  renderSection(secB,"Section B: Prescription and contingency");
+  if(extraContacts.length){ title("Authorized contacts (continued)"); table(["Name","Role","Phone","Email"],extraContacts.map(r=>[r.name||"",r.role||"",r.phone||"",r.email||""]),[.3,.2,.2,.3]); }
+  {
+    const nb=rows("neighbors"), ag=rows("agencies");
+    if(nb.length||ag.length){ title("Notifications");
+      if(nb.length){ sectionTitle("Adjacent landowners"); table(["Name","Phone","Date notified"],nb.map(r=>[r.name||"",r.phone||"",r.notified||""]),[.45,.3,.25]); }
+      if(ag.length){ sectionTitle("Agencies"); table(["Agency","Contact","Phone","When to call"],ag.map(r=>[r.agency||"",r.contact||"",r.phone||"",r.when||""]),[.28,.24,.2,.28]); } }
+  }
+  // the wider area map, if the base map loads
+  try{
+    if(siteBounds("area")){
+      const m=await renderSiteMap({kind:"area",base:"Topo",W:1200,H:900});
+      if(m){ const img=await doc.embedPng(new Uint8Array(await m.blob.arrayBuffer()));
+        newPage(); para("Area map",{font:timesB,size:14,gap:6});
+        const w=W-2*M, h=img.height*w/img.width; pg.drawImage(img,{x:M,y:y-h,width:w,height:h}); y-=h+8;
+        para("The unit and surrounding roads."+(m.base?` Base map: ${m.base}.`:" The base map couldn't be loaded, so only the features are shown."),{font:timesI,size:10}); }
+    }
+  }catch(e){ console.warn("Area map not added",e); }
+
+  doc.setTitle(pdfSafe(helv,`Smoke Management Plan application: ${v("name")||""}`));
+  const bytes=await doc.save();
+  return new Blob([bytes],{type:"application/pdf"});
+}
+
 /* ---------- markdown ---------- */
 function mdEsc(s){ return String(s??"").replace(/\|/g,"\\|").replace(/\n+/g," "); }
 function mdTable(cols,rows){
@@ -4334,7 +4575,12 @@ async function offerFile(filename,data,label){
     showText(data,`The file couldn't be saved here. Copy this text into ${filename}.`);
   }
 }
-document.getElementById("exportMd").onclick=()=>{ saveNow(); offerFile(slug()+"-smp.md", toMarkdown(), "SMP"); };
+document.getElementById("exportMd").onclick=async()=>{
+  saveNow(); toast("Filling in the SMP application…");
+  try{ downloadBlob(slug()+"-smp-application.pdf", await exportSmpPdf(), "SMP application");
+    if(lastMapBases.some(b=>!b)) setTimeout(()=>toast("Map imagery couldn't be loaded, so the map shows features only"),2800); }
+  catch(e){ console.error(e); toast("Couldn't fill the PDF; saving Markdown instead"); offerFile(slug()+"-smp.md", toMarkdown(), "SMP"); }
+};
 document.getElementById("mapImgBtn").onclick=async()=>{
   if(!siteBounds("site")){ readout("Draw the unit or add site features first."); return; }
   readout("Drawing the map image…");
