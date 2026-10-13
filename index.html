@@ -1897,14 +1897,18 @@ function locMsg(t,err){ const m=document.getElementById("locMsg"); if(m){ m.text
    requests from github.io pages, and the Worker identifies the app as OSM's usage policy asks and
    caches answers. Signed out, or if the Worker doesn't have the relay yet, they go direct. */
 let osmRelayMissing=false;
-const useRelay = () => !!(sync && sync.code) && !osmRelayMissing;
+const useRelay = () => {
+  const ok = !!(sync && sync.code) && !osmRelayMissing;
+  if(!ok && !useRelay.said){ useRelay.said=true; console.info(`OpenStreetMap requests go direct: ${!(sync && sync.code) ? "not signed in" : "the sync Worker has no /osm relay (redeploy worker.js)"}.`); }
+  return ok;
+};
 async function nomFetch(kind,qs){
   if(useRelay()){
     try{
       const r=await fetch(`${SYNC_URL}/osm/nominatim/${kind}?${qs}`,{headers:{"Authorization":"Bearer "+sync.code}});
       if(r.status!==404 && r.status!==401) return r;
-      if(r.status===404) osmRelayMissing=true;
-    }catch(e){}
+      if(r.status===404){ osmRelayMissing=true; console.warn("The sync Worker has no /osm relay; redeploy worker.js. Going direct to OpenStreetMap."); }
+    }catch(e){ console.warn("Couldn't reach the sync Worker's OpenStreetMap relay; going direct.",e); }
   }
   return fetch(`https://nominatim.openstreetmap.org/${kind}?${qs}`,{headers:{"Accept":"application/json"}});
 }
@@ -2862,23 +2866,26 @@ async function overpass(q){
   let why="";
   if(useRelay()){
     try{
-      const r=await fetch(`${SYNC_URL}/osm/overpass`,{method:"POST",body:"data="+encodeURIComponent(q),headers:{"Authorization":"Bearer "+sync.code,"Content-Type":"application/x-www-form-urlencoded"}});
+      const r=await fetch(`${SYNC_URL}/osm/overpass`,{method:"POST",signal:AbortSignal.timeout?AbortSignal.timeout(30000):undefined,body:"data="+encodeURIComponent(q),headers:{"Authorization":"Bearer "+sync.code,"Content-Type":"application/x-www-form-urlencoded"}});
       if(r.ok) return (await r.json()).elements||[];
-      if(r.status===404) osmRelayMissing=true;
+      if(r.status===404){ osmRelayMissing=true; console.warn("The sync Worker has no /osm relay; redeploy worker.js. Going direct to OpenStreetMap."); }
       else if(r.status!==401){ why=(await r.text()).slice(0,200); overpassDownUntil=Date.now()+600000; overpassWhy=why; const err=new Error("overpass"); err.detail=why; throw err; }
-    }catch(e){ if(e.message==="overpass") throw e; }
+    }catch(e){
+      if(e.message==="overpass") throw e;
+      if(e.name==="TimeoutError"||e.name==="AbortError"){ why="OpenStreetMap's map search servers didn't answer within 30 seconds"; overpassDownUntil=Date.now()+600000; overpassWhy=why; const err=new Error("overpass"); err.detail=why; throw err; }
+      console.warn("Couldn't reach the sync Worker's Overpass relay; going direct.",e); }
   }
   for(const url of OVERPASS){
     try{
       // Overpass asks browser apps to send a referrer; it answers 406 when overloaded or when the request looks anonymous
-      const ac=new AbortController(), tmr=setTimeout(()=>ac.abort(),12000);
+      const ac=new AbortController(), tmr=setTimeout(()=>ac.abort(),8000);
       const r=await fetch(url,{method:"POST",signal:ac.signal,body:"data="+encodeURIComponent(q),referrerPolicy:"strict-origin-when-cross-origin",headers:{"Content-Type":"application/x-www-form-urlencoded"}})
         .finally(()=>clearTimeout(tmr));
       if(r.ok) return (await r.json()).elements||[];
       const t=(await r.text()).replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim();
       why=`${new URL(url).host} answered ${r.status}${t?": "+t.slice(0,160):""}`;
       if(r.status===400) break;   // a query error won't go away on another server; 406, 429, and 504 mean try the next one
-    }catch(e){ why=`${new URL(url).host} ${e.name==="AbortError"?"didn't answer within 12 seconds":`couldn't be reached (${e.message})`}`; }
+    }catch(e){ why=`${new URL(url).host} ${e.name==="AbortError"?"didn't answer within 8 seconds":`couldn't be reached (${e.message})`}`; }
   }
   overpassDownUntil=Date.now()+600000; overpassWhy=why;
   const err=new Error("overpass"); err.detail=why; throw err;

@@ -65,6 +65,7 @@ async function identify(request, env) {
 }
 
 const OSM_UA = 'SMP-Worksheet/1.0 (prescribed burn smoke management worksheet; https://github.com/eric-carlson/smoke-management-plan-worksheet)';
+let overpassGood = null;   // the server that answered last, tried first next time (lives as long as this Worker instance)
 const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
 
 async function sha256(s) {
@@ -97,10 +98,11 @@ async function osm(request, pathname) {
     if (!/^data=/.test(body) || body.length > 8000) return text('Expected data=<query>', 400);
     return cached('ovp-' + (await sha256(body)), 86400, async () => {
       let why = '';
-      for (const target of OVERPASS) {
+      const order = overpassGood ? [overpassGood, ...OVERPASS.filter((u) => u !== overpassGood)] : OVERPASS;
+      for (const target of order) {
         try {
-          const r = await fetch(target, { method: 'POST', body, headers: { 'User-Agent': OSM_UA, 'Content-Type': 'application/x-www-form-urlencoded' }, signal: AbortSignal.timeout(20000) });
-          if (r.ok) return r;
+          const r = await fetch(target, { method: 'POST', body, headers: { 'User-Agent': OSM_UA, 'Content-Type': 'application/x-www-form-urlencoded' }, signal: AbortSignal.timeout(8000) });
+          if (r.ok) { overpassGood = target; return r; }
           why = `${new URL(target).host} answered ${r.status}`;
           if (r.status === 400) return text(await r.text(), 400);
         } catch (e) { why = `${new URL(target).host} ${e.name === 'TimeoutError' ? 'timed out' : 'could not be reached'}`; }
