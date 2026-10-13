@@ -813,7 +813,9 @@ input.computed{background:transparent;border-style:dashed;font-variant-numeric:t
 #mapSide .map-panel{height:100%;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 #mapSide .map-panel.flash{box-shadow:0 0 0 3px var(--oak)}
 @media (min-width:1000px){
-  .layout{max-width:1760px;grid-template-columns:minmax(0,1fr) minmax(380px,44%);grid-template-areas:"toc toc" "main map";gap:16px 24px}
+  /* full window width: the form keeps a readable width and the map takes everything else */
+  .layout,.top-inner{max-width:none}
+  .layout{grid-template-columns:minmax(0,720px) minmax(380px,1fr);grid-template-areas:"toc toc" "main map";gap:16px 24px}
   nav.toc{grid-area:toc;position:static;min-width:0}
   nav.toc ol{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
   nav.toc li{flex:none}
@@ -824,7 +826,7 @@ input.computed{background:transparent;border-style:dashed;font-variant-numeric:t
   #mapSide{display:block;grid-area:map;position:sticky;top:calc(var(--hdr,100px) + 12px);height:calc(100vh - var(--hdr,100px) - 28px);align-self:start;min-width:0}
 }
 @media (min-width:1360px){
-  .layout{grid-template-columns:200px minmax(0,1fr) minmax(420px,40%);grid-template-areas:"toc main map";gap:28px}
+  .layout{grid-template-columns:200px minmax(0,760px) minmax(420px,1fr);grid-template-areas:"toc main map";gap:28px}
   nav.toc{position:sticky;top:calc(var(--hdr,100px) + 12px);align-self:start}
   nav.toc ol{display:block;overflow:visible;padding:0}
   nav.toc a{background:none;border:0;grid-template-columns:1fr auto}
@@ -882,6 +884,11 @@ input.computed{background:transparent;border-style:dashed;font-variant-numeric:t
 .kmenu .ksel svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
 .kmenu .kcap{font-size:.75rem;color:var(--muted);min-height:1.2em;flex:1;text-align:right;padding-right:4px;white-space:nowrap}
 .kswatch .fpin{transform:scale(.86)}
+.leaflet-control.locate-ctl{margin-top:6px}
+.locate-ctl a{display:flex!important;align-items:center;justify-content:center;color:var(--ink,#1c2420)}
+.locate-ctl svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round}
+.locate-ctl a.busy svg{animation:locpulse 1s ease-in-out infinite}
+@keyframes locpulse{50%{opacity:.25}}
 .map-panel .leaflet-touch .leaflet-bar a,.map-panel .leaflet-bar a{width:26px;height:26px;line-height:26px;font-size:18px}
 .map-wrap{position:relative;flex:1 1 auto;min-height:220px}
 .map-wrap #map{position:absolute;inset:0;height:auto;min-height:0}
@@ -1007,7 +1014,7 @@ body.readonly .ro-banner{display:block}
       <button class="btn" id="shareBtn" title="Sign in with your access code to sync edits with everyone on the plan. The owner adds people and assigns editor or viewer access here.">Sharing</button>
       <button class="btn" id="historyBtn" title="See who changed which parts of the worksheet, and when.">History</button>
       <button class="btn" id="tipsAll" aria-pressed="false" title="Open the explanation under every field at once. Use the ? next to a field to open just that one.">Show all explanations</button>
-      <button class="btn" id="exportBp" title="Download a Markdown (.md) file in the California Standardized Prescribed Fire Plan format, with the go/no-go checklist, medical plan, and contingency plan attachments.">Export burn plan</button>
+      <button class="btn" id="exportBp" title="Download the burn plan as a Word (.docx) file: the California Standardized Prescribed Fire Plan filled in from this worksheet, with the unit boundary, go/no-go checklist, medical plan, and contingency plan attachments.">Export burn plan</button>
       <button class="btn" id="exportMd" title="Download the smoke management plan sections as a Markdown (.md) file you can print, email, or copy into the district's SMP form.">Export SMP</button>
       <button class="btn" id="backup" title="Download a JSON copy of everything entered. Use it with Restore to move your work to another browser or device.">Back up</button>
       <button class="btn" id="restoreBtn" title="Load a JSON backup made with Back up. This replaces what's on screen, and syncs to everyone if you're signed in as an editor.">Restore</button>
@@ -1043,7 +1050,6 @@ body.readonly .ro-banner{display:block}
 <div id="mapPanel" class="map-panel">
   <div class="map-bar" role="toolbar" aria-label="Map tools">
     <span class="bar-group" id="barModes">
-      <button type="button" class="ib modebtn" id="modeLoc" title="Set location: click the map to place the burn location" aria-label="Set location: click the map to place the burn location" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></svg></button>
       <button type="button" class="ib modebtn" id="modeUnit" title="Draw burn unit: click corners to outline the unit; fills in area, elevation, slope, and aspect" aria-label="Draw burn unit: click corners to outline the unit; fills in area, elevation, slope, and aspect" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8l7-4 7 5-2 10H7Z"/><circle cx="5" cy="8" r="1.7" fill="currentColor"/><circle cx="12" cy="4" r="1.7" fill="currentColor"/><circle cx="19" cy="9" r="1.7" fill="currentColor"/><circle cx="17" cy="19" r="1.7" fill="currentColor"/><circle cx="7" cy="19" r="1.7" fill="currentColor"/></svg></button>
       <button type="button" class="ib modebtn" id="modeWind" title="Wind directions: drag handles to set the acceptable range and preferred direction" aria-label="Wind directions: drag handles to set the acceptable range and preferred direction" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h15a3 3 0 1 1-3 3"/><path d="M3 16h7"/></svg></button>
       <button type="button" class="ib modebtn" id="modeFeat" title="Site features: gates, water, structures, signs, staging, medical points, access route, and control lines" aria-label="Site features: gates, water, structures, signs, staging, medical points, access route, and control lines" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4"/><path d="M5 4h12l-2.5 4.5L17 13H5"/></svg></button>
@@ -1071,6 +1077,7 @@ body.readonly .ro-banner{display:block}
       </span>
       <span class="foot-btns" id="browseBtns" hidden>
         <button type="button" class="ib" id="recalcBtn" title="Recalculate: look up slope, aspect, elevation, township/range/section, county, and town again" aria-label="Recalculate: look up slope, aspect, elevation, township/range/section, county, and town again"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/></svg></button>
+        <button type="button" class="ib" id="mapImgBtn" title="Save a printable map image (PNG) of the unit and site features" aria-label="Save a printable map image"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="14" rx="1.5"/><path d="m3 15 5-5 4 4 3-3 6 6"/><path d="M12 21h0"/></svg></button>
         <button type="button" class="ib" id="unitDelete" title="Delete the unit outline (project area and elevations are kept)" aria-label="Delete the unit outline (project area and elevations are kept)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></svg></button>
       </span>
     </span>
@@ -1396,8 +1403,8 @@ const DEFAULTS = {
 
 const TIPS = {
  name:"A short name the district uses to identify this burn on your SMP and on each day-of-burn request.",
- address:"Street address closest to the burn unit. The driveway address that leads to the unit is correct here. \"Use my location\" fills latitude and longitude from your device's GPS, so use it while standing in the unit. \"Pick on map\" opens a map centered on the latitude and longitude entered below, or on the address if no coordinates are entered yet, and lets you click the unit's center.",
- lat:"Latitude of the unit's center in degrees and decimal minutes, e.g. 38° 53.207′ N. The district uses it to map the burn and check which smoke sensitive areas are nearby.",
+ address:"Street address closest to the burn unit. The driveway address that leads to the unit is correct here. \"Use my location\" fills latitude and longitude from your device's GPS, so use it while standing in the unit. Once you draw the unit on the map, latitude and longitude are recalculated from its center.",
+ lat:"Latitude of the unit's center in degrees and decimal minutes, e.g. 38° 53.207′ N. Calculated from the middle of the unit outline whenever you draw or edit it on the map. The district uses it to map the burn and check which smoke sensitive areas are nearby.",
  lon:"Longitude of the unit's center in degrees and decimal minutes, e.g. 123° 09.352′ W.",
  county:"County where the burn takes place. This determines which air district reviews the plan.",
  town:"Closest town or community. Helps the district locate the burn and anticipate who might see or smell smoke.",
@@ -1485,7 +1492,7 @@ Object.assign(TIPS, {
  phone24:"Cell phone where the district can reach the representative at any hour from ignition until the burn is out, including overnight.",
  email:"Email for the authorized representative. The district sends SMP approval and burn request responses here.",
  facilityId:"District-assigned ID if you've had a permit from MCAQMD before. Leave blank for a first application.",
- address:"Street address of the burn site. The driveway address that leads to the unit is correct here. \"Use my location\" fills latitude and longitude from your device's GPS, so use it while standing in the unit. \"Pick on map\" opens a map centered on the latitude and longitude entered below, or on the address if no coordinates are entered yet.",
+ address:"Street address of the burn site. The driveway address that leads to the unit is correct here. \"Use my location\" fills latitude and longitude from your device's GPS, so use it while standing in the unit. Once you draw the unit on the map, latitude and longitude are recalculated from its center.",
  apn:"Assessor's parcel number(s) for the land being burned, from your property tax bill or the county assessor's parcel viewer. Required if the site has no street address, and worth including anyway.",
  thp:"Timber Harvest Plan number, only if the burn is part of an approved THP. Usually blank for a range or fuel reduction burn.",
  legalT:"Township from the Public Land Survey legal description, e.g. 12N. Found on your deed or the county parcel viewer.",
@@ -1684,7 +1691,7 @@ function fieldHTML(f){
     const sel = state[f.k] || [];
     return `<div class="f wide checklist">${f.opts.map(o=>`<label><input type="checkbox" data-ck="${f.k}" value="${esc(o)}"${sel.includes(o)?" checked":""}><span>${esc(o)}</span></label>`).join("")}</div>`;
   }
-  const acts = f.actions==="loc" ? `<span class="actgroup"><button type="button" class="actbtn" id="useLoc">Use my location</button><button type="button" class="actbtn" id="pickMap"${canPick()?"":" disabled"}>Pick on map</button></span>`
+  const acts = f.actions==="loc" ? `<span class="actgroup"><button type="button" class="actbtn" id="useLoc">Use my location</button></span>`
              : f.actions==="unit" ? `<span class="actgroup"><button type="button" class="actbtn" id="drawUnit"${canPick()?"":" disabled"}>Draw on map</button></span>` : "";
   const msg = f.actions==="loc" ? `<span class="fieldmsg" id="locMsg" aria-live="polite"></span>` : "";
   return `<div class="f${f.wide?" wide":""}">${f.label?`<div class="lblrow"><label for="f_${f.k}">${esc(f.label)}</label>${tipBtn(f.k)}${acts}</div>${tipBox(f.k)}`:""}${control(f)}${msg}</div>`;
@@ -1894,7 +1901,6 @@ main.addEventListener("click", e=>{
       locMsg(why,true);
     }, {enableHighAccuracy:true, timeout:20000, maximumAge:0});
   }
-  if(e.target.id==="pickMap") openMap("loc");
   if(e.target.id==="drawUnit") openMap("unit");
 });
 
@@ -2023,7 +2029,6 @@ function unitSummary(){
 function setMode(m){
   mapMode=m;
   { const km=document.getElementById("kindMenu"); if(km && !km.hidden){ km.hidden=true; document.getElementById("featKindBtn").setAttribute("aria-expanded","false"); } }
-  document.getElementById("modeLoc").setAttribute("aria-pressed",String(m==="loc"));
   document.getElementById("modeUnit").setAttribute("aria-pressed",String(m==="unit"));
   document.getElementById("modeWind").setAttribute("aria-pressed",String(m==="wind"));
   document.getElementById("modeFeat").setAttribute("aria-pressed",String(m==="feat"));
@@ -2032,7 +2037,7 @@ function setMode(m){
   document.getElementById("windBtns").hidden = m!=="wind";
   if(m==="wind"){
     if(!unitCenter()){ mapMode="browse"; document.getElementById("modeWind").setAttribute("aria-pressed","false"); document.getElementById("windBtns").hidden=true;
-      readout("Set the burn location or draw the unit first."); return; }
+      readout("Draw the burn unit on the map first."); return; }
     windTmp = state.wind ? {...state.wind} : {from:200,to:290,ideal:245};
   }
   document.getElementById("locBtns").hidden = m!=="loc";
@@ -2058,7 +2063,6 @@ const toggleMode = m => {
   if(m!=="browse" && mapMode!==m && isRO()) return roPrompt();
   setMode(mapMode===m ? "browse" : m);
 };
-document.getElementById("modeLoc").onclick=()=>toggleMode("loc");
 document.getElementById("modeUnit").onclick=()=>toggleMode("unit");
 document.getElementById("modeWind").onclick=()=>toggleMode("wind");
 document.getElementById("modeFeat").onclick=()=>toggleMode("feat");
@@ -2215,9 +2219,15 @@ mapPanel.addEventListener("keydown", e=>{
 const PTS16=["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = d => PTS16[Math.round(((d%360)+360)%360/22.5)%16];
 const norm = d => ((d%360)+360)%360;
+function polyCentroid(P){
+  // area-weighted center of the outline (vertex averages drift toward wherever the corners are dense)
+  const k=Math.cos(P[0][0]*Math.PI/180); let A=0,cx=0,cy=0;
+  P.forEach((p,i)=>{ const q=P[(i+1)%P.length], x0=p[1]*k, y0=p[0], x1=q[1]*k, y1=q[0], c=x0*y1-x1*y0; A+=c; cx+=(x0+x1)*c; cy+=(y0+y1)*c; });
+  if(Math.abs(A)<1e-14){ const n=P.length; return [P.reduce((a,p)=>a+p[0],0)/n, P.reduce((a,p)=>a+p[1],0)/n]; }
+  return [cy/(3*A), cx/(3*A*k)];
+}
 function unitCenter(){
-  if(hasUnit()){ const n=state.unitPoly.length;
-    return [state.unitPoly.reduce((a,p)=>a+p[0],0)/n, state.unitPoly.reduce((a,p)=>a+p[1],0)/n]; }
+  if(hasUnit()) return polyCentroid(state.unitPoly);
   const la=fromDMM(state.lat), lo=fromDMM(state.lon);
   return (la!=null&&lo!=null) ? [la,lo] : null;
 }
@@ -2315,7 +2325,7 @@ main.addEventListener("click", async e=>{
   if(e.target.id!=="calcDist" || isRO()) return;
   const btn=e.target, msg=()=>document.getElementById("distMsg");
   const c=unitCenter();
-  if(!c){ msg().textContent="Set the burn location or draw the unit first."; msg().classList.add("err"); return; }
+  if(!c){ msg().textContent="Draw the burn unit on the map first."; msg().classList.add("err"); return; }
   btn.disabled=true;
   const rows=state.ssaList||[], skipped=[]; let done=0;
   for(let i=0;i<rows.length;i++){
@@ -2810,8 +2820,9 @@ async function placeLookup(c){
 /* Runs every lookup for the saved unit (or the location point) and reports what changed. */
 async function recalcFromMap(){
   const poly=hasUnit()?state.unitPoly:null, c=unitCenter();
-  if(!c) return "Set the burn location or draw the unit first.";
+  if(!c) return "Draw the burn unit on the map first.";
   const filledL=[], kept=[], failed=[];
+  if(poly){ const before=`${state.lat}|${state.lon}`; setCoords(c[0],c[1]); if(`${state.lat}|${state.lon}`!==before) filledL.push("burn location (center of the unit)"); }
   const note=(r,label,val)=>{ if(r==="set") filledL.push(label); else if(r==="kept") kept.push(`${label} (calculated: ${val})`); };
   const jobs=[
     poly ? terrainStats(poly).then(t=>{
@@ -3007,6 +3018,37 @@ async function openMap(mode){
   if(mode && mode!==mapMode) setMode(mode);
   if(mode && mode!=="browse" && wideMQ.matches){ const m=document.querySelector(".map-bar .modebtn[aria-pressed=true]"); if(m) m.focus({preventScroll:true}); }
 }
+
+/* "Where am I" button under the zoom buttons: centers the map on the device's location.
+   It only moves the map; the burn location comes from the unit outline. */
+let meLayer=null;
+function addLocateControl(){
+  const Ctl=L.Control.extend({options:{position:"topleft"},onAdd(){
+    const d=L.DomUtil.create("div","leaflet-bar locate-ctl");
+    d.innerHTML=`<a href="#" role="button" title="Show my location" aria-label="Show my location"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4 4 11l7 2 2 7Z"/></svg></a>`;
+    L.DomEvent.disableClickPropagation(d);
+    d.querySelector("a").addEventListener("click",e=>{ e.preventDefault(); locateMe(d.querySelector("a")); });
+    return d;
+  }});
+  new Ctl().addTo(map);
+}
+function locateMe(btn){
+  if(!("geolocation" in navigator)){ readout("This browser doesn't provide location."); return; }
+  btn.classList.add("busy"); readout("Finding your location…");
+  navigator.geolocation.getCurrentPosition(pos=>{
+    btn.classList.remove("busy");
+    const {latitude:la, longitude:lo, accuracy:acc}=pos.coords;
+    if(!meLayer) meLayer=L.layerGroup().addTo(map); meLayer.clearLayers();
+    if(acc>15) L.circle([la,lo],{radius:acc,color:"#0072B2",weight:1,fillColor:"#0072B2",fillOpacity:.12,interactive:false}).addTo(meLayer);
+    L.circleMarker([la,lo],{radius:7,color:"#fff",weight:3,fillColor:"#0072B2",fillOpacity:1,interactive:false}).addTo(meLayer);
+    map.setView([la,lo], Math.max(map.getZoom(),16));
+    const c=unitCenter(), far = c ? miles([la,lo],c)*1609.344 : null;
+    readout(`You are here (±${Math.round(acc*3.28084).toLocaleString()} ft)${far!=null ? `, ${fmtDist(far)} ${compass(bearing(c,[la,lo]))} of the unit's center` : ""}.`);
+  }, err=>{
+    btn.classList.remove("busy");
+    readout(err.code===1 ? "Location access is blocked. Allow location for this page in your browser settings." : err.code===3 ? "Finding your location timed out. Try again." : "Your location isn't available right now.");
+  }, {enableHighAccuracy:true, timeout:20000, maximumAge:10000});
+}
 function buildMap(L){
   if(!map){
     // Create the map with a view already set. Leaflet can't place any shape (the location marker,
@@ -3023,7 +3065,7 @@ function buildMap(L){
     let base="Satellite"; try{ base=localStorage.getItem(KEY+":base")||base; }catch(e){}
     if(!BASES[base]) base="Satellite";
     currentBase=base; BASES[base].addTo(map);
-    addLayersControl();
+    addLayersControl(); addLocateControl();
     savedLayer=L.layerGroup().addTo(map); windLayer=L.layerGroup().addTo(map); drawLayer=L.layerGroup().addTo(map);
     featLayer=L.layerGroup().addTo(map); handleLayer=L.layerGroup().addTo(map); windHandles=L.layerGroup().addTo(map);
     featTmp=L.layerGroup().addTo(map);
@@ -3561,6 +3603,335 @@ function toBurnPlanMd(){
   return md.replace(/\n{3,}/g,"\n\n");
 }
 
+/* ---------- printable map images ----------
+   Draws the map straight onto a canvas (tiles, then the same overlays as the live map) so it
+   can go into the burn plan. Tiles load with crossOrigin so the canvas can be exported; if a
+   tile server refuses, the next base map is tried, then a plain background. */
+const TILE_SRC={
+  "Satellite":{url:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",max:19,credit:"Imagery © Esri, Maxar, Earthstar Geographics"},
+  "Topo":{url:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",max:18,credit:"Topo © Esri and contributors"},
+  "USGS topo":{url:"https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}",max:16,credit:"USGS The National Map"}
+};
+const wpx = (lat,lon,z) => { const s=256*2**z, r=Math.PI/180;
+  return [ (lon+180)/360*s, (1-Math.log(Math.tan(lat*r)+1/Math.cos(lat*r))/Math.PI)/2*s ]; };
+function loadTile(url){
+  return new Promise(res=>{
+    const im=new Image(); im.crossOrigin="anonymous";
+    const t=setTimeout(()=>{ im.src=""; res(null); },12000);
+    im.onload=()=>{ clearTimeout(t); res(im); }; im.onerror=()=>{ clearTimeout(t); res(null); };
+    im.src=url;
+  });
+}
+function siteBounds(kind){
+  const pts=[];
+  if(hasUnit()) pts.push(...state.unitPoly);
+  if(kind==="site"){ feats().forEach(f=>pts.push(f.pt||[f.lat,f.lon])); lines().forEach(l=>pts.push(...l.pts)); }
+  const c=unitCenter(); if(c) pts.push(c);
+  const ok=pts.filter(p=>p && isFinite(p[0]) && isFinite(p[1]));
+  if(!ok.length) return null;
+  return [Math.min(...ok.map(p=>p[0])),Math.min(...ok.map(p=>p[1])),Math.max(...ok.map(p=>p[0])),Math.max(...ok.map(p=>p[1]))];
+}
+async function renderSiteMap({kind="site", base="Satellite", W=1600, H=1150}={}){
+  const b=siteBounds(kind); if(!b) return null;
+  const c=[(b[0]+b[2])/2,(b[1]+b[3])/2];
+  // site map: fit everything with a margin; area map: zoomed out to show roads and towns nearby
+  let z;
+  if(kind==="site"){ z=19; while(z>10){ const p0=wpx(b[2],b[1],z), p1=wpx(b[0],b[3],z); if(p1[0]-p0[0]<W*0.78 && p1[1]-p0[1]<H*0.72) break; z--; } }
+  else z=hasUnit()?14:13;
+  const order=[base,...Object.keys(TILE_SRC).filter(k=>k!==base)];
+  const s=W/700;   // overlay scale: 1 on a 700 px wide map, so text prints at a readable size
+  const legendKinds = kind==="site" ? [...new Set([...feats().map(f=>f.kind),...lines().map(l=>l.kind)])].filter(k=>FKINDS[k]) : [];
+  const nLegend = (hasUnit()?1:0) + (unitCenter()?1:0) + legendKinds.length, cols=3, rowsL=Math.ceil(nLegend/cols);
+  const band = Math.round(62*s + rowsL*20*s + 8*s), Hm=H;
+  const cv=document.createElement("canvas"); cv.width=W; cv.height=Hm+band; H=Hm;
+  const ctx=cv.getContext("2d");
+  let used=null;
+  for(const name of order){
+    const src=TILE_SRC[name], tz=Math.min(z,src.max), f=2**(z-tz);   // enlarge tiles past the server's last level
+    const [cx,cy]=wpx(c[0],c[1],z), x0=cx-W/2, y0=cy-H/2, ts=256*f;
+    const jobs=[];
+    for(let tx=Math.floor(x0/ts); tx*ts<x0+W; tx++) for(let ty=Math.floor(y0/ts); ty*ts<y0+H; ty++)
+      jobs.push(loadTile(src.url.replace("{z}",tz).replace("{x}",tx).replace("{y}",ty)).then(im=>({im,tx,ty})));
+    const tiles=await Promise.all(jobs);
+    if(tiles.filter(t=>!t.im).length > tiles.length*0.2) continue;
+    ctx.fillStyle="#e8ebe4"; ctx.fillRect(0,0,W,H);
+    tiles.forEach(t=>{ if(t.im) ctx.drawImage(t.im, Math.round(t.tx*ts-x0), Math.round(t.ty*ts-y0), ts+1, ts+1); });
+    try{ ctx.getImageData(0,0,1,1); used=name; break; }catch(e){ ctx.clearRect(0,0,W,H); }
+  }
+  if(!used){ ctx.fillStyle="#f2f3ee"; ctx.fillRect(0,0,W,H); }
+  const [ccx,ccy]=wpx(c[0],c[1],z);
+  const P = p => { const q=wpx(p[0],p[1],z); return [q[0]-ccx+W/2, q[1]-ccy+H/2]; };
+  const dash = d => d ? d.split(" ").map(x=>x*s) : [];
+  const path = (pts,close) => { ctx.beginPath(); pts.forEach((p,i)=>{ const [x,y]=P(p); i?ctx.lineTo(x,y):ctx.moveTo(x,y); }); if(close) ctx.closePath(); };
+  ctx.lineJoin="round";
+  if(hasUnit()){
+    path(state.unitPoly,true); ctx.fillStyle="rgba(240,228,66,.18)"; ctx.fill();
+    ctx.setLineDash([]); ctx.strokeStyle="rgba(0,0,0,.6)"; ctx.lineWidth=7*s; ctx.stroke();
+    ctx.strokeStyle=UNIT_C; ctx.lineWidth=3*s; ctx.stroke();
+  }
+  if(kind==="site"){
+    lines().forEach(l=>{ const k=FKINDS[l.kind]||FKINDS.road;
+      path(l.pts,false); ctx.setLineDash([]); ctx.lineCap="round"; ctx.strokeStyle="rgba(0,0,0,.6)"; ctx.lineWidth=8*s; ctx.stroke();
+      ctx.lineCap=k.dash==="1 7"?"round":"butt"; ctx.setLineDash(dash(k.dash)); ctx.strokeStyle=k.color; ctx.lineWidth=4*s; ctx.stroke(); });
+    ctx.setLineDash([]);
+  }
+  const halo = (t,x,y,size,align="left") => { ctx.font=`700 ${size}px "Public Sans",Arial,sans-serif`; ctx.textAlign=align; ctx.textBaseline="middle";
+    ctx.lineWidth=size/3.2; ctx.strokeStyle="rgba(255,255,255,.92)"; ctx.strokeText(t,x,y); ctx.fillStyle="#111"; ctx.fillText(t,x,y); };
+  const pin = (k,x,y,r) => {
+    ctx.beginPath(); if(k.shape==="square") ctx.rect(x-r,y-r,2*r,2*r); else ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fillStyle=k.color; ctx.fill(); ctx.lineWidth=2*s; ctx.strokeStyle="#fff"; ctx.stroke();
+    ctx.beginPath(); if(k.shape==="square") ctx.rect(x-r-1.5*s,y-r-1.5*s,2*r+3*s,2*r+3*s); else ctx.arc(x,y,r+1.5*s,0,Math.PI*2);
+    ctx.lineWidth=1.5*s; ctx.strokeStyle="#000"; ctx.stroke();
+    ctx.font=`700 ${Math.round(r*1.05)}px "Public Sans",Arial,sans-serif`; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillStyle=k.ink||"#fff"; ctx.fillText(k.ch,x,y+0.5*s);
+  };
+  // burn location
+  const loc=unitCenter();
+  if(loc){ const [x,y]=P(loc); ctx.beginPath(); ctx.arc(x,y,7*s,0,Math.PI*2); ctx.fillStyle="#000"; ctx.fill(); ctx.lineWidth=3*s; ctx.strokeStyle="#fff"; ctx.stroke(); }
+  if(kind==="site"){
+    feats().forEach(f=>{ const k=FKINDS[f.kind]||FKINDS.other, p=f.pt||[f.lat,f.lon]; if(!p||!isFinite(p[0])) return;
+      const [x,y]=P(p); pin(k,x,y,11*s); if(f.name) halo(f.name,x+15*s,y,12*s); });
+    lines().forEach(l=>{ if(!l.name||l.pts.length<2) return; const m=l.pts[Math.floor((l.pts.length-1)/2)], n=l.pts[Math.floor((l.pts.length-1)/2)+1]||m;
+      const [x1,y1]=P(m),[x2,y2]=P(n); halo(l.name,(x1+x2)/2+6*s,(y1+y2)/2-10*s,11*s); });
+  } else if(hasUnit()){
+    const [x,y]=P(loc); halo(`Burn unit (${polyAcres(state.unitPoly).toFixed(1)} ac)`,x+14*s,y-14*s,13*s);
+  }
+  // frame elements: title, north arrow, scale bar, legend, credit
+  const box = (x,y,w,h) => { ctx.fillStyle="rgba(255,255,255,.93)"; ctx.fillRect(x,y,w,h); ctx.lineWidth=1*s; ctx.strokeStyle="rgba(0,0,0,.35)"; ctx.strokeRect(x,y,w,h); };
+  const title = kind==="site" ? `${state.name||"Burn unit"}: site map` : `${state.name||"Burn unit"}: area map`;
+  { const x=W-34*s, y=24*s; ctx.beginPath(); ctx.moveTo(x,y-14*s); ctx.lineTo(x+11*s,y+16*s); ctx.lineTo(x,y+9*s); ctx.lineTo(x-11*s,y+16*s); ctx.closePath();
+    ctx.fillStyle="#111"; ctx.fill(); ctx.lineWidth=2*s; ctx.strokeStyle="#fff"; ctx.stroke(); halo("N",x,y+30*s,14*s,"center"); }
+  { const mpp=156543.03392*Math.cos(c[0]*Math.PI/180)/2**z, ftpp=mpp*3.28084, target=W*0.18*ftpp;
+    const useMi=target>=2640, unit=useMi?5280:1, nice=[1,2,5].flatMap(m=>[1,10,100,1000,10000].map(e=>m*e)).sort((a,b)=>a-b)
+      .filter(n=>useMi ? n/10<=target/5280 : n<=target).map(n=>useMi?n/10:n).pop()||1;
+    const len=nice*unit/ftpp, x=16*s, y=H-26*s, lbl=useMi?`${nice} mi`:`${nice.toLocaleString()} ft`;
+    ctx.font=`600 ${11*s}px "Public Sans",Arial,sans-serif`;
+    box(x-8*s,y-16*s,len+ctx.measureText(lbl).width+24*s,28*s);
+    ctx.fillStyle="#111"; ctx.fillRect(x,y-2*s,len,5*s); ctx.fillRect(x,y-8*s,2*s,14*s); ctx.fillRect(x+len-2*s,y-8*s,2*s,14*s);
+    ctx.font=`600 ${11*s}px "Public Sans",Arial,sans-serif`; ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+    ctx.fillText(useMi?`${nice} mi`:`${nice.toLocaleString()} ft`,x+len+6*s,y+4*s); }
+  {
+    // footer band: title, then the legend in three columns
+    ctx.fillStyle="#fff"; ctx.fillRect(0,Hm,W,band); ctx.fillStyle="#000"; ctx.fillRect(0,Hm,W,Math.max(1,s));
+    ctx.font=`700 ${15*s}px "Public Sans",Arial,sans-serif`; ctx.fillStyle="#111"; ctx.textAlign="left"; ctx.textBaseline="middle";
+    ctx.fillText(title,14*s,Hm+20*s);
+    const sub=[hasUnit()?`${polyAcres(state.unitPoly).toFixed(1)} acres`:"", state.lat?`Center ${state.lat}, ${state.lon}`:"", new Date().toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"})].filter(Boolean).join("   ");
+    ctx.font=`500 ${10.5*s}px "Public Sans",Arial,sans-serif`; ctx.fillStyle="#444"; ctx.textAlign="left"; ctx.fillText(sub,14*s,Hm+38*s);
+    const items=[];
+    if(hasUnit()) items.push({t:"Burn unit",draw:(x,y)=>{ ctx.fillStyle="rgba(240,228,66,.35)"; ctx.fillRect(x,y-6*s,22*s,12*s); ctx.lineWidth=2.5*s; ctx.strokeStyle=UNIT_C; ctx.strokeRect(x,y-6*s,22*s,12*s); ctx.lineWidth=1*s; ctx.strokeStyle="#000"; ctx.strokeRect(x-1.5*s,y-7.5*s,25*s,15*s); }});
+    if(loc) items.push({t:"Burn location",draw:(x,y)=>{ ctx.beginPath(); ctx.arc(x+11*s,y,6*s,0,Math.PI*2); ctx.fillStyle="#000"; ctx.fill(); ctx.lineWidth=2*s; ctx.strokeStyle="#fff"; ctx.stroke(); }});
+    legendKinds.forEach(kk=>{ const k=FKINDS[kk]; items.push({t:k.label,draw:(x,y)=>{
+      if(k.t==="pt") pin(k,x+11*s,y,8*s);
+      else { ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+22*s,y); ctx.setLineDash([]); ctx.lineCap="round"; ctx.strokeStyle="rgba(0,0,0,.6)"; ctx.lineWidth=8*s; ctx.stroke();
+        ctx.lineCap="butt"; ctx.setLineDash(dash(k.dash)); ctx.strokeStyle=k.color; ctx.lineWidth=4*s; ctx.stroke(); ctx.setLineDash([]); } }}); });
+    const cw=(W-28*s)/cols, lh=20*s;
+    items.forEach((it,i)=>{ const x=14*s+(i%cols)*cw, y=Hm+62*s+Math.floor(i/cols)*lh;
+      it.draw(x,y); ctx.fillStyle="#111"; ctx.font=`500 ${11*s}px "Public Sans",Arial,sans-serif`; ctx.textAlign="left"; ctx.textBaseline="middle"; ctx.fillText(it.t,x+32*s,y); });
+  }
+  { const credit = used ? TILE_SRC[used].credit : "Base map unavailable; features only";
+    ctx.font=`500 ${9*s}px "Public Sans",Arial,sans-serif`; const cw=ctx.measureText(credit).width;
+    ctx.fillStyle="rgba(255,255,255,.85)"; ctx.fillRect(W-cw-12*s,H-17*s,cw+12*s,17*s); ctx.fillStyle="#222"; ctx.textAlign="right"; ctx.textBaseline="middle"; ctx.fillText(credit,W-6*s,H-8.5*s); }
+  const blob=await new Promise(r=>cv.toBlob(r,"image/png"));
+  return {blob, W, H:Hm+band, base:used, zoom:z};
+}
+
+/* ---------- burn plan as a Word file ----------
+   burn-plan-template.docx is the blank California Standardized Prescribed Fire Plan with
+   {{kind:key}} markers where answers go (f = underlined blank, ck = checkbox, c = table cell,
+   box = write-in box, boxo = optional box, appendix = where the attachments go). */
+let JSZIP_ready=null, lastMapBases=[];
+function loadJSZip(){
+  if(!JSZIP_ready) JSZIP_ready=new Promise((res,rej)=>{
+    if(window.JSZip) return res(window.JSZip);
+    const sc=document.createElement("script");
+    sc.src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
+    sc.onload=()=>res(window.JSZip); sc.onerror=()=>{ JSZIP_ready=null; rej(new Error("jszip")); };
+    document.head.appendChild(sc);
+  });
+  return JSZIP_ready;
+}
+const xmlEsc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+// text with line breaks as Word runs content
+const wText = s => String(s).split("\n").map(l=>`<w:t xml:space="preserve">${xmlEsc(l)}</w:t>`).join("<w:br/>");
+function burnPlanValues(){
+  const v = k => String(state[k]??"").trim();
+  const g = (k,r,c) => String(((state[k]||{})[r]||{})[c]??"").trim();
+  const has = (k,o) => (state[k]||[]).includes(o);
+  const rows = k => (state[k]||[]).filter(r=>Object.values(r||{}).some(x=>String(x??"").trim()));
+  const fmtDate = d => d ? new Date(d+"T12:00:00").toLocaleDateString(undefined,{year:"numeric",month:"long",day:"numeric"}) : "";
+  const withMap = (txt,...keys) => { const ls=keys.flatMap(k=>mapCalc(k)); return [txt, ls.length ? "From the map:\n"+ls.map(l=>"• "+l).join("\n") : ""].filter(Boolean).join("\n\n"); };
+  const V={
+    title:v("name"), boss:v("burnBoss"), author:v("bpAuthor"), ahj:v("bpAhj"), owner:v("landowner"),
+    created:fmtDate(v("bpCreated")), reeval:fmtDate(v("bpReeval")), loc:v("address"), lat:v("lat"), lon:v("lon"),
+    ownership:v("bpOwnership"), acres:v("acres"),
+    goals:v("objectives"), prep:withMap(v("bpPrep"),"calcLines"), water:withMap(v("bpWater"),"calcWater"),
+    access:withMap(v("bpAccess"),"calcAccessBp"), values:withMap(v("bpValues"),"calcValues"),
+    rxOther:v("rxOther"), season:v("rxSeason"),
+    wind: state.wind ? `From ${windText(state.wind)}; optimal ${compass(state.wind.ideal)} (${Math.round(state.wind.ideal)}°)`
+                     : [v("surfDirRange"), v("surfDirIdeal") && `optimal ${v("surfDirIdeal")}`].filter(Boolean).join("; "),
+    firing:!!v("firingBoss"), firingName: v("firingBoss") ? `: ${v("firingBoss")}` : "", firingPlan:v("firingPlan"),
+    holding:!!v("holdingSpec"), holdingName: v("holdingSpec") ? `: ${v("holdingSpec")}` : "", holdingPlan:v("holdingPlan"),
+    resources:withMap(v("bpResources"),"calcPerimeter","calcStaging"), mopup:v("mopup"),
+    postOther:v("postOther"), riskOther:v("riskOther"), attOther:v("otherAttDesc"),
+    declarer:v("wcDeclarer"), ic:v("wcIc")
+  };
+  [["fuel"],["slope"],["aspect"],["special"]].forEach(([r])=>{ V[`ud.${r}.in`]=g("unitDesc",r,"in"); V[`ud.${r}.adj`]=g("unitDesc",r,"adj"); });
+  ["temp","rh","wind","fdfm","pig","fl","ros"].forEach(r=>["min","des","max"].forEach(c=>{ V[`rx.${r}.${c}`]=g("rxTable",r,c); }));
+  V["rx.fl.label"]="Flame Length (feet)"; V["rx.ros.label"]="Rate of Spread (chains/hour)";
+  ["fl","ros"].forEach(c=>{ V[`fb.in.${c}`]=g("fireBehavior","in",c); V[`fb.adj.${c}`]=g("fireBehavior","adj",c); });
+  const prod=rows("production");
+  V["prod.res"]=prod.length ? prod.map(r=>r.res||"").join("\n") : "Crews/resources";
+  V["prod.rate"]=prod.map(r=>r.rate||"").join("\n");
+  const smp=["Submitted through PFIRS","Submitted in hard copy or online to air district","Not required by air district based on project size/emissions"];
+  smp.forEach((o,i)=>{ V[`smp${i+1}`]=has("bpSmp",o); });
+  ["Fire effects monitoring plan","Project rehabilitation plan"].forEach((o,i)=>{ V[`post${i+1}`]=has("postActs",o); });
+  V.post3=has("postActs","Other")||!!V.postOther;
+  ["Contingency plan (required)","Medical plan","Communications plan","Management Action Points (M.A.P.)","Briefing checklist","Safety plan"].forEach((o,i)=>{ V[`risk${i+1}`]=has("riskActs",o); });
+  V.risk7=has("riskActs","Other")||!!V.riskOther;
+  ["Project and area maps (required)","Go/no-go checklist (recommended)"].forEach((o,i)=>{ V[`att${i+1}`]=has("otherAtt",o); });
+  V.att3=has("otherAtt","Other")||!!V.attOther;
+  const nb=rows("neighbors"), oth=rows("dayOther"), wc=rows("wcContacts");
+  nb.slice(0,6).forEach((r,i)=>{ const n=String(r.notified||"").trim(); V[`nb${i+1}`]=!!n; V[`nb${i+1}.name`]=r.name||""; V[`nb${i+1}.phone`]=(r.phone||"")+(n?` (notified ${n})`:""); });
+  ["preAq","preFire","ecc","dayAq","dayFire"].forEach(k=>{ V[`${k}.name`]=g("bpNotify",k,"name"); V[`${k}.phone`]=g("bpNotify",k,"phone"); });
+  oth.slice(0,3).forEach((r,i)=>{ V[`oth${i+1}.name`]=r.name||""; V[`oth${i+1}.phone`]=r.phone||""; });
+  wc.slice(0,3).forEach((r,i)=>{ V[`wc${i+1}.name`]=r.name||""; V[`wc${i+1}.phone`]=r.phone||""; });
+  return {V, extra:{nb:nb.slice(6), oth:oth.slice(3), wc:wc.slice(3)}};
+}
+/* Attachments appended after section 10, in the template's Cambria 12 pt */
+function burnPlanAppendix(extra,maps=[]){
+  const v = k => String(state[k]??"").trim();
+  const RPR = (o={}) => `<w:rPr><w:rFonts w:ascii="Cambria" w:hAnsi="Cambria"/>${o.b?"<w:b/><w:bCs/>":""}${o.i?"<w:i/><w:iCs/>":""}<w:sz w:val="${o.sz||24}"/><w:szCs w:val="${o.sz||24}"/></w:rPr>`;
+  const R = (t,o) => `<w:r>${RPR(o)}${wText(t)}</w:r>`;
+  const P = (content,o={}) => `<w:p><w:pPr>${o.brk?'<w:pageBreakBefore/>':""}${o.keep?'<w:keepNext/>':""}<w:spacing w:before="${o.before??0}" w:after="${o.after??160}"/>${o.center?'<w:jc w:val="center"/>':""}</w:pPr>${typeof content==="string"?R(content,o):content.join("")}</w:p>`;
+  const H = (t,brk) => P(t,{b:1,sz:28,center:1,brk,after:240});
+  const H2 = t => P(t,{b:1,keep:1,before:120,after:80});
+  const box = t => `<w:p><w:pPr><w:pBdr>${["top","left","bottom","right"].map(s=>`<w:${s} w:val="single" w:sz="6" w:space="4" w:color="000000"/>`).join("")}</w:pBdr><w:spacing w:before="60" w:after="200"/><w:ind w:left="90" w:right="90"/></w:pPr>${R(t||"\n\n")}</w:p>`;
+  const T = (widths,rows,head) => {
+    const b=["top","left","bottom","right","insideH","insideV"].map(s=>`<w:${s} w:val="single" w:sz="4" w:space="0" w:color="000000"/>`).join("");
+    return `<w:tbl><w:tblPr><w:tblW w:w="${widths.reduce((a,x)=>a+x,0)}" w:type="dxa"/><w:tblBorders>${b}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="100" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tblCellMar></w:tblPr>`
+      + `<w:tblGrid>${widths.map(x=>`<w:gridCol w:w="${x}"/>`).join("")}</w:tblGrid>`
+      + rows.map((r,ri)=>`<w:tr>${ri===0&&head?"<w:trPr><w:tblHeader/></w:trPr>":""}${r.map((c,ci)=>`<w:tc><w:tcPr><w:tcW w:w="${widths[ci]}" w:type="dxa"/></w:tcPr><w:p><w:pPr><w:spacing w:before="40" w:after="40"/>${(ri===0&&head)||ci>0&&widths[ci]<1200?'<w:jc w:val="center"/>':""}</w:pPr>${R(c,{b:ri===0&&head})}</w:p></w:tc>`).join("")}</w:tr>`).join("")
+      + `</w:tbl>` + P("",{after:120});
+  };
+  const BOX="□";
+  let x="";
+  if(extra.nb.length||extra.oth.length||extra.wc.length){
+    x += H("Additional Notifications and Contacts",true);
+    if(extra.nb.length) x += H2("Adjacent landowners (continued)") + T([4200,3000,2160],[["Name","Phone","Notified"],...extra.nb.map(r=>[r.name||"",r.phone||"",r.notified||""])],true);
+    if(extra.oth.length) x += H2("Day-of-burn: other notifications (continued)") + T([5400,3960],[["Name/agency","Phone"],...extra.oth.map(r=>[r.name||"",r.phone||""])],true);
+    if(extra.wc.length) x += H2("Person(s) to contact for declaration (continued)") + T([5400,3960],[["Name/position","Phone/frequency"],...extra.wc.map(r=>[r.name||"",r.phone||""])],true);
+  }
+  const pic = (m,i) => { const cx=5943600, cy=Math.round(cx*m.H/m.W);
+    return `<w:p><w:pPr><w:keepNext/><w:spacing w:before="0" w:after="60"/><w:jc w:val="center"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${900+i}" name="Map ${i+1}"/>`
+      + `<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">`
+      + `<pic:nvPicPr><pic:cNvPr id="${900+i}" name="map${i+1}.png"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${m.rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>`
+      + `<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`
+      + P(m.caption,{i:1,sz:20,center:1,after:240}); };
+  if(maps.length){
+    x += H("Attachment I: Project and Area Maps",true);
+    maps.forEach((m,i)=>{ x += pic(m,i); });
+  }
+  if(hasUnit()){
+    x += maps.length ? H2("Unit boundary") : H("Attachment I: Unit Boundary",true);
+    x += P(`Burn unit outline from the worksheet map: ${state.unitPoly.length} corners, ${polyAcres(state.unitPoly).toFixed(1)} acres. Center: ${v("lat")}, ${v("lon")}.`);
+    x += T([1400,3980,3980],[["Corner","Latitude","Longitude"],...state.unitPoly.map((p,i)=>[String(i+1),toDMM(p[0],true),toDMM(p[1],false)])],true);
+    if(!maps.length) x += P("Attach the project and area maps after this page.",{i:1});
+  }
+  x += H("Attachment II: Go/No-Go Checklist",true);
+  x += P("Complete on the day of the burn.",{i:1});
+  x += T([7560,900,900],[["Preliminary questions","Yes","No"],
+    ["A. Have fuels, weather, site conditions, or available resources changed since the plan was approved?",BOX,BOX],
+    ["B. If yes, has the plan been amended and the amendment approved?",BOX,BOX]],true);
+  x += T([7560,900,900],[["Go/no-go items","Yes","No"],...[
+    "All permits and clearances obtained (fire agency burn permit, air district permit, and SMP approval)",
+    "All required notifications made",
+    "All pre-burn work completed (control lines, fuel preparation, protection of values at risk)",
+    "Current fire weather forecast obtained and favorable",
+    "All prescription parameters met, measured on site",
+    "Smoke management specifications met and air district burn-day authorization received",
+    "All required personnel and equipment on site and in working order",
+    "Contingency resources identified and available",
+    "Briefing held; all personnel briefed on objectives, hazards, communications, escape routes, and safety zones"].map(t=>[t,BOX,BOX])],true);
+  x += H2("Test fire");
+  x += P("Time: ______________     Location: ________________________________________");
+  x += P("Results (fire behavior and smoke dispersal):");
+  x += box("");
+  x += P([R("Considering all of the above, the prescribed fire will be carried out:  ",{b:1}),R(`${BOX} Yes    ${BOX} No`)]);
+  x += P("Burn boss signature: ________________________________     Date: ______________",{before:240});
+
+  x += H("Attachment III: Medical Plan",true);
+  x += T([3600,5760],[
+    ["Property address",v("address")],["Burn unit location",[v("lat"),v("lon")].filter(Boolean).join(", ")],
+    ["Medical meeting location",v("medMeet")],["Sheriff's office phone",v("medSheriff")],
+    ["Closest medical facility",v("medFacName")],["Facility address",v("medFacAddr")],["Facility phone",v("medFacPhone")],
+    ["Ambulance response time",v("medAmbTime")],["Closest helispot",v("medHelispot")]],false);
+  x += H2("Medical equipment on scene") + box(v("medEquip"));
+  x += H2("Medically trained personnel on scene") + box(v("medPeople"));
+  x += H2("Medical incident report");
+  [ "Activate the medical plan; notify the burn boss.",
+    `Call 911. Give the location (${v("address")||"property address"}${v("lat")?`, ${v("lat")}, ${v("lon")}`:""}) and the severity of the injury.`,
+    "Describe the nature of the injury.",
+    "Request transport (ground ambulance or air) as needed.",
+    "If the fire is a factor, report its size, rate of spread, fuel type, structure threat, potential growth, and current actions."
+  ].forEach((t,i)=>{ x += `<w:p><w:pPr><w:spacing w:after="80"/><w:ind w:left="360" w:hanging="360"/></w:pPr>${R(`${i+1}.\t${t}`.replace("\t"," "))}</w:p>`; });
+
+  x += H("Attachment IV: Contingency Plan",true);
+  [["1. Injury requiring medical attention","cInjury"],["2. Excessive smoke production","cSmoke"],["3. Fire behavior exceeding prescription","cBehavior"],["4. Fire escape","cEscape"]]
+    .forEach(([h,k])=>{ x += H2(h) + box(v(k)); });
+  return x;
+}
+async function exportBurnPlanDocx(){
+  const JSZip=await loadJSZip();
+  const res=await fetch("burn-plan-template.docx",{cache:"no-cache"});
+  if(!res.ok) throw new Error("template");
+  const zip=await JSZip.loadAsync(await res.arrayBuffer());
+  let xml=await zip.file("word/document.xml").async("string");
+  const {V,extra}=burnPlanValues();
+  const maps=[];
+  if(siteBounds("site")){
+    const jobs=[{kind:"site",base:currentBase||"Satellite",W:1600,H:1150},{kind:"area",base:"Topo",W:1200,H:900}];
+    for(const j of jobs){
+      const m=await renderSiteMap(j); if(!m) continue;
+      const n=maps.length+1, rid=`rIdMap${n}`;
+      zip.file(`word/media/map${n}.png`, m.blob);
+      maps.push({...m, rid, caption: (j.kind==="site" ? "Site map: burn unit, control lines, access, water, and other site features." : "Area map: the unit and surrounding roads.")
+        + (m.base ? ` Base map: ${m.base}.` : " The base map couldn't be loaded, so only the features are shown.")});
+    }
+    if(maps.length){
+      let rels=await zip.file("word/_rels/document.xml.rels").async("string");
+      rels=rels.replace("</Relationships>", maps.map(m=>`<Relationship Id="${m.rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${m.rid.replace("rIdMap","map")}.png"/>`).join("")+"</Relationships>");
+      zip.file("word/_rels/document.xml.rels",rels);
+      let ct=await zip.file("[Content_Types].xml").async("string");
+      if(!/Extension="png"/i.test(ct)) ct=ct.replace("<Default ",'<Default Extension="png" ContentType="image/png"/><Default ');
+      zip.file("[Content_Types].xml",ct);
+      V.att1=true;
+    }
+  }
+  lastMapBases=maps.map(m=>m.base);
+  // optional boxes: drop the whole paragraph when there's nothing to say
+  xml=xml.replace(/<w:p[ >](?:(?!<\/w:p>)[\s\S])*?\{\{boxo:([^}]+)\}\}[\s\S]*?<\/w:p>/g,(m,k)=> String(V[k]||"").trim() ? m.replace("{{boxo:","{{box:") : "");
+  xml=xml.replace(/<w:p[ >](?:(?!<\/w:p>)[\s\S])*?\{\{appendix\}\}[\s\S]*?<\/w:p>/,()=>burnPlanAppendix(extra,maps));
+  xml=xml.replace(/<w:r(?: [^>]*)?>(<w:rPr>(?:(?!<\/w:rPr>)[\s\S])*<\/w:rPr>)?<w:t(?: [^>]*)?>\{\{(f|ck|c|box):([^}|]+)(?:\|(\d+))?\}\}<\/w:t><\/w:r>/g,(m,rpr,kind,k,tabs)=>{
+    rpr=rpr||""; const val=V[k];
+    if(kind==="ck") return `<w:r>${rpr}<w:t xml:space="preserve">${val?"☒":"□"}</w:t></w:r>`;
+    const s=String(val??"").trim();
+    if(kind==="f"){
+      if(!s) return +tabs ? `<w:r>${rpr}${"<w:tab/>".repeat(+tabs)}</w:r>` : "";
+      return `<w:r>${rpr}${wText(" "+s.replace(/\n+/g,"; ")+" ")}</w:r>`;
+    }
+    if(kind==="box") return `<w:r>${rpr}${s ? wText(s) : "<w:br/><w:br/><w:br/>"}</w:r>`;
+    return s ? `<w:r>${rpr}${wText(s)}</w:r>` : "";
+  });
+  zip.file("word/document.xml",xml);
+  return zip.generateAsync({type:"blob",mimeType:"application/vnd.openxmlformats-officedocument.wordprocessingml.document",compression:"DEFLATE"});
+}
+function downloadBlob(filename,blob,label){
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download=filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+  toast(label+" saved");
+}
+
 /* ---------- markdown ---------- */
 function mdEsc(s){ return String(s??"").replace(/\|/g,"\\|").replace(/\n+/g," "); }
 function mdTable(cols,rows){
@@ -3665,7 +4036,22 @@ async function offerFile(filename,data,label){
   }
 }
 document.getElementById("exportMd").onclick=()=>{ saveNow(); offerFile(slug()+"-smp.md", toMarkdown(), "SMP"); };
-document.getElementById("exportBp").onclick=()=>{ saveNow(); offerFile(slug()+"-burn-plan.md", toBurnPlanMd(), "Burn plan"); };
+document.getElementById("mapImgBtn").onclick=async()=>{
+  if(!siteBounds("site")){ readout("Draw the unit or add site features first."); return; }
+  readout("Drawing the map image…");
+  try{
+    const m=await renderSiteMap({kind:"site",base:currentBase||"Satellite",W:2000,H:1440});
+    downloadBlob(slug()+"-site-map.png", m.blob, "Map image");
+    readout(m.base ? `Map image saved (${m.base} base map).` : "Map imagery couldn't be loaded, so the image shows features only.");
+  }catch(e){ console.error(e); readout("Couldn't make the map image."); }
+};
+document.getElementById("exportBp").onclick=async()=>{
+  saveNow(); toast("Building the burn plan…");
+  try{ downloadBlob(slug()+"-burn-plan.docx", await exportBurnPlanDocx(), "Burn plan");
+    if(lastMapBases.some(b=>!b)) setTimeout(()=>toast("Map imagery couldn't be loaded, so the maps show features only"),2800);
+    else if(lastMapBases.length && lastMapBases[0]!==(currentBase||"Satellite")) setTimeout(()=>toast(`Site map uses the ${lastMapBases[0]} base map`),2800); }
+  catch(e){ console.error(e); toast("Couldn't build the Word file; saving Markdown instead"); offerFile(slug()+"-burn-plan.md", toBurnPlanMd(), "Burn plan"); }
+};
 document.getElementById("backup").onclick=()=>{ saveNow(); offerFile(slug()+"-backup.json", JSON.stringify(state,null,2), "Backup"); };
 
 const restoreFile=document.getElementById("restoreFile");
