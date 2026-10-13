@@ -3636,7 +3636,11 @@ async function renderSiteMap({kind="site", base="Satellite", W=1600, H=1150}={})
   const c=[(b[0]+b[2])/2,(b[1]+b[3])/2];
   // site map: fit everything with a margin; area map: zoomed out to show roads and towns nearby
   let z;
-  if(kind==="site"){ z=19; while(z>10){ const p0=wpx(b[2],b[1],z), p1=wpx(b[0],b[3],z); if(p1[0]-p0[0]<W*0.78 && p1[1]-p0[1]<H*0.72) break; z--; } }
+  if(kind==="site"){
+    // fractional zoom: fill the frame with the unit and site features (the area map gives the wider context)
+    const p0=wpx(b[2],b[1],0), p1=wpx(b[0],b[3],0), w0=Math.max(p1[0]-p0[0],1e-9), h0=Math.max(p1[1]-p0[1],1e-9);
+    z=Math.max(10,Math.min(19, Math.log2(W*0.84/w0), Math.log2(H*0.80/h0)));
+  }
   else z=hasUnit()?14:13;
   const order=[base,...Object.keys(TILE_SRC).filter(k=>k!==base)];
   const s=W/700;   // overlay scale: 1 on a 700 px wide map, so text prints at a readable size
@@ -3647,7 +3651,7 @@ async function renderSiteMap({kind="site", base="Satellite", W=1600, H=1150}={})
   const ctx=cv.getContext("2d");
   let used=null;
   for(const name of order){
-    const src=TILE_SRC[name], tz=Math.min(z,src.max), f=2**(z-tz);   // enlarge tiles past the server's last level
+    const src=TILE_SRC[name], tz=Math.min(Math.ceil(z),src.max), f=2**(z-tz);   // scale tiles to the exact zoom (and enlarge past the server's last level)
     const [cx,cy]=wpx(c[0],c[1],z), x0=cx-W/2, y0=cy-H/2, ts=256*f;
     const jobs=[];
     for(let tx=Math.floor(x0/ts); tx*ts<x0+W; tx++) for(let ty=Math.floor(y0/ts); ty*ts<y0+H; ty++)
@@ -3688,10 +3692,24 @@ async function renderSiteMap({kind="site", base="Satellite", W=1600, H=1150}={})
   const loc=unitCenter();
   if(loc){ const [x,y]=P(loc); ctx.beginPath(); ctx.arc(x,y,7*s,0,Math.PI*2); ctx.fillStyle="#000"; ctx.fill(); ctx.lineWidth=3*s; ctx.strokeStyle="#fff"; ctx.stroke(); }
   if(kind==="site"){
-    feats().forEach(f=>{ const k=FKINDS[f.kind]||FKINDS.other, p=f.pt||[f.lat,f.lon]; if(!p||!isFinite(p[0])) return;
-      const [x,y]=P(p); pin(k,x,y,11*s); if(f.name) halo(f.name,x+15*s,y,12*s); });
-    lines().forEach(l=>{ if(!l.name||l.pts.length<2) return; const m=l.pts[Math.floor((l.pts.length-1)/2)], n=l.pts[Math.floor((l.pts.length-1)/2)+1]||m;
-      const [x1,y1]=P(m),[x2,y2]=P(n); halo(l.name,(x1+x2)/2+6*s,(y1+y2)/2-10*s,11*s); });
+    // names go where they don't cover a pin or another name: try right, left, above, below, then the diagonals
+    const taken=[], hit=(a)=>taken.some(t=>a.x<t.x+t.w && a.x+a.w>t.x && a.y<t.y+t.h && a.y+a.h>t.y)
+      || a.x<4*s || a.y<4*s || a.x+a.w>W-4*s || a.y+a.h>H-4*s;
+    const pts=feats().map(f=>({f,k:FKINDS[f.kind]||FKINDS.other,p:f.pt||[f.lat,f.lon]})).filter(o=>o.p&&isFinite(o.p[0])).map(o=>({...o,xy:P(o.p)}));
+    pts.forEach(o=>{ const r=13*s; taken.push({x:o.xy[0]-r,y:o.xy[1]-r,w:2*r,h:2*r}); });
+    const place=(t,x,y,size,r,extra=[])=>{
+      ctx.font=`700 ${size}px "Public Sans",Arial,sans-serif`; const tw=ctx.measureText(t).width, th=size*1.15, g=4*s;
+      const cand=[[x+r+g,y-th/2],[x-r-g-tw,y-th/2],[x-tw/2,y-r-g-th],[x-tw/2,y+r+g],[x+r,y-r-th],[x+r,y+r],[x-r-tw,y-r-th],[x-r-tw,y+r],...extra];
+      const at=cand.find(([cx,cy])=>!hit({x:cx,y:cy,w:tw,h:th}))||cand[0];
+      taken.push({x:at[0],y:at[1],w:tw,h:th}); halo(t,at[0],at[1]+th/2,size);
+    };
+    pts.forEach(o=>pin(o.k,o.xy[0],o.xy[1],11*s));
+    pts.forEach(o=>{ if(o.f.name) place(o.f.name,o.xy[0],o.xy[1],12*s,11*s); });
+    lines().forEach(l=>{ if(!l.name||l.pts.length<2) return;
+      // try the middle of each segment, longest first
+      const segs=l.pts.slice(1).map((q,i)=>{ const a=P(l.pts[i]), b2=P(q); return {mx:(a[0]+b2[0])/2,my:(a[1]+b2[1])/2,len:Math.hypot(b2[0]-a[0],b2[1]-a[1])}; }).sort((a,b2)=>b2.len-a.len);
+      const m=segs[0], extra=segs.slice(1).flatMap(sg=>[[sg.mx+8*s,sg.my-20*s],[sg.mx+8*s,sg.my+6*s]]);
+      place(l.name,m.mx,m.my,11*s,8*s,extra); });
   } else if(hasUnit()){
     const [x,y]=P(loc); halo(`Burn unit (${polyAcres(state.unitPoly).toFixed(1)} ac)`,x+14*s,y-14*s,13*s);
   }
@@ -3761,7 +3779,7 @@ function burnPlanValues(){
   const withMap = (txt,...keys) => { const ls=keys.flatMap(k=>mapCalc(k)); return [txt, ls.length ? "From the map:\n"+ls.map(l=>"• "+l).join("\n") : ""].filter(Boolean).join("\n\n"); };
   const V={
     title:v("name"), boss:v("burnBoss"), author:v("bpAuthor"), ahj:v("bpAhj"), owner:v("landowner"),
-    created:fmtDate(v("bpCreated")), reeval:fmtDate(v("bpReeval")), loc:v("address"), lat:v("lat"), lon:v("lon"),
+    created:new Date().toLocaleDateString(undefined,{year:"numeric",month:"long",day:"numeric"}), reeval:fmtDate(v("bpReeval")), loc:v("address"), lat:v("lat"), lon:v("lon"),
     ownership:v("bpOwnership"), acres:v("acres"),
     goals:v("objectives"), prep:withMap(v("bpPrep"),"calcLines"), water:withMap(v("bpWater"),"calcWater"),
     access:withMap(v("bpAccess"),"calcAccessBp"), values:withMap(v("bpValues"),"calcValues"),
@@ -3910,8 +3928,15 @@ async function exportBurnPlanDocx(){
   // optional boxes: drop the whole paragraph when there's nothing to say
   xml=xml.replace(/<w:p[ >](?:(?!<\/w:p>)[\s\S])*?\{\{boxo:([^}]+)\}\}[\s\S]*?<\/w:p>/g,(m,k)=> String(V[k]||"").trim() ? m.replace("{{boxo:","{{box:") : "");
   xml=xml.replace(/<w:p[ >](?:(?!<\/w:p>)[\s\S])*?\{\{appendix\}\}[\s\S]*?<\/w:p>/,()=>burnPlanAppendix(extra,maps));
-  xml=xml.replace(/<w:r(?: [^>]*)?>(<w:rPr>(?:(?!<\/w:rPr>)[\s\S])*<\/w:rPr>)?<w:t(?: [^>]*)?>\{\{(f|ck|c|box):([^}|]+)(?:\|(\d+))?\}\}<\/w:t><\/w:r>/g,(m,rpr,kind,k,tabs)=>{
+  // name/phone rows: when a name is filled in, a tab stop lines the phone numbers up in one column
+  xml=xml.replace(/<w:p[ >](?:(?!<\/w:p>)[\s\S])*?\{\{tab:([^}]+)\}\}[\s\S]*?<\/w:p>/g,(m,k)=>{
+    if(!String(V[k+".name"]||"").trim()) return m;
+    const pos = /^nb\d/.test(k) ? 3960 : 5400;
+    return m.replace(/<w:pPr>/,`<w:pPr><w:tabs><w:tab w:val="left" w:pos="${pos}"/></w:tabs>`);
+  });
+  xml=xml.replace(/<w:r(?: [^>]*)?>(<w:rPr>(?:(?!<\/w:rPr>)[\s\S])*<\/w:rPr>)?<w:t(?: [^>]*)?>\{\{(f|ck|c|box|tab):([^}|]+)(?:\|(\d+))?\}\}<\/w:t><\/w:r>/g,(m,rpr,kind,k,tabs)=>{
     rpr=rpr||""; const val=V[k];
+    if(kind==="tab") return String(V[k+".name"]||"").trim() ? `<w:r>${rpr}<w:tab/></w:r>` : `<w:r>${rpr}<w:t xml:space="preserve">  </w:t></w:r>`;
     if(kind==="ck") return `<w:r>${rpr}<w:t xml:space="preserve">${val?"☒":"□"}</w:t></w:r>`;
     const s=String(val??"").trim();
     if(kind==="f"){
