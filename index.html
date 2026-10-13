@@ -197,8 +197,10 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-w
   #mapDialog .map-panel #map{min-height:0}
   #mapInline .map-panel{height:240px}
   #mapFallback{overflow-y:auto}
-  .ib{width:40px;height:40px}
-  .map-bar #featKind,.map-bar #featName,.bar-search input{height:40px}
+  .map-panel .map-bar .ib{width:36px;height:36px}
+  .map-panel .map-bar .kindbtn{width:auto;padding:0 4px}
+  .map-panel .map-bar #featName,.map-panel .bar-search input{height:34px}
+  .map-panel .leaflet-bar a{width:34px;height:34px;line-height:34px}
   .bar-search input{width:150px}
 }
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
@@ -833,10 +835,10 @@ input.computed{background:transparent;border-style:dashed;font-variant-numeric:t
 @media (max-width:999px){
   .map-card{display:block}
 }
-.map-bar{display:flex;align-items:center;gap:6px 8px;padding:6px 8px;border-bottom:1px solid var(--line);flex-wrap:wrap;background:var(--surface)}
-.bar-group,.bar-ctx,.bar-right,.bar-search,.map-bar .foot-btns{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.map-bar{position:relative;z-index:1300;display:flex;align-items:center;gap:4px 6px;padding:4px 6px;border-bottom:1px solid var(--line);flex-wrap:wrap;background:var(--surface)}
+.bar-group,.bar-ctx,.bar-right,.bar-search,.map-bar .foot-btns{display:flex;align-items:center;gap:2px;flex-wrap:wrap}
 .map-bar .foot-btns[hidden],.bar-search[hidden]{display:none}
-.bar-group{padding-right:8px;border-right:1px solid var(--line)}
+.bar-group{padding-right:6px;margin-right:2px;border-right:1px solid var(--line)}
 .bar-ctx{flex:1 1 0;min-width:0}
 @media (max-width:999px){
   /* full-screen map on small screens: modes and search/close on the first row, mode tools on the second */
@@ -849,13 +851,38 @@ input.computed{background:transparent;border-style:dashed;font-variant-numeric:t
 .ib svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .ib:hover:not(:disabled){border-color:var(--muted)}
 .ib[aria-pressed="true"]{background:var(--oak);border-color:var(--oak);color:#fff}
+/* map toolbar: small borderless icons, like a macOS toolbar */
+.map-bar .ib{width:26px;height:26px;border-color:transparent;background:none;border-radius:5px}
+.map-bar .ib svg{width:17px;height:17px;stroke-width:1.75}
+.map-bar .ib:hover:not(:disabled){background:var(--field);border-color:var(--line)}
+.map-bar .ib[aria-pressed="true"],.map-bar .ib[aria-expanded="true"]{background:color-mix(in srgb,var(--oak) 22%,transparent);border-color:var(--oak);color:var(--ink)}
+.map-bar .ib.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.map-bar .ib.primary:disabled{background:none;border-color:transparent;color:var(--ink)}
 .ib.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .ib.armed{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .ib:disabled{opacity:.4;cursor:not-allowed}
 .ib[hidden]{display:none}
-.map-bar #featKind{width:auto;max-width:136px;height:34px;padding:4px 6px;font-size:.875rem}
-.map-bar #featName{width:auto;flex:1 1 70px;min-width:60px;max-width:150px;height:34px;padding:4px 8px;font-size:.875rem}
-.bar-search input{width:190px;height:34px;padding:4px 8px;font-size:.875rem}
+.map-bar #featKind{display:none}
+.map-bar #featName{width:auto;flex:1 1 70px;min-width:60px;max-width:160px;height:24px;padding:2px 7px;font-size:.8125rem;border-radius:5px}
+.bar-search input{width:180px;height:24px;padding:2px 7px;font-size:.8125rem;border-radius:5px}
+/* feature type picker: a button that opens a grid of types, like Preview's shape menu */
+.map-bar .kindbtn{width:auto;padding:0 3px 0 4px;gap:1px}
+.map-bar .kindbtn .chev{width:11px;height:11px;stroke-width:2.2}
+.kindbtn .kswatch{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px}
+.kmenu{position:absolute;z-index:1400;top:calc(100% + 6px);background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.22);padding:8px;width:max-content}
+.kmenu[hidden]{display:none}
+.kmenu::before{content:"";position:absolute;top:-7px;left:var(--arrow,20px);width:12px;height:12px;background:var(--surface);border-left:1px solid var(--line);border-top:1px solid var(--line);transform:rotate(45deg)}
+.kmenu h4{margin:2px 4px 4px;font-size:.6875rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.kgrid{display:grid;grid-template-columns:repeat(4,36px);gap:2px}
+.kgrid button,.kmenu .ksel{display:flex;align-items:center;justify-content:center;width:36px;height:32px;border:1px solid transparent;border-radius:6px;background:none;padding:0;cursor:pointer;color:var(--ink)}
+.kgrid button:hover,.kmenu .ksel:hover,.kgrid button:focus-visible,.kmenu .ksel:focus-visible{background:var(--field);border-color:var(--line);outline:none}
+.kgrid button[aria-checked="true"],.kmenu .ksel[aria-checked="true"]{background:color-mix(in srgb,var(--oak) 22%,transparent);border-color:var(--oak)}
+.kmenu hr{border:0;border-top:1px solid var(--line);margin:6px 0}
+.kmenu .kfoot{display:flex;align-items:center;gap:8px}
+.kmenu .ksel svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.kmenu .kcap{font-size:.75rem;color:var(--muted);min-height:1.2em;flex:1;text-align:right;padding-right:4px;white-space:nowrap}
+.kswatch .fpin{transform:scale(.86)}
+.map-panel .leaflet-touch .leaflet-bar a,.map-panel .leaflet-bar a{width:26px;height:26px;line-height:26px;font-size:18px}
 .map-wrap{position:relative;flex:1 1 auto;min-height:220px}
 .map-wrap #map{position:absolute;inset:0;height:auto;min-height:0}
 .map-wrap #mapFallback{position:absolute;inset:0;z-index:1100;background:var(--surface);overflow-y:auto}
@@ -863,28 +890,43 @@ input.computed{background:transparent;border-style:dashed;font-variant-numeric:t
 .map-status > div{background:color-mix(in srgb,var(--surface) 92%,transparent);color:var(--ink);border-radius:6px;padding:4px 9px;font-size:.8125rem;line-height:1.35;box-shadow:0 1px 5px rgba(0,0,0,.28);pointer-events:auto}
 .map-status .readout{font-variant-numeric:tabular-nums;font-weight:600}
 .map-status .readout:empty{display:none}
+.map-status .map-undo{display:flex;align-items:center;gap:10px;background:var(--ink);color:var(--bg);font-weight:600}
+.map-status .map-undo[hidden]{display:none}
+.map-undo button{border:0;background:none;color:inherit;font:inherit;font-weight:700;text-decoration:underline;text-underline-offset:2px;cursor:pointer;padding:2px 0}
 .map-status .map-msg{color:var(--muted)}
 #map{height:min(62vh,560px);background:var(--field)}
 .map-msg[hidden],#mapFallback[hidden]{display:none}
 .modebtn[aria-pressed="true"]{background:var(--oak);border-color:var(--oak);color:#fff}
 .unit-sum{margin-left:auto;font-size:.875rem;color:var(--muted);font-variant-numeric:tabular-nums}
 .foot-btns{display:flex;gap:8px;flex-wrap:wrap}
-.vtx{width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid #A3261C;box-shadow:0 0 0 1px rgba(0,0,0,.35);cursor:grab}
-.whandle{width:22px;height:22px;border-radius:50%;background:#2F6FB0;border:3px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.4);cursor:grab;display:flex;align-items:center;justify-content:center;color:#fff;font:700 10px/1 system-ui,sans-serif}
-.whandle.ideal{background:#fff;border-color:#2F6FB0;color:#2F6FB0}
+.vtx{width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid #000;box-shadow:0 0 0 1px #fff;cursor:grab}
+.whandle{width:22px;height:22px;border-radius:50%;background:#0072B2;border:3px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.4);cursor:grab;display:flex;align-items:center;justify-content:center;color:#fff;font:700 10px/1 system-ui,sans-serif}
+.whandle.ideal{background:#fff;border-color:#0072B2;color:#0072B2}
 .wlabel{font:700 12px/1.2 "Public Sans",system-ui,sans-serif;color:#fff;text-shadow:0 0 3px #000,0 0 3px #000;white-space:nowrap}
-.fpin{min-width:22px;height:22px;padding:0 4px;border-radius:11px;background:var(--c);border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.45);color:#fff;
+.fpin{min-width:22px;height:22px;padding:0 4px;border-radius:11px;background:var(--c);border:2px solid #fff;box-shadow:0 0 0 1.5px #000;color:#fff;
   font:700 11px/18px "Public Sans",system-ui,sans-serif;text-align:center;box-sizing:border-box;white-space:nowrap}
-.fpin.sel{box-shadow:0 0 0 3px #fff,0 0 0 5px var(--c)}
+.fpin.square{border-radius:3px}
+.fpop-wrap .leaflet-popup-content{margin:12px 12px 10px;font:.875rem/1.4 "Public Sans",system-ui,sans-serif;color:#1c2420}
+.fpop label{display:block;font-weight:600;font-size:.8125rem;margin-bottom:8px}
+.fpop input,.fpop select{display:block;width:100%;margin-top:3px;padding:6px 8px;font:inherit;font-weight:400;border:1px solid #c7cdc3;border-radius:6px;background:#f7f8f5;color:#1c2420}
+.fpop-meta{color:#5d6862;font-size:.8125rem;margin:2px 0 10px;font-variant-numeric:tabular-nums}
+.fpop-type{color:#5d6862;font-size:.8125rem}
+.fpop-btns{display:flex;gap:6px}
+.fpop-btns .ib{color:#1c2420;background:#fff;border-color:#c7cdc3}
+.fpop-btns .ib.primary,.fpop-btns .ib.armed{background:#A3261C;border-color:#A3261C;color:#fff}
+.fpin.sel{box-shadow:0 0 0 3px #000,0 0 0 5px #fff}
 .fpin.pending{opacity:.75;border-style:dashed}
 .lvtx{width:12px;height:12px;border-radius:50%;background:#fff;border:2px solid #333;cursor:grab}
+.lvtx.sel,.vtx.sel{background:#F0E442;border-color:#000;box-shadow:0 0 0 2px #fff,0 0 0 4px #000}
 .mapcalc{font-size:.9375rem;background:var(--field);border:1px dashed var(--line);border-radius:6px;padding:8px 12px}
 .mapcalc ul{margin:0;padding-left:18px}
 .mapcalc li{margin:2px 0}
 .mapcalc .muted{color:var(--muted);font-size:.875rem}
 #featKind{width:auto;max-width:200px}
 #featName{width:auto;flex:1 1 140px;min-width:120px}
-.vtx.first{background:#A3261C;border-color:#fff}
+.vtx.first{background:#F0E442;border-color:#000}
+.vtx.mid{width:12px;height:12px;border-width:2px;opacity:.75;cursor:copy}
+.vtx.mid:hover{opacity:1}
 .leaflet-tooltip.closetip{font:600 12px/1.2 "Public Sans",system-ui,sans-serif;padding:3px 6px}
 #map.drawing{cursor:crosshair}
 #mapFallback{padding:16px;display:grid;gap:12px;max-width:62ch}
@@ -1009,8 +1051,8 @@ body.readonly .ro-banner{display:block}
     <span class="bar-ctx">
       <span class="foot-btns" id="locBtns" hidden><button type="button" class="ib primary" id="mapUse" title="Use this location" aria-label="Use this location" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></button></span>
       <span class="foot-btns" id="unitBtns" hidden>
+        <button type="button" class="ib" id="unitVtxDelete" title="Remove the selected corner (Delete)" aria-label="Remove the selected corner" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18 9 8l6 6 6-9"/><circle cx="15" cy="14" r="4.5" fill="var(--surface)"/><path d="M12.8 14h4.4"/></svg></button>
         <button type="button" class="ib" id="unitUndo" title="Undo last corner (Backspace)" aria-label="Undo last corner (Backspace)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5"/><path d="M4 12h10a5 5 0 0 1 0 10h-3"/></svg></button>
-        <button type="button" class="ib" id="unitRestart" title="Start over: remove all corners" aria-label="Start over: remove all corners"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 4 6 6-9 9H6l-3-3Z"/><path d="m9 9 6 6"/><path d="M12 19h8"/></svg></button>
         <button type="button" class="ib primary" id="unitFinish" title="Finish unit (Enter, double-click, or click the first corner)" aria-label="Finish unit (Enter, double-click, or click the first corner)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></button>
       </span>
       <span class="foot-btns" id="windBtns" hidden>
@@ -1019,8 +1061,11 @@ body.readonly .ro-banner{display:block}
       </span>
       <span class="foot-btns" id="featBtns" hidden>
         <select id="featKind" aria-label="Feature type" title="Feature type"></select>
+        <button type="button" class="ib kindbtn" id="featKindBtn" aria-haspopup="true" aria-expanded="false" title="Feature type" aria-label="Feature type"><span class="kswatch"></span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div class="kmenu" id="kindMenu" role="menu" aria-label="Feature type" hidden></div>
         <input type="text" id="featName" placeholder="Name" aria-label="Feature name" title="Feature name (optional)" autocomplete="off">
         <button type="button" class="ib" id="featUndo" title="Undo last point (Backspace)" aria-label="Undo last point (Backspace)" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5"/><path d="M4 12h10a5 5 0 0 1 0 10h-3"/></svg></button>
+        <button type="button" class="ib" id="vtxDelete" title="Remove the selected point (Delete)" aria-label="Remove the selected point" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18 9 8l6 6 6-9"/><circle cx="15" cy="14" r="4.5" fill="var(--surface)"/><path d="M12.8 14h4.4"/></svg></button>
         <button type="button" class="ib" id="featDelete" title="Delete the selected feature" aria-label="Delete the selected feature" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></svg></button>
         <button type="button" class="ib primary" id="featAdd" title="Add" aria-label="Add" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></button>
       </span>
@@ -1050,7 +1095,7 @@ body.readonly .ro-banner{display:block}
       <div class="f"><label for="pasteCoords">Paste coordinates (decimal degrees)</label>
         <input type="text" id="pasteCoords" placeholder="38.88678, -123.15587"></div>
     </div>
-    <div class="map-status" aria-live="polite"><div class="readout" id="mapReadout"></div><div class="map-msg" id="mapMsg" hidden></div></div>
+    <div class="map-status" aria-live="polite"><div class="map-undo" id="mapUndo" hidden><span></span><button type="button">Undo</button></div><div class="readout" id="mapReadout"></div><div class="map-msg" id="mapMsg" hidden></div></div>
   </div>
   <button type="button" class="map-open" id="mapOpenBtn" aria-label="Open the site map"><span>Open map</span></button>
 </div>
@@ -1859,8 +1904,10 @@ const mapDlg=document.getElementById("mapDialog"), mapMsgEl=document.getElementB
       mapReadout=document.getElementById("mapReadout"), mapUse=document.getElementById("mapUse"),
       mapFallback=document.getElementById("mapFallback"), mapEl=document.getElementById("map");
 let L_ready=null, map=null, marker=null, picked=null, tilesOk=false, tileErrs=0;
-let mapMode="browse", tmpPts=[], drawLayer=null, savedLayer=null, handleLayer=null;
+let mapMode="browse", tmpPts=[], unitClosed=false, unitRecalcT=null, drawLayer=null, savedLayer=null, handleLayer=null;
 const FIRE="#A3261C";
+const OI={black:"#000000",orange:"#E69F00",sky:"#56B4E9",green:"#009E73",yellow:"#F0E442",blue:"#0072B2",vermillion:"#D55E00",purple:"#CC79A7"};
+const UNIT_C=OI.yellow, CASING={color:"#000",opacity:.55};
 function mapMsg(t){ mapMsgEl.textContent=t||""; mapMsgEl.hidden=!t; }
 function readout(t){ mapReadout.textContent=t||""; }
 function loadLeaflet(){
@@ -1957,11 +2004,11 @@ async function centerOn(q){
 
 /* ---------- modes ---------- */
 const BANNERS={
-  browse:()=> hasUnit() ? `Unit ${polyAcres(state.unitPoly).toFixed(1)} ac. Pick a tool above.` : "Pick a tool above to set the location or draw the unit.",
+  browse:()=> (hasUnit() ? `Unit ${polyAcres(state.unitPoly).toFixed(1)} ac. ` : "") + ((feats().length||lines().length) ? "Click a feature to edit it, or pick a tool above." : "Pick a tool above."),
   feat:"Pick a type, click the map, then ✓. For lines, click along the route; clicking a point snaps to it. To change a feature, pick Select and edit.",
   wind:"Drag A and B to set the range the wind may blow from (clockwise A to B), and the star to the preferred direction. Gray shows where smoke goes. Save with ✓.",
   loc:"Click the map to place the burn location, then ✓.",
-  unit:"Click corners around the unit; drag one to move it. Finish with ✓, Enter, or a double-click. Escape cancels."
+  unit:()=> unitClosed ? UNIT_EDIT_HELP : "Click corners around the unit; drag one to move it. Finish with ✓, Enter, or a double-click. Escape cancels."
 };
 function modeBanner(){ const b=BANNERS[mapMode]; mapMsg(typeof b==="function" ? b() : b); }
 function unitSummary(){
@@ -1975,6 +2022,7 @@ function unitSummary(){
 }
 function setMode(m){
   mapMode=m;
+  { const km=document.getElementById("kindMenu"); if(km && !km.hidden){ km.hidden=true; document.getElementById("featKindBtn").setAttribute("aria-expanded","false"); } }
   document.getElementById("modeLoc").setAttribute("aria-pressed",String(m==="loc"));
   document.getElementById("modeUnit").setAttribute("aria-pressed",String(m==="unit"));
   document.getElementById("modeWind").setAttribute("aria-pressed",String(m==="wind"));
@@ -1993,12 +2041,16 @@ function setMode(m){
   document.getElementById("unitDelete").hidden = !hasUnit();
   mapEl.classList.toggle("drawing", m==="unit" || m==="feat");
   if(map){ (m==="unit"||m==="feat") ? map.doubleClickZoom.disable() : map.doubleClickZoom.enable(); }
-  if(m==="unit"){ tmpPts = hasUnit() ? clone(state.unitPoly) : []; readout(tmpPts.length ? "Editing the saved outline. Drag corners or add new ones, then Finish." : "Click the first corner of the unit."); }
+  unitVtx=null; featVtx=null; featEditSession=false; unitVtxUi();
+  unitClosed = m==="unit" && hasUnit();
+  if(m==="unit"){ tmpPts = unitClosed ? clone(state.unitPoly) : []; }
   else tmpPts=[];
+  unitButtons();
   if(m==="loc"){ picked=null; mapUse.disabled=true; readout(fromDMM(state.lat)!=null ? `Current: ${state.lat}, ${state.lon}` : "Click the map to place the point."); }
   if(m==="browse" && !mapReadout.dataset.keep) readout("");
   delete mapReadout.dataset.keep;
   modeBanner(); drawSaved(); drawTmp(true); unitSummary(); drawWind(m==="wind"); drawFeatures(); syncMarker(); refreshLayersUi();
+  if(m==="unit") readout(unitClosed ? `Editing the unit outline: ${tmpPts.length} corners, ${polyAcres(tmpPts).toFixed(1)} acres.` : "Click the first corner of the unit.");
   if(m==="feat") readout(featCountText());
   if(m==="wind") windReadout();
 }
@@ -2016,31 +2068,84 @@ function drawSaved(){
   if(!map || !map._loaded) return;
   savedLayer.clearLayers();
   if(hasUnit() && mapMode!=="unit" && layerOn("unit"))
-    L.polygon(state.unitPoly,{color:FIRE,weight:3,fillColor:FIRE,fillOpacity:.18,interactive:false}).addTo(savedLayer);
+    { L.polygon(state.unitPoly,{...CASING,weight:7,fill:false,interactive:false}).addTo(savedLayer);
+      L.polygon(state.unitPoly,{color:UNIT_C,weight:3,fillColor:UNIT_C,fillOpacity:.15,interactive:false}).addTo(savedLayer); }
 }
 function drawTmp(rebuildHandles){
   if(!map || !map._loaded) return;
   drawLayer.clearLayers();
   if(mapMode!=="unit"){ handleLayer.clearLayers(); return; }
-  if(tmpPts.length>=2) L.polyline(tmpPts,{color:FIRE,weight:3,interactive:false}).addTo(drawLayer);
+  if(unitClosed){
+    L.polygon(tmpPts,{...CASING,weight:7,fill:false,interactive:false}).addTo(drawLayer);
+    L.polygon(tmpPts,{color:UNIT_C,weight:3,fillColor:UNIT_C,fillOpacity:.12,interactive:false}).addTo(drawLayer);
+    if(rebuildHandles) drawHandles();
+    return;
+  }
+  if(tmpPts.length>=2){ L.polyline(tmpPts,{...CASING,weight:7,interactive:false}).addTo(drawLayer); L.polyline(tmpPts,{color:UNIT_C,weight:3,interactive:false}).addTo(drawLayer); }
   if(tmpPts.length>=3){
-    L.polyline([tmpPts[tmpPts.length-1],tmpPts[0]],{color:FIRE,weight:2,dashArray:"6 6",interactive:false}).addTo(drawLayer);
-    L.polygon(tmpPts,{stroke:false,fillColor:FIRE,fillOpacity:.12,interactive:false}).addTo(drawLayer);
+    L.polyline([tmpPts[tmpPts.length-1],tmpPts[0]],{color:UNIT_C,weight:2,dashArray:"6 6",interactive:false}).addTo(drawLayer);
+    L.polygon(tmpPts,{stroke:false,fillColor:UNIT_C,fillOpacity:.12,interactive:false}).addTo(drawLayer);
     readout(`${tmpPts.length} corners, ${polyAcres(tmpPts).toFixed(1)} acres so far.`);
   } else if(tmpPts.length) readout(`${tmpPts.length} corner${tmpPts.length>1?"s":""}. Keep clicking around the unit.`);
   if(rebuildHandles) drawHandles();
+  unitButtons();
 }
+const UNIT_EDIT_HELP="Drag a corner to move it. Drag or click a small midpoint to add a corner. Click a corner, then press Delete to remove it. Changes save as you go; ✓ or Enter when done.";
+function unitButtons(){
+  document.getElementById("unitUndo").hidden = unitClosed || !tmpPts.length;
+  const f=document.getElementById("unitFinish"), t = unitClosed ? "Done editing the unit (Enter)" : "Finish unit (Enter, double-click, or click the first corner)";
+  f.title=t; f.setAttribute("aria-label",t);
+}
+/* Editing a saved outline works like editing a line: every change is saved right away. */
+function commitUnitEdit(msg){
+  state.unitPoly=tmpPts.map(p=>[+p[0].toFixed(6),+p[1].toFixed(6)]);
+  const acres=polyAcres(state.unitPoly);
+  setField("acres", acres.toFixed(1)); unitSummary();
+  readout(`${msg} ${tmpPts.length} corners, ${acres.toFixed(1)} acres.`);
+  clearTimeout(unitRecalcT);
+  unitRecalcT=setTimeout(async()=>{ unitRecalcT=null; const r=await recalcFromMap(); if(mapMode==="unit") readout(`${acres.toFixed(1)} acres. ${r}`); },1500);
+}
+function unitVtxUi(){ document.getElementById("unitVtxDelete").hidden = unitVtx==null; }
+function removeUnitVertex(){
+  if(unitVtx==null) return false;
+  if(tmpPts.length<=3){ readout("The unit needs at least three corners."); return true; }
+  const i=unitVtx;
+  tmpPts.splice(i,1); unitVtx=Math.min(i,tmpPts.length-1); drawTmp(true); unitVtxUi();
+  if(unitClosed){ commitUnitEdit(`Corner removed; corner ${unitVtx+1} is selected.`); return true; }
+  readout(`Corner removed. ${tmpPts.length} corners, ${polyAcres(tmpPts).toFixed(1)} acres. ${tmpPts.length>3 ? `Corner ${unitVtx+1} is selected; press Delete to remove it too, or ✓ to save.` : "That's the minimum for the unit. Save with ✓."}`);
+  return true;
+}
+document.getElementById("unitVtxDelete").onclick=()=>removeUnitVertex();
 function drawHandles(){
   handleLayer.clearLayers();
+  if(unitClosed && tmpPts.length>=3) addMidHandles();
   tmpPts.forEach((p,i)=>{
     const h=L.marker(p,{draggable:true,keyboard:false,
-      icon:L.divIcon({className:"",html:`<div class="vtx${i===0?" first":""}"></div>`,iconSize:[16,16],iconAnchor:[8,8]})}).addTo(handleLayer);
+      icon:L.divIcon({className:"",html:`<div class="vtx${i===0&&!unitClosed?" first":""}${unitVtx===i?" sel":""}"></div>`,iconSize:[16,16],iconAnchor:[8,8]})}).addTo(handleLayer);
     h.on("drag",ev=>{ const ll=ev.target.getLatLng(); tmpPts[i]=[ll.lat,ll.lng]; drawTmp(false); });
-    h.on("click",ev=>{ L.DomEvent.stopPropagation(ev); if(i===0 && tmpPts.length>=3) finishUnit(); });
-    if(i===0 && tmpPts.length>=3) h.bindTooltip("Click to close",{permanent:true,direction:"top",offset:[0,-10],className:"closetip"});
+    h.on("dragend",()=>{ if(unitClosed){ commitUnitEdit("Corner moved."); drawHandles(); } });
+    h.on("click",ev=>{ L.DomEvent.stopPropagation(ev);
+      if(!unitClosed && i===0 && tmpPts.length>=3 && unitVtx==null) return finishUnit();
+      unitVtx = unitVtx===i ? null : i; drawHandles(); unitVtxUi();
+      readout(unitVtx==null ? "Corner deselected." : `Corner ${i+1} of ${tmpPts.length} selected. Press Delete or the remove-corner button to remove it, or drag to move it.`); });
+    if(!unitClosed && i===0 && tmpPts.length>=3) h.bindTooltip("Click to close",{permanent:true,direction:"top",offset:[0,-10],className:"closetip"});
+  });
+}
+function addMidHandles(){
+  tmpPts.forEach((p,i)=>{
+    const q=tmpPts[(i+1)%tmpPts.length], at=[(p[0]+q[0])/2,(p[1]+q[1])/2];
+    const m=L.marker(at,{draggable:true,keyboard:false,title:"Drag or click to add a corner here",
+      icon:L.divIcon({className:"",html:'<div class="vtx mid"></div>',iconSize:[12,12],iconAnchor:[6,6]})}).addTo(handleLayer);
+    let added=false;
+    const add=ll=>{ tmpPts.splice(i+1,0,[ll.lat,ll.lng]); added=true; };
+    m.on("dragstart",ev=>add(ev.target.getLatLng()));
+    m.on("drag",ev=>{ const ll=ev.target.getLatLng(); tmpPts[i+1]=[ll.lat,ll.lng]; drawTmp(false); });
+    m.on("dragend",()=>{ unitVtx=null; unitVtxUi(); commitUnitEdit("Corner added."); drawHandles(); });
+    m.on("click",ev=>{ L.DomEvent.stopPropagation(ev); if(added) return; add(L.latLng(at)); unitVtx=i+1; unitVtxUi(); drawTmp(true); commitUnitEdit(`Corner added and selected; drag it into place.`); });
   });
 }
 function addCorner(ll){
+  if(unitClosed){ if(unitVtx!=null){ unitVtx=null; unitVtxUi(); drawHandles(); } return; }
   if(tmpPts.length){
     const last=map.latLngToContainerPoint(tmpPts[tmpPts.length-1]), here=map.latLngToContainerPoint(ll);
     if(last.distanceTo(here)<6) return;   // ignore the repeat click from a double-click
@@ -2049,6 +2154,13 @@ function addCorner(ll){
 }
 async function finishUnit(){
   if(mapMode!=="unit") return;
+  const pending=unitRecalcT!=null; clearTimeout(unitRecalcT); unitRecalcT=null;
+  if(unitClosed){
+    mapReadout.dataset.keep="1"; setMode("browse");
+    const ac=polyAcres(state.unitPoly).toFixed(1); readout(`Unit outline saved: ${ac} acres.`);
+    if(pending) readout(`Unit outline saved: ${ac} acres. ` + await recalcFromMap());
+    return;
+  }
   const pts=tmpPts.slice();
   if(pts.length<3){ mapReadout.dataset.keep="1"; setMode("browse"); readout("Need at least three corners. Nothing was saved."); return; }
   const acres=polyAcres(pts);
@@ -2062,21 +2174,26 @@ function setField(k,v){
   state[k]=v; const el=document.getElementById("f_"+k); if(el) el.value=v;
   updateDerived(); scheduleSave();
 }
-document.getElementById("unitUndo").onclick=()=>{ tmpPts.pop(); drawTmp(true); if(!tmpPts.length) readout("Click the first corner of the unit."); };
-document.getElementById("unitRestart").onclick=()=>{ tmpPts=[]; drawTmp(true); readout("Click the first corner of the unit."); };
+document.getElementById("unitUndo").onclick=()=>{ if(unitClosed) return; unitVtx=null; unitVtxUi(); tmpPts.pop(); drawTmp(true); if(!tmpPts.length) readout("Click the first corner of the unit."); };
 document.getElementById("unitFinish").onclick=()=>finishUnit();
-let delArmed=false;
 document.getElementById("unitDelete").onclick=e=>{
   if(isRO()) return roPrompt();
-  const btn=e.currentTarget;
-  if(!delArmed){ delArmed=true; btn.classList.add("armed"); readout("Click the trash button again to delete the unit outline."); setTimeout(()=>{ delArmed=false; btn.classList.remove("armed"); },3000); return; }
-  delArmed=false; btn.classList.remove("armed");
+  const saved=state.unitPoly;
   delete state.unitPoly; updateDerived(); scheduleSave(); setMode("browse"); readout("Unit outline deleted.");
+  offerUndo("Unit outline deleted.", ()=>{ state.unitPoly=saved; updateDerived(); scheduleSave(); setMode("browse"); readout("Unit outline restored."); });
 };
 // Escape cancels the drawing in progress (or leaves location mode) instead of closing the map
 mapDlg.addEventListener("cancel", e=>{
   if(mapMode==="feat" && (featPending || featLine.length || featSel)){ e.preventDefault(); featPending=null; featLine=[]; clearSel(); featUi(); drawFeatures(); readout(featCountText()); return; }
   if(mapMode!=="browse"){ e.preventDefault(); setMode("browse"); }
+});
+// Delete/Backspace for a selected point, even if focus left the map (e.g. after a popup closed)
+document.addEventListener("keydown", e=>{
+  if(e.key!=="Delete" && e.key!=="Backspace") return;
+  if(mapPanel.contains(e.target)) return;   // the panel handler below covers it
+  if(e.target.closest && e.target.closest("input,textarea,select,[contenteditable]")) return;
+  if(mapMode==="feat" && featVtx!=null){ e.preventDefault(); removeLineVertex(); }
+  else if(mapMode==="unit" && unitVtx!=null){ e.preventDefault(); removeUnitVertex(); }
 });
 mapPanel.addEventListener("keydown", e=>{
   if(e.key==="Escape" && layersOpen()){ e.preventDefault(); closeLayers(); return; }
@@ -2088,8 +2205,9 @@ mapPanel.addEventListener("keydown", e=>{
   }
   if(e.target.matches && e.target.matches("input")) return;
   if(mapMode==="unit" && e.key==="Enter"){ e.preventDefault(); finishUnit(); }
-  if(mapMode==="unit" && (e.key==="Backspace"||e.key==="Delete")){ e.preventDefault(); document.getElementById("unitUndo").click(); }
+  if(mapMode==="unit" && (e.key==="Backspace"||e.key==="Delete")){ e.preventDefault(); if(!removeUnitVertex()) document.getElementById("unitUndo").click(); }
   if(mapMode==="feat" && e.key==="Enter" && !e.target.matches("select,button")){ e.preventDefault(); featCommit(); }
+  if(mapMode==="feat" && (e.key==="Backspace"||e.key==="Delete") && featVtx!=null){ e.preventDefault(); removeLineVertex(); return; }
   if(mapMode==="feat" && (e.key==="Backspace"||e.key==="Delete") && featLine.length){ e.preventDefault(); featLine.pop(); featUi(); drawFeatures(); }
 });
 
@@ -2145,10 +2263,10 @@ function drawWind(withHandles){
   if(!w || !c) return;
   const r=windRadius();
   // upwind wedge: where acceptable winds come from
-  L.polygon(wedge(c,w.from,w.to,r),{color:"#2F6FB0",weight:2,fillColor:"#2F6FB0",fillOpacity:.22,interactive:false}).addTo(windLayer);
+  L.polygon(wedge(c,w.from,w.to,r),{color:OI.blue,weight:2,fillColor:OI.blue,fillOpacity:.25,interactive:false}).addTo(windLayer);
   // downwind wedge: where the smoke goes
   L.polygon(wedge(c,w.from+180,w.to+180,r*0.8),{color:"#7a7a7a",weight:1,dashArray:"5 5",fillColor:"#9a9a9a",fillOpacity:.25,interactive:false}).addTo(windLayer);
-  L.polyline([destPt(c,w.ideal,r),c,destPt(c,w.ideal+180,r*0.8)],{color:"#2F6FB0",weight:3,interactive:false}).addTo(windLayer);
+  L.polyline([destPt(c,w.ideal,r),c,destPt(c,w.ideal+180,r*0.8)],{color:OI.blue,weight:3,interactive:false}).addTo(windLayer);
   const lbl=(pt,t)=>L.marker(pt,{interactive:false,icon:L.divIcon({className:"",html:`<span class="wlabel">${t}</span>`,iconSize:null})}).addTo(windLayer);
   lbl(destPt(c,w.from+span(w.from,w.to)/2,r*0.6),"Wind from");
   lbl(destPt(c,w.from+180+span(w.from,w.to)/2,r*0.5),"Smoke");
@@ -2229,31 +2347,91 @@ main.addEventListener("click", async e=>{
 
 /* ---------- site features (points and lines on the map) ---------- */
 const FKINDS={
-  gate:{label:"Entrance gate",t:"pt",color:"#6b5330",ch:"G"},
-  water:{label:"Water source",t:"pt",color:"#1f6fb0",ch:"W"},
-  structure:{label:"Structure",t:"pt",color:"#a8322a",ch:"⌂"},
-  staging:{label:"Staging area",t:"pt",color:"#6c4fa0",ch:"St"},
-  medical:{label:"Medical meeting point",t:"pt",color:"#c0392b",ch:"+"},
-  helispot:{label:"Helispot",t:"pt",color:"#2c3e50",ch:"H"},
-  sign:{label:"Sign",t:"pt",color:"#c77d0a",ch:"!"},
-  other:{label:"Other point",t:"pt",color:"#555555",ch:"•"},
-  access:{label:"Access route",t:"ln",color:"#1f6fb0",dash:"8 6"},
-  road:{label:"Road (control line)",t:"ln",color:"#7a5230"},
-  trail:{label:"Trail (control line)",t:"ln",color:"#a0522d",dash:"4 4"},
-  mowed:{label:"Mowed line",t:"ln",color:"#5d8a2e"},
-  hand:{label:"Hand line",t:"ln",color:"#c0392b",dash:"6 4"},
-  dozer:{label:"Dozer line",t:"ln",color:"#8e44ad"},
-  wet:{label:"Wet line",t:"ln",color:"#2a9fd6",dash:"2 6"},
-  natural:{label:"Natural barrier",t:"ln",color:"#2e7d6b",dash:"10 4"}
+  gate:{label:"Entrance gate",t:"pt",color:OI.orange,ink:"#000",ch:"G"},
+  water:{label:"Water source",t:"pt",color:OI.blue,ink:"#fff",ch:"W"},
+  structure:{label:"Structure",t:"pt",color:OI.vermillion,ink:"#fff",ch:"⌂",shape:"square"},
+  staging:{label:"Staging area",t:"pt",color:OI.purple,ink:"#000",ch:"St"},
+  medical:{label:"Medical meeting point",t:"pt",color:"#FFFFFF",ink:"#000",ch:"+"},
+  helispot:{label:"Helispot",t:"pt",color:OI.black,ink:"#fff",ch:"H"},
+  sign:{label:"Sign",t:"pt",color:OI.yellow,ink:"#000",ch:"!"},
+  other:{label:"Other point",t:"pt",color:"#BBBBBB",ink:"#000",ch:"•"},
+  access:{label:"Access route",t:"ln",color:OI.sky,dash:"12 6"},
+  road:{label:"Road (control line)",t:"ln",color:OI.orange},
+  trail:{label:"Trail (control line)",t:"ln",color:OI.orange,dash:"3 6"},
+  mowed:{label:"Mowed line",t:"ln",color:OI.green},
+  hand:{label:"Hand line",t:"ln",color:OI.vermillion,dash:"10 4"},
+  dozer:{label:"Dozer line",t:"ln",color:OI.purple},
+  wet:{label:"Wet line",t:"ln",color:"#FFFFFF",dash:"1 7"},
+  natural:{label:"Natural barrier",t:"ln",color:OI.purple,dash:"12 4 2 4"}
 };
 const CONTROL=["road","trail","mowed","hand","dozer","wet","natural"];
 let featLayer=null, featTmp=null, featPending=null, featLine=[], featSel=null, featPrevKind="gate";
 const isLineKind = () => (FKINDS[featKindEl.value]||{}).t==="ln";
-function clearSel(){ if(featSel){ featSel=null; featNameEl.value=""; featKindEl.value=featPrevKind; } }
+let featVtx=null, unitVtx=null, featEditSession=false;
+function clearSel(){
+  featVtx=null;
+  if(featSel){ featSel=null; featNameEl.value=""; featKindEl.value=featPrevKind; }
+  // finished editing something opened from its popup: leave Site features mode
+  if(featEditSession){ featEditSession=false; setTimeout(()=>{ if(mapMode==="feat"){ mapReadout.dataset.keep="1"; setMode("browse"); } },0); }
+}
 const featKindEl=document.getElementById("featKind"), featNameEl=document.getElementById("featName"), featAddEl=document.getElementById("featAdd");
 featKindEl.innerHTML = `<option value="select">Select and edit</option><optgroup label="Points">${Object.entries(FKINDS).filter(([,v])=>v.t==="pt").map(([k,v])=>`<option value="${k}">${v.label}</option>`).join("")}</optgroup>`
   + `<optgroup label="Lines">${Object.entries(FKINDS).filter(([,v])=>v.t==="ln").map(([k,v])=>`<option value="${k}">${v.label}</option>`).join("")}</optgroup>`;
 featKindEl.value="gate";
+
+/* Feature type picker. The hidden <select> keeps the value; this menu sets it. */
+const kindBtn=document.getElementById("featKindBtn"), kindMenu=document.getElementById("kindMenu");
+const SEL_ICON='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v15l4-4 3 7 2.5-1-3-7H18Z"/></svg>';
+function kindSwatch(k){
+  const v=FKINDS[k];
+  if(!v) return SEL_ICON.replace('<svg','<svg style="width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linejoin:round"');
+  if(v.t==="pt") return `<div class="fpin ${v.shape||""}" style="--c:${v.color};color:${v.ink||"#fff"}">${v.ch}</div>`;
+  const d="M4 20 20 4", w=v.dash==="1 7";
+  return `<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" style="overflow:visible"><path d="${d}" fill="none" stroke="#000" stroke-width="6.5" stroke-linecap="round"/>`
+    + `<path d="${d}" fill="none" stroke="${v.color}" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="${w?"round":"butt"}" ${v.dash?`stroke-dasharray="${v.dash.split(" ").map(x=>x*.45).join(" ")}"`:""}/></svg>`;
+}
+function kindLabel(k){ return FKINDS[k] ? FKINDS[k].label : "Select and edit"; }
+function syncKindBtn(){
+  const k=featKindEl.value;
+  kindBtn.querySelector(".kswatch").innerHTML=kindSwatch(k);
+  const t=`Feature type: ${kindLabel(k)}`; kindBtn.title=t; kindBtn.setAttribute("aria-label",t);
+  featNameEl.placeholder = FKINDS[k] ? `${FKINDS[k].label} name` : "Name";
+  kindMenu.querySelectorAll("[data-k]").forEach(b=>b.setAttribute("aria-checked",String(b.dataset.k===k)));
+}
+const kItem = k => `<button type="button" role="menuitemradio" data-k="${k}" title="${kindLabel(k)}" aria-label="${kindLabel(k)}">${kindSwatch(k)}</button>`;
+kindMenu.innerHTML =
+  `<h4>Points</h4><div class="kgrid">${Object.keys(FKINDS).filter(k=>FKINDS[k].t==="pt").map(kItem).join("")}</div>`
+  + `<h4 style="margin-top:8px">Lines</h4><div class="kgrid">${Object.keys(FKINDS).filter(k=>FKINDS[k].t==="ln").map(kItem).join("")}</div>`
+  + `<hr><div class="kfoot"><button type="button" class="ksel" role="menuitemradio" data-k="select" title="Select and edit" aria-label="Select and edit">${SEL_ICON}</button><span class="kcap" aria-hidden="true"></span></div>`;
+const kCap=kindMenu.querySelector(".kcap");
+function openKindMenu(){
+  kindMenu.hidden=false; kindBtn.setAttribute("aria-expanded","true");
+  const bar=kindBtn.closest(".map-bar").getBoundingClientRect(), b=kindBtn.getBoundingClientRect();
+  const w=kindMenu.offsetWidth, left=Math.max(4,Math.min(b.left-bar.left+b.width/2-w/2, bar.width-w-4));
+  kindMenu.style.left=left+"px"; kindMenu.style.top=(b.bottom-bar.top+8)+"px";
+  kindMenu.style.setProperty("--arrow",(b.left-bar.left+b.width/2-left-6)+"px");
+  kCap.textContent=kindLabel(featKindEl.value);
+  (kindMenu.querySelector('[aria-checked="true"]')||kindMenu.querySelector("[data-k]")).focus();
+}
+function closeKindMenu(focusBtn){ if(kindMenu.hidden) return; kindMenu.hidden=true; kindBtn.setAttribute("aria-expanded","false"); if(focusBtn) kindBtn.focus(); }
+kindBtn.onclick=()=> kindMenu.hidden ? openKindMenu() : closeKindMenu();
+kindMenu.addEventListener("click",e=>{
+  const b=e.target.closest("[data-k]"); if(!b) return;
+  featKindEl.value=b.dataset.k; featKindEl.dispatchEvent(new Event("change"));
+  closeKindMenu(true);
+});
+kindMenu.addEventListener("mouseover",e=>{ const b=e.target.closest("[data-k]"); if(b) kCap.textContent=kindLabel(b.dataset.k); });
+kindMenu.addEventListener("focusin",e=>{ const b=e.target.closest("[data-k]"); if(b) kCap.textContent=kindLabel(b.dataset.k); });
+kindMenu.addEventListener("mouseleave",()=>{ kCap.textContent=kindLabel(featKindEl.value); });
+kindMenu.addEventListener("keydown",e=>{
+  const items=[...kindMenu.querySelectorAll("[data-k]")], i=items.indexOf(document.activeElement);
+  const mv={ArrowRight:1,ArrowLeft:-1,ArrowDown:4,ArrowUp:-4}[e.key];
+  if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); closeKindMenu(true); return; }
+  if(mv && i>=0){ e.preventDefault(); items[Math.max(0,Math.min(items.length-1,i+mv))].focus(); }
+  if(e.key==="Enter"||e.key===" "){ e.stopPropagation(); }
+});
+document.addEventListener("pointerdown",e=>{ if(!kindMenu.hidden && !kindMenu.contains(e.target) && !kindBtn.contains(e.target)) closeKindMenu(); },true);
+syncKindBtn();
 const fid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const feats = () => state.features||[];
 const lines = () => state.lines||[];
@@ -2263,10 +2441,12 @@ function featCountText(){
   return p||l ? `${p} point${p===1?"":"s"} and ${l} line${l===1?"":"s"} on the map.` : "No site features yet. Pick a type and click the map.";
 }
 function featUi(){
+  syncKindBtn();
   const sel=selItem(), kind=FKINDS[featKindEl.value];
   featNameEl.hidden = featKindEl.value==="select" && !sel;
   document.getElementById("featUndo").hidden = !(kind && kind.t==="ln" && featLine.length);
   document.getElementById("featDelete").hidden = !sel;
+  document.getElementById("vtxDelete").hidden = !(sel && featSel.t==="ln" && featVtx!=null);
   const addLbl = sel ? "Save changes" : (kind && kind.t==="ln" ? "Finish line (Enter or double-click)" : "Add point (Enter)");
   featAddEl.title=addLbl; featAddEl.setAttribute("aria-label",addLbl);
   featAddEl.disabled = !(sel || featPending || featLine.length>=2);
@@ -2301,6 +2481,80 @@ function featCommit(){
     afterFeatChange(`${name||FKINDS[kind].label} added: ${fmtLen(len)}.`);
   }
 }
+
+/* ---------- edit a feature from the map ----------
+   Clicking a point or line (when no drawing tool is active) opens a small editor:
+   rename, change type, move or reshape, or delete. */
+let featPop=null;
+function openFeatPopup(t,id,ll){
+  const it=(t==="pt"?feats():lines()).find(x=>x.id===id); if(!it) return;
+  const ro=isRO(), k=FKINDS[it.kind]||FKINDS.other;
+  const meta = t==="pt" ? `${dmm(it.lat,it.lon)}<br>${esc(whereRel([it.lat,it.lon]))}` : `Length ${esc(fmtLen(lineLenM(it.pts)))}`;
+  const opts = Object.entries(FKINDS).filter(([,v])=>v.t===t).map(([kk,v])=>`<option value="${kk}"${kk===it.kind?" selected":""}>${esc(v.label)}</option>`).join("");
+  const el=document.createElement("div"); el.className="fpop";
+  el.innerHTML = ro
+    ? `<strong>${esc(it.name||k.label)}</strong><div class="fpop-type">${esc(k.label)}</div><div class="fpop-meta">${meta}</div>`
+    : `<label>Name<input type="text" data-p="name" value="${esc(it.name||"")}" placeholder="${esc(k.label)}" autocomplete="off"></label>
+       <label>Type<select data-p="kind">${opts}</select></label>
+       <div class="fpop-meta">${meta}</div>
+       <div class="fpop-btns">
+         <button type="button" class="ib primary" data-p="save" title="Save changes" aria-label="Save changes">${ICON.check}</button>
+         <button type="button" class="ib" data-p="move" title="${t==="pt"?"Move: drag the point to a new spot":"Reshape: drag the line's points"}" aria-label="${t==="pt"?"Move":"Reshape"}">${ICON.move}</button>
+         <button type="button" class="ib" data-p="del" title="Delete" aria-label="Delete">${ICON.trash}</button>
+       </div>`;
+  if(!ro){
+    const save=()=>{ it.name=el.querySelector("[data-p=name]").value.trim(); it.kind=el.querySelector("[data-p=kind]").value; map.closePopup(); afterFeatChange(`${it.name||FKINDS[it.kind].label} saved.`); };
+    el.querySelector("[data-p=save]").onclick=save;
+    el.querySelector("[data-p=name]").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); save(); } });
+    el.querySelector("[data-p=move]").onclick=()=>{ map.closePopup(); setMode("feat"); featKindEl.value="select"; featPrevKind="select"; featEditSession=true; selectFeat(t,id); };
+    el.querySelector("[data-p=del]").onclick=()=>{ map.closePopup(); deleteFeature(t,id); };
+  }
+  L.DomEvent.disableClickPropagation(el);
+  featPop=L.popup({className:"fpop-wrap",minWidth:220,maxWidth:260,offset:t==="pt"?[0,-8]:[0,0],autoPanPaddingTopLeft:[56,56],autoPanPaddingBottomRight:[24,56]}).setLatLng(ll).setContent(el).openOn(map);
+  if(!ro) setTimeout(()=>{ const i=el.querySelector("[data-p=name]"); if(i && window.matchMedia("(hover:hover)").matches) i.focus(); },50);
+}
+const ICON={
+  check:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
+  trash:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></svg>',
+  move:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M3 12h18"/><path d="m9 6 3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/></svg>'
+};
+
+function removeLineVertex(){
+  const l=selItem(); if(!l || featSel.t!=="ln" || featVtx==null) return false;
+  if(l.pts.length<=2){ readout("A line needs at least two points. To remove it, use the trash button."); return true; }
+  const i=featVtx;
+  l.pts.splice(i,1); featVtx=null;
+  afterFeatChange("Point removed.");
+  selectFeat("ln",l.id);
+  featVtx=Math.min(i,l.pts.length-1);   // the point that followed, or the new last point
+  featUi(); drawFeatures();
+  readout(`Point removed. ${l.name||FKINDS[l.kind].label} is now ${fmtLen(lineLenM(l.pts))}, ${l.pts.length} points. ` +
+    (l.pts.length>2 ? `Point ${featVtx+1} is selected; press Delete again to remove it too.` : "That's the minimum for a line."));
+  return true;
+}
+document.getElementById("vtxDelete").onclick=()=>removeLineVertex();
+
+/* Deletes happen right away; an Undo button stays up for a few seconds. */
+let undoTimer=null;
+function offerUndo(msg, restore){
+  const box=document.getElementById("mapUndo");
+  box.querySelector("span").textContent=msg;
+  box.querySelector("button").onclick=()=>{ clearTimeout(undoTimer); box.hidden=true; restore(); };
+  for(const id of ["mapReadout","mapMsg"]){ const r=document.getElementById(id); if(r && r.textContent.trim()===msg) r.textContent=""; }
+  box.hidden=false; clearTimeout(undoTimer); undoTimer=setTimeout(()=>{ box.hidden=true; },8000);
+}
+function deleteFeature(t,id){
+  const arr = t==="pt" ? feats() : lines(), idx=arr.findIndex(x=>x.id===id); if(idx<0) return;
+  const item=arr[idx], label=item.name||FKINDS[item.kind].label;
+  if(t==="pt") state.features=arr.filter(x=>x.id!==id); else state.lines=arr.filter(x=>x.id!==id);
+  afterFeatChange(`${label} deleted.`);
+  offerUndo(`${label} deleted.`, ()=>{
+    const cur = (t==="pt" ? feats() : lines()).slice(); cur.splice(Math.min(idx,cur.length),0,item);
+    if(t==="pt") state.features=cur; else state.lines=cur;
+    afterFeatChange(`${label} restored.`);
+  });
+}
+
 function afterFeatChange(msg){
   autofillFromFeatures();
   updateDerived(); scheduleSave(); featUi(); drawFeatures(); readout(msg+" "+featCountText());
@@ -2316,16 +2570,12 @@ featKindEl.addEventListener("change",()=>{ refreshLayersUi();
   featUi(); drawFeatures();
 });
 document.getElementById("featUndo").onclick=()=>{ featLine.pop(); featUi(); drawFeatures(); };
-let featDelArmed=false;
-document.getElementById("featDelete").onclick=e=>{
+document.getElementById("featDelete").onclick=()=>{
   const sel=selItem(); if(!sel) return;
-  const btn=e.currentTarget;
-  if(!featDelArmed){ featDelArmed=true; btn.classList.add("armed"); readout(`Click the trash button again to delete ${sel.name||FKINDS[sel.kind].label}.`); setTimeout(()=>{ featDelArmed=false; btn.classList.remove("armed"); },3000); return; }
-  featDelArmed=false; btn.classList.remove("armed");
-  if(featSel.t==="pt") state.features=feats().filter(x=>x.id!==sel.id); else state.lines=lines().filter(x=>x.id!==sel.id);
-  clearSel(); afterFeatChange(`${sel.name||FKINDS[sel.kind].label} deleted.`);
+  const t=featSel.t; clearSel(); deleteFeature(t,sel.id);
 };
 function selectFeat(t,id){
+  if(!featSel || featSel.id!==id) featVtx=null;
   if(!featSel) featPrevKind=featKindEl.value;
   featPending=null; featLine=[]; featSel={t,id};
   const it=selItem(); featKindEl.value=it.kind; featNameEl.value=it.name||"";
@@ -2335,7 +2585,7 @@ function selectFeat(t,id){
 }
 function pinIcon(kind,extra){
   const k=FKINDS[kind]||FKINDS.other;
-  return L.divIcon({className:"",html:`<div class="fpin ${extra||""}" style="--c:${k.color}">${k.ch}</div>`,iconSize:null,iconAnchor:[11,11]});
+  return L.divIcon({className:"",html:`<div class="fpin ${k.shape||""} ${extra||""}" style="--c:${k.color};color:${k.ink||"#fff"}">${k.ch}</div>`,iconSize:null,iconAnchor:[11,11]});
 }
 function drawFeatures(){
   if(!map || !map._loaded || !featLayer) return;
@@ -2344,14 +2594,18 @@ function drawFeatures(){
   lines().forEach(l=>{
     if(!layerOn(groupOf(l.kind))) return;
     const k=FKINDS[l.kind]||FKINDS.road, sel=featSel && featSel.t==="ln" && featSel.id===l.id;
-    const pl=L.polyline(l.pts,{color:k.color,weight:sel?7:4,opacity:.95,dashArray:k.dash||null,interactive:editing})
+    L.polyline(l.pts,{...CASING,weight:(sel?7:4)+4,interactive:false}).addTo(featLayer);
+    const pl=L.polyline(l.pts,{color:k.color,weight:sel?7:4,opacity:1,dashArray:k.dash||null,lineCap:k.dash==="1 7"?"round":"butt",interactive:editing||mapMode==="browse"})
       .bindTooltip(showNames() ? (l.name||k.label) : `${l.name||k.label} (${fmtLen(lineLenM(l.pts))})`, showNames()?{permanent:true,direction:"center",className:"flabel"}:{sticky:true}).addTo(featLayer);
+    if(mapMode==="browse") pl.on("click",ev=>{ L.DomEvent.stopPropagation(ev); openFeatPopup("ln",l.id,ev.latlng); });
     if(editing) pl.on("click",ev=>{ L.DomEvent.stopPropagation(ev);
       if(isLineKind() && !featSel) return featMapClick(ev.latlng);
       if(featKindEl.value!=="select" && !featSel) return featMapClick(ev.latlng);
       selectFeat("ln",l.id); });
     if(sel) l.pts.forEach((p,i)=>{
-      const h=L.marker(p,{draggable:true,keyboard:false,icon:L.divIcon({className:"",html:`<div class="lvtx"></div>`,iconSize:[12,12],iconAnchor:[6,6]})}).addTo(featTmp);
+      const h=L.marker(p,{draggable:true,keyboard:false,icon:L.divIcon({className:"",html:`<div class="lvtx${featVtx===i?" sel":""}"></div>`,iconSize:[12,12],iconAnchor:[6,6]})}).addTo(featTmp);
+      h.on("click",ev=>{ L.DomEvent.stopPropagation(ev); featVtx = featVtx===i ? null : i; featUi(); drawFeatures();
+        readout(featVtx==null ? "Point deselected." : `Point ${i+1} of ${l.pts.length} selected. Press Delete or the remove-point button to remove it, or drag to move it.`); });
       h.on("drag",ev=>{ const ll=ev.target.getLatLng(); l.pts[i]=[ll.lat,ll.lng]; pl.setLatLngs(l.pts); });
       h.on("dragend",()=>{ l.pts[i]=[+l.pts[i][0].toFixed(6),+l.pts[i][1].toFixed(6)]; afterFeatChange("Line updated."); selectFeat("ln",l.id); });
     });
@@ -2361,6 +2615,7 @@ function drawFeatures(){
     const sel=featSel && featSel.t==="pt" && featSel.id===f.id;
     const m=L.marker([f.lat,f.lon],{icon:pinIcon(f.kind,sel?"sel":""),draggable:editing,keyboard:false,interactive:editing||mapMode==="browse"})
       .bindTooltip(f.name||FKINDS[f.kind].label, showNames()?{permanent:true,direction:"right",offset:[10,0],className:"flabel"}:{direction:"top",offset:[0,-10]}).addTo(featLayer);
+    if(mapMode==="browse") m.on("click",ev=>{ L.DomEvent.stopPropagation(ev); openFeatPopup("pt",f.id,L.latLng(f.lat,f.lon)); });
     if(editing){
       m.on("click",ev=>{ L.DomEvent.stopPropagation(ev);
         if(isLineKind() && !featSel) return featMapClick(L.latLng(f.lat,f.lon));   // snap the line to this point
@@ -2372,7 +2627,8 @@ function drawFeatures(){
   if(featPending) L.marker(featPending,{icon:pinIcon(featKindEl.value,"pending"),interactive:false}).addTo(featTmp);
   if(featLine.length){
     const k=FKINDS[featKindEl.value];
-    L.polyline(featLine,{color:k.color,weight:4,dashArray:k.dash||null,interactive:false}).addTo(featTmp);
+    L.polyline(featLine,{...CASING,weight:8,interactive:false}).addTo(featTmp);
+    L.polyline(featLine,{color:k.color,weight:4,dashArray:k.dash||null,lineCap:k.dash==="1 7"?"round":"butt",interactive:false}).addTo(featTmp);
     featLine.forEach((p,i)=>{
       const h=L.marker(p,{draggable:true,keyboard:false,icon:L.divIcon({className:"",html:`<div class="lvtx"></div>`,iconSize:[12,12],iconAnchor:[6,6]})}).addTo(featTmp);
       h.on("drag",ev=>{ const ll=ev.target.getLatLng(); featLine[i]=[ll.lat,ll.lng]; });
@@ -2594,9 +2850,9 @@ document.getElementById("recalcBtn").onclick=async e=>{
    always shows, whatever the setting. */
 let BASES=null, currentBase="Satellite", lyrRoot=null;
 const LAYER_GROUPS=[
-  {k:"unit",label:"Burn unit",color:FIRE,count:()=>hasUnit()?1:0},
-  {k:"wind",label:"Wind and smoke",color:"#2F6FB0",count:()=>state.wind?1:0},
-  {k:"loc",label:"Burn location point",color:FIRE,count:()=>fromDMM(state.lat)!=null?1:0},
+  {k:"unit",label:"Burn unit",color:UNIT_C,count:()=>hasUnit()?1:0},
+  {k:"wind",label:"Wind and smoke",color:"#0072B2",count:()=>state.wind?1:0},
+  {k:"loc",label:"Burn location point",color:"#000",count:()=>fromDMM(state.lat)!=null?1:0},
   {k:"access",label:"Gates and access route",color:FKINDS.access.color,count:()=>feats().filter(f=>f.kind==="gate").length+lines().filter(l=>l.kind==="access").length},
   {k:"control",label:"Control lines",color:FKINDS.road.color,count:()=>lines().filter(l=>CONTROL.includes(l.kind)).length},
   {k:"water",label:"Water sources",color:FKINDS.water.color,count:()=>feats().filter(f=>f.kind==="water").length},
@@ -2649,7 +2905,7 @@ function refreshLayersUi(){
   const list=lyrRoot.querySelector(".lyr-list");
   list.innerHTML = groups.length ? groups.map(g=>`<label class="lyr-row${g.k===forced?" forced":""}"${g.k===forced?' title="Shown while you edit it"':""}>
       <input type="checkbox" data-lyr="${g.k}"${layerOn(g.k)?" checked":""}${g.k===forced?" disabled":""}>
-      <span class="sw" style="background:${g.color}"></span><span>${esc(g.label)}</span><span class="cnt">${g.n}</span></label>`).join("")
+      <span class="sw" style="background:${g.color};box-shadow:0 0 0 1px #000"></span><span>${esc(g.label)}</span><span class="cnt">${g.n}</span></label>`).join("")
     : `<div style="color:var(--muted)">Nothing drawn on the map yet.</div>`;
   lyrRoot.querySelector("[data-names]").checked=layerPrefs.names;
 }
@@ -2715,7 +2971,7 @@ function syncMarker(){
   if(!map || !map._loaded) return;
   const la=fromDMM(state.lat), lo=fromDMM(state.lon);
   if(la!=null&&lo!=null){
-    if(marker) marker.setLatLng([la,lo]); else marker=L.circleMarker([la,lo],{radius:9,color:"#ffffff",weight:3,fillColor:FIRE,fillOpacity:1,interactive:false});
+    if(marker) marker.setLatLng([la,lo]); else marker=L.circleMarker([la,lo],{radius:8,color:"#ffffff",weight:3,fillColor:"#000",fillOpacity:1,interactive:false});
     if(layerOn("loc")) marker.addTo(map); else marker.remove();
   } else if(marker){ marker.remove(); marker=null; }
 }
@@ -2775,7 +3031,7 @@ function buildMap(L){
     map.on("click",ev=>{
       if(mapMode==="loc"){
         if(marker) marker.setLatLng(ev.latlng);
-        else marker=L.circleMarker(ev.latlng,{radius:9,color:"#ffffff",weight:3,fillColor:FIRE,fillOpacity:1}).addTo(map);
+        else marker=L.circleMarker(ev.latlng,{radius:8,color:"#ffffff",weight:3,fillColor:"#000",fillOpacity:1}).addTo(map);
         setPicked(ev.latlng.lat,ev.latlng.lng);
       } else if(mapMode==="unit") addCorner(ev.latlng);
       else if(mapMode==="feat") featMapClick(ev.latlng);
