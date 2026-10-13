@@ -189,7 +189,7 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-w
   dialog textarea{min-height:0;height:calc(100dvh - 220px)}
   /* Sharing and view-only stay traditional centered dialogs with the page visible around them */
   #historyDlg .h-body{max-height:calc(100dvh - 260px)}
-  #shareDlg,#roDlg,#historyDlg{inset:0;margin:auto;width:calc(100% - 24px);max-width:560px;height:fit-content;max-height:calc(100dvh - 48px);
+  #shareDlg,#roDlg,#historyDlg,#ssaDlg{inset:0;margin:auto;width:calc(100% - 24px);max-width:560px;height:fit-content;max-height:calc(100dvh - 48px);
     border:1px solid var(--line);border-radius:12px;padding:20px 18px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
   #shareDlg[open]{overflow-y:auto}
   #shareDlg .dlg-foot{position:sticky;bottom:-20px;background:var(--surface);padding-bottom:4px}
@@ -978,6 +978,25 @@ body.readonly main input,body.readonly main select,body.readonly main textarea{o
 .ro-banner .btn{margin-left:6px}
 #roDlg{width:min(460px,94vw)}
 #historyDlg{width:min(680px,94vw)}
+#ssaDlg{width:min(620px,94vw)}
+#ssaDlg h2{margin:0 0 4px;font-size:1.25rem;font-weight:800}
+.ssa-ctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 10px}
+.ssa-ctl select{width:auto}
+.ssa-row{display:flex;align-items:center;gap:10px;padding:7px 2px;border-top:1px solid var(--line);cursor:pointer}
+.ssa-row input{flex:none;width:18px;height:18px;margin:0}
+.ssa-name{flex:1;min-width:0;font-weight:600}
+.ssa-d{color:var(--muted);font-size:.875rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ssa-tag{font-size:.75rem;font-weight:700;border:1px solid var(--line);border-radius:999px;padding:1px 8px;color:var(--muted);white-space:nowrap}
+.ssa-tag.down{border-color:var(--ink);color:var(--ink);background:var(--field)}
+.ssa-row.have{cursor:default;opacity:.65}
+.fieldmsg.busy{display:inline-flex;align-items:center;gap:8px;color:var(--ink)}
+.fieldmsg.busy::before{content:"";flex:none;width:14px;height:14px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--oak);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.fieldmsg.busy::before{animation:none;border-color:var(--oak) var(--line) var(--line) var(--line)}}
+.ssa-wait{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:36px 16px;color:var(--muted);text-align:center}
+#ssaDlg .btn:disabled{opacity:.45;cursor:not-allowed}
+.ssa-wait::before{content:"";width:28px;height:28px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--oak);animation:spin .8s linear infinite}
+@media (prefers-reduced-motion: reduce){.ssa-wait::before{animation:none}}
 #historyDlg h2{margin:0 0 4px;font-size:1.25rem;font-weight:800}
 .h-intro{margin:0 0 12px;color:var(--muted);font-size:.9375rem}
 .h-body{max-height:min(60vh,560px);overflow-y:auto;margin:0 -4px;padding:0 4px}
@@ -1139,6 +1158,13 @@ body.readonly .ro-banner{display:block}
   <p class="h-intro">Who changed which parts of the worksheet. One person's edits within 15 minutes are grouped together. Click a field to jump to it.</p>
   <div id="historyBody" class="h-body"></div>
   <div class="dlg-foot"><span class="fieldmsg" id="historyMsg"></span><button class="btn" id="historyRefresh">Refresh</button><button class="btn" id="historyClose">Close</button></div>
+</dialog>
+<dialog id="ssaDlg" aria-labelledby="ssaTitle">
+  <h2 id="ssaTitle">Nearby smoke sensitive areas</h2>
+  <p class="h-intro">Places from OpenStreetMap near the unit's center. The usual ones are ticked; pick the ones that matter and add them. The map can miss rural schools and care homes, so add those by hand.</p>
+  <div class="ssa-ctl"><label for="ssaRadius">Search within</label><select id="ssaRadius"><option value="3">3 miles</option><option value="5">5 miles</option><option value="10" selected>10 miles</option><option value="15">15 miles</option><option value="25">25 miles</option></select><span class="fieldmsg" id="ssaMsg" aria-live="polite"></span></div>
+  <div id="ssaBody" class="h-body"></div>
+  <div class="dlg-foot"><button class="btn" id="ssaClose">Cancel</button><button class="btn primary" id="ssaAdd" disabled>Add to the table</button></div>
 </dialog>
 <dialog id="roDlg" aria-labelledby="roDlgTitle">
   <h2 id="roDlgTitle">View only</h2>
@@ -1437,7 +1463,7 @@ const TIPS = {
  intensity:"Low: fire backs or creeps through grass and litter with short flames and little lofted smoke. High: hotter fire, taller flames, smoke column. Most understory burns are low.",
  drying:"Time since the last significant rain and how dry fuels will be at ignition. Wet fuels smolder and smoke more. Note heavy fuels like downed logs that will burn longer.",
  objectives:"What the burn should accomplish, in measurable terms. Copy these from the burn plan.",
- ssaList:"Calculate distances looks up each area by name and fills in distance and direction from the burn unit's center. Rows it can't find, like a highway or neighbors, stay as entered. Places where people could be affected by smoke: roads, homes, towns, schools, hospitals, campgrounds. Give straight-line distance in miles and compass direction from the unit.",
+ ssaList:"Find nearby searches OpenStreetMap for towns, schools, hospitals, care homes, campgrounds, and highways around the unit and lets you pick which to add, with distance and direction filled in (and marked downwind if you've saved wind directions on the map). Calculate distances looks up each area by name and fills in distance and direction from the burn unit's center. Rows it can't find, like a highway or neighbors, stay as entered. Places where people could be affected by smoke: roads, homes, towns, schools, hospitals, campgrounds. Give straight-line distance in miles and compass direction from the unit.",
  dayTravel:"Where smoke is expected to go during the day, based on forecast winds. Daytime heating usually lifts smoke and carries it with the prevailing wind. Show the path on the map.",
  nightTravel:"Where smoke goes after sunset. Cool air drains downhill and pools in valleys, carrying residual smoke. Name the drainages, roads, and homes it would reach.",
  mapRef:"Page or figure number of the attached map showing the unit, sensitive areas, smoke paths, and sign locations.",
@@ -1659,7 +1685,7 @@ function tableHTML(f){
   const head = f.cols.map(c=>`<th scope="col">${esc(c.label)}</th>`).join("") + `<th scope="col"><span class="sr" style="position:absolute;left:-9999px">Remove</span></th>`;
   const body = rows.map((r,i)=>`<tr>${f.cols.map(c=>`<td data-label="${esc(c.label)}"><input type="text" autocomplete="off" aria-label="${esc(c.label)}, row ${i+1}" data-t="${f.k}" data-r="${i}" data-c="${c.k}" value="${esc(r[c.k])}"></td>`).join("")}<td class="rm"><button class="x" data-del="${f.k}" data-r="${i}" aria-label="Remove row ${i+1}">×</button></td></tr>`).join("");
   return `<div class="table-wrap"><table class="stack"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>
-    <div class="tbl-foot"><button class="btn small" data-add="${f.k}">Add row</button>${f.k==="ssaList"?` <button class="btn small" id="calcDist" title="Look up each area by name and fill in its straight-line distance and compass direction from the burn unit">Calculate distances</button> <span class="fieldmsg" id="distMsg" aria-live="polite"></span>`:""}</div>`;
+    <div class="tbl-foot"><button class="btn small" data-add="${f.k}">Add row</button>${f.k==="ssaList"?` <button class="btn small" id="findSSA" title="Search OpenStreetMap for towns, schools, hospitals, care homes, campgrounds, and highways near the unit, then pick which to add">Find nearby</button> <button class="btn small" id="calcDist" title="Look up each area by name and fill in its straight-line distance and compass direction from the burn unit">Calculate distances</button> <span class="fieldmsg" id="distMsg" aria-live="polite"></span>`:""}</div>`;
 }
 
 function emissionsHTML(){
@@ -2338,7 +2364,7 @@ main.addEventListener("click", async e=>{
       rows[i].dir = d.inside ? "Inside unit" : compass(bearing(c,[f.lat,f.lon]));
       done++; continue;
     }
-    if(msg()) msg().textContent=`Looking up ${name}…`;
+    if(msg()){ msg().textContent=`Looking up ${name}…`; msg().classList.remove("err"); msg().classList.add("busy"); }
     const g=await geocodeNear(name+", California",c);
     if(g){
       const d=miles(c,g);
@@ -2350,7 +2376,7 @@ main.addEventListener("click", async e=>{
   }
   rerenderSection("ssa"); scheduleSave();
   const m=document.getElementById("distMsg");
-  if(m){ m.classList.toggle("err",!done);
+  if(m){ m.classList.remove("busy"); m.classList.toggle("err",!done);
     m.textContent = `Updated ${done} row${done===1?"":"s"}.` + (skipped.length?` No map match, left as entered: ${skipped.join(", ")}.`:""); }
 });
 
@@ -2811,12 +2837,199 @@ async function plssLookup(poly,pt){
   if(!T.size) return null;
   return {t:[...T].join(", "), r:[...Rg].join(", "), sec:[...secs].sort((a,b)=>a-b).join(", "), mer};
 }
+/* ---------- nearby places from OpenStreetMap (Overpass API) ---------- */
+// public Overpass servers, tried in order when one is busy or unreachable
+const OVERPASS=["https://overpass-api.de/api/interpreter","https://overpass.kumi.systems/api/interpreter","https://overpass.private.coffee/api/interpreter"];
+let overpassDownUntil=0, overpassWhy="";
+async function overpass(q){
+  // after every server has failed, skip Overpass for 10 minutes rather than making each search wait
+  if(Date.now()<overpassDownUntil){ const err=new Error("overpass"); err.detail=overpassWhy; throw err; }
+  let why="";
+  for(const url of OVERPASS){
+    try{
+      // Overpass asks browser apps to send a referrer; it answers 406 when overloaded or when the request looks anonymous
+      const ac=new AbortController(), tmr=setTimeout(()=>ac.abort(),12000);
+      const r=await fetch(url,{method:"POST",signal:ac.signal,body:"data="+encodeURIComponent(q),referrerPolicy:"strict-origin-when-cross-origin",headers:{"Content-Type":"application/x-www-form-urlencoded"}})
+        .finally(()=>clearTimeout(tmr));
+      if(r.ok) return (await r.json()).elements||[];
+      const t=(await r.text()).replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim();
+      why=`${new URL(url).host} answered ${r.status}${t?": "+t.slice(0,160):""}`;
+      if(r.status===400) break;   // a query error won't go away on another server; 406, 429, and 504 mean try the next one
+    }catch(e){ why=`${new URL(url).host} ${e.name==="AbortError"?"didn't answer within 12 seconds":`couldn't be reached (${e.message})`}`; }
+  }
+  overpassDownUntil=Date.now()+600000; overpassWhy=why;
+  const err=new Error("overpass"); err.detail=why; throw err;
+}
+const elPt = e => e.lat!=null ? [e.lat,e.lon] : e.center ? [e.center.lat,e.center.lon] : null;
+// distance in miles from c to a polyline, measured to the nearest point on each segment
+function milesToLine(c,pts){
+  const k=Math.cos(c[0]*Math.PI/180), X=p=>[(p[1]-c[1])*k*69.172,(p[0]-c[0])*69.172];
+  let best=Infinity, at=null;
+  for(let i=1;i<pts.length;i++){
+    const a=X(pts[i-1]), b=X(pts[i]), dx=b[0]-a[0], dy=b[1]-a[1], L=dx*dx+dy*dy;
+    const t=L?Math.max(0,Math.min(1,-(a[0]*dx+a[1]*dy)/L)):0, px=a[0]+t*dx, py=a[1]+t*dy, d=Math.hypot(px,py);
+    if(d<best){ best=d; at=[c[0]+py/69.172, c[1]+px/(69.172*k)]; }
+  }
+  return {mi:best, at};
+}
+/* Nearest town: the nearest city, town, or village. A smaller named place counts only when it is the
+   town in the site address (e.g. Yorkville), so map labels like old ranch or railroad names are skipped. */
+async function nearestTown(c){
+  const els=await overpass(`[out:json][timeout:20];node["place"~"^(city|town|village|hamlet)$"]["name"](around:40000,${c[0]},${c[1]});out;`);
+  const addrTown=(String(state.address||"").match(/,\s*([^,]+?),\s*(?:CA|California)\b/i)||[])[1];
+  const norm=s=>String(s||"").toLowerCase().trim();
+  const cand=els.map(e=>({name:e.tags.name, type:e.tags.place, mi:miles(c,[e.lat,e.lon])}))
+    .filter(p=>p.type!=="hamlet" || (addrTown && norm(p.name)===norm(addrTown) && p.mi<15))
+    .sort((a,b)=>a.mi-b.mi);
+  return cand[0] ? cand[0].name : "";
+}
 async function placeLookup(c){
   const rev=async z=>{ const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=${z}&lat=${c[0]}&lon=${c[1]}`,{headers:{"Accept":"application/json"}}); return (await r.json()).address||{}; };
-  let a=await rev(14), town=a.city||a.town||a.village||a.hamlet||"";
-  if(!town){ a=await rev(10); town=a.city||a.town||a.village||a.hamlet||""; }
+  const a=await rev(10);
+  let town=""; try{ town=await nearestTown(c); }
+  catch(e){ // Overpass busy: nearest city, town, or village from Nominatim (no hamlets, so no map-label places)
+    try{ const ps=await nominatimNearby(c,25,[["town","Town"],["village","Town"],["city","Town"]]); ps.sort((a,b)=>a.mi-b.mi);
+      const addrTown=(String(state.address||"").match(/,\s*([^,]+?),\s*(?:CA|California)\b/i)||[])[1];
+      town = addrTown && a.hamlet && a.hamlet.toLowerCase()===addrTown.toLowerCase() ? a.hamlet : (ps[0]?ps[0].name:""); }catch(e2){} }
+  if(!town) town=a.city||a.town||a.village||"";
   return {county:String(a.county||"").replace(/ County$/,""), town};
 }
+/* Smoke sensitive area candidates within r miles of the unit's center */
+const SSA_KINDS=[
+  {what:"Town",          q:'node["place"~"^(city|town|village)$"]', pre:true},
+  {what:"Small community",q:'node["place"="hamlet"]'},
+  {what:"School",        q:'nw["amenity"~"^(school|kindergarten|college)$"]', pre:true},
+  {what:"Child care",    q:'nw["amenity"="childcare"]', pre:true},
+  {what:"Hospital or clinic", q:'nw["amenity"~"^(hospital|clinic)$"]', pre:true},
+  {what:"Care home",     q:'nw["social_facility"~"^(nursing_home|assisted_living|group_home)$"]', pre:true},
+  {what:"Campground",    q:'nw["tourism"~"^(camp_site|caravan_site)$"]'},
+  {what:"Park",          q:'nw["leisure"="park"]'},
+  {what:"Lodging",       q:'nw["tourism"~"^(hotel|motel|guest_house|hostel)$"]'}
+];
+async function findNearbySSA(rMi){
+  const c=unitCenter(); if(!c) throw new Error("nocenter");
+  const R=Math.round(rMi*1609.344), at=`(around:${R},${c[0]},${c[1]})`;
+  const q=`[out:json][timeout:20];(${SSA_KINDS.map((k,i)=>`${k.q}["name"]${at};`).join("")})->.p;.p out tags center;`
+        + `way["highway"~"^(motorway|trunk|primary|secondary)$"]${at};out tags geom;`;
+  let els, out=[], fallback=false;
+  try{ els=await overpass(q); }
+  catch(e){
+    fallback=e.detail||true;
+    out=await nominatimNearby(c,rMi,NOM_PHRASES,ph=>{ const m=document.getElementById("ssaMsg"); const wt=document.getElementById("ssaWaitText"); if(wt) wt.innerHTML=`OpenStreetMap's map search is busy, so using the address search instead.<br>Looking for ${esc(ph)}…`; });
+    els=[];
+  }
+  const seen=new Set(), roads={};
+  els.forEach(e=>{
+    const t=e.tags||{};
+    if(e.type==="way" && t.highway && e.geometry){
+      const ref=(t.ref||"").split(";")[0].trim(), key=ref||t.name; if(!key) return;
+      const name = ref ? ref.replace(/^(CA|SR|US)\s*-?\s*/i,(m,p)=>p.toUpperCase()==="US"?"US ":"Highway ") : t.name;
+      const d=milesToLine(c,e.geometry.map(g=>[g.lat,g.lon]));
+      if(!roads[key] || d.mi<roads[key].mi) roads[key]={name, what:"Highway", mi:d.mi, at:d.at, pre:true};
+      return;
+    }
+    const p=elPt(e); if(!p || !t.name) return;
+    const kind=SSA_KINDS.find(k=>{
+      if(k.what==="Town") return /^(city|town|village)$/.test(t.place||"");
+      if(k.what==="Small community") return t.place==="hamlet";
+      if(k.what==="School") return /^(school|kindergarten|college)$/.test(t.amenity||"");
+      if(k.what==="Child care") return t.amenity==="childcare";
+      if(k.what==="Hospital or clinic") return /^(hospital|clinic)$/.test(t.amenity||"");
+      if(k.what==="Care home") return /^(nursing_home|assisted_living|group_home)$/.test(t.social_facility||"");
+      if(k.what==="Campground") return /^(camp_site|caravan_site)$/.test(t.tourism||"");
+      if(k.what==="Park") return /^(park|nature_reserve)$/.test(t.leisure||"");
+      if(k.what==="Lodging") return /^(hotel|motel|guest_house|hostel)$/.test(t.tourism||"");
+    });
+    if(!kind) return;
+    const key=kind.what+"|"+t.name.toLowerCase(); if(seen.has(key)) return; seen.add(key);
+    out.push({name:t.name, what:kind.what==="Town" ? (t.place[0].toUpperCase()+t.place.slice(1)) : kind.what, mi:miles(c,p), at:p, pre:!!kind.pre});
+  });
+  Object.values(roads).forEach(r=>out.push(r));
+  out.forEach(o=>{
+    o.dir = o.mi<0.1 ? "Adjacent" : compass(bearing(c,o.at));
+    o.down = !!(state.wind && o.mi>=0.1 && inArc(bearing(c,o.at), norm(state.wind.from+180), norm(state.wind.to+180)));
+  });
+  out.fallback=fallback;
+  return out.sort((a,b)=>a.mi-b.mi);
+}
+/* Fallback when every Overpass server is down: Nominatim category searches ("school", "town", ...)
+   inside a box around the unit, one request a second as Nominatim asks. It can't find highways. */
+const NOM_PHRASES=[["city","Town","towns"],["town","Town","towns"],["village","Town","towns"],["hamlet","Small community","small communities"],["school","School","schools"],["kindergarten","School","schools"],
+  ["childcare","Child care","child care"],["hospital","Hospital or clinic","hospitals"],["clinic","Hospital or clinic","clinics"],["nursing home","Care home","care homes"],["campsite","Campground","campgrounds"],["hotel","Lodging","lodging"],["motel","Lodging","lodging"],["park","Park","parks"]];
+async function nominatimNearby(c,rMi,phrases,progress){
+  const dLat=rMi/69, dLon=rMi/(69*Math.cos(c[0]*Math.PI/180)), vb=[c[1]-dLon,c[0]+dLat,c[1]+dLon,c[0]-dLat].join(",");
+  const out=[], seen=new Set();
+  for(let i=0;i<phrases.length;i++){
+    const [ph,what,lbl]=phrases[i];
+    if(progress) progress(lbl||ph);
+    try{
+      const r=await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=40&bounded=1&viewbox=${vb}&q=${encodeURIComponent(ph)}`,{headers:{"Accept":"application/json"}});
+      if(r.ok) (await r.json()).forEach(j=>{
+        const name=j.name||String(j.display_name||"").split(",")[0]; if(!name) return;
+        const p=[+j.lat,+j.lon], mi=miles(c,p); if(mi>rMi) return;
+        const typ = what==="Town" ? (j.type==="city"?"City":j.type==="village"?"Village":j.type==="town"?"Town":null) : what;
+        if(what==="Town" && (j.category!=="place" || !typ)) return;
+        if(what==="Small community" && !(j.category==="place" && j.type==="hamlet")) return;
+        const key=typ+"|"+name.toLowerCase(); if(seen.has(key)) return; seen.add(key);
+        out.push({name, what:typ, mi, at:p, pre:SSA_KINDS.some(k=>k.pre && (k.what===what))});
+      });
+    }catch(e){}
+    if(i<phrases.length-1) await new Promise(r=>setTimeout(r,1100));
+  }
+  return out;
+}
+function inArc(b,a1,a2){ b=norm(b); a1=norm(a1); a2=norm(a2); return a1<=a2 ? b>=a1&&b<=a2 : b>=a1||b<=a2; }
+const ssaDlg=document.getElementById("ssaDlg");
+let ssaFound=[];
+const fmtMi = mi => mi<0.1 ? "<0.1" : mi.toFixed(mi<10?1:0);
+const ssaKey = s => String(s||"").toLowerCase().replace(/\(.*?\)/g,"").replace(/\b(state )?(route|highway|hwy|sr|ca)\b/g,"hwy").replace(/[^a-z0-9]+/g," ").trim();
+function renderSSA(){
+  const have=new Set((state.ssaList||[]).map(r=>ssaKey(r.area)));
+  const body=document.getElementById("ssaBody");
+  if(!ssaFound.length){ body.innerHTML=`<p class="h-intro">Nothing found within this distance. Try a larger radius.</p>`; return; }
+  const groups={}; ssaFound.forEach((o,i)=>{ const g=/^(City|Town|Village)$/.test(o.what)?"Towns":o.what; (groups[g]=groups[g]||[]).push([o,i]); });
+  const order=["Towns","Highway","School","Child care","Hospital or clinic","Care home","Campground","Lodging","Park","Small community"];
+  body.innerHTML=Object.keys(groups).sort((a,b)=>order.indexOf(a)-order.indexOf(b)).map(g=>`<div class="ssa-grp"><div class="h-day">${esc(g)}</div>`
+    + groups[g].map(([o,i])=>{ const inT=have.has(ssaKey(o.name));
+      return `<label class="ssa-row${inT?" have":""}"><input type="checkbox" data-i="${i}"${inT?" disabled":(o.pre?" checked":"")}>`
+        + `<span class="ssa-name">${esc(o.name)}</span><span class="ssa-d">${fmtMi(o.mi)} mi ${esc(o.dir)}</span>`
+        + `${o.down?'<span class="ssa-tag down" title="In the direction smoke travels with your permissible wind directions">Downwind</span>':""}${inT?'<span class="ssa-tag">In table</span>':""}</label>`; }).join("")
+    + `</div>`).join("");
+  ssaCount();
+}
+function ssaCount(){ const n=ssaDlg.querySelectorAll("#ssaBody input:checked:not(:disabled)").length;
+  const b=document.getElementById("ssaAdd"); b.disabled=!n; b.textContent = n ? `Add ${n} to the table` : "Add to the table"; }
+async function runSSA(){
+  const msg=document.getElementById("ssaMsg"), r=+document.getElementById("ssaRadius").value;
+  msg.textContent=""; msg.classList.remove("err","busy");
+  document.getElementById("ssaRadius").disabled=true; document.getElementById("ssaAdd").disabled=true;
+  document.getElementById("ssaBody").innerHTML=`<div class="ssa-wait" role="status"><span id="ssaWaitText">Searching OpenStreetMap…</span></div>`;
+  try{ const res=await findNearbySSA(r); ssaFound=res;
+    msg.textContent=`${ssaFound.length} place${ssaFound.length===1?"":"s"} within ${r} miles.`
+      + (res.fallback ? " OpenStreetMap's map search was busy, so these come from the address search, which can't find highways; add roads by hand." : "")
+      + (state.wind?"":" Save wind directions on the map to see which are downwind.");
+    renderSSA(); }
+  catch(e){ document.getElementById("ssaBody").innerHTML="";
+    msg.textContent = e.message==="nocenter" ? "Draw the burn unit on the map first." : `Couldn't search OpenStreetMap. ${e.detail||""} Try again in a minute.`; msg.classList.add("err"); }
+  finally{ document.getElementById("ssaRadius").disabled=false; }
+}
+main.addEventListener("click", e=>{
+  if(e.target.id!=="findSSA") return;
+  if(isRO()) return roPrompt();
+  if(!unitCenter()){ const m=document.getElementById("distMsg"); if(m){ m.textContent="Draw the burn unit on the map first."; m.classList.add("err"); } return; }
+  ssaDlg.showModal(); runSSA();
+});
+document.getElementById("ssaRadius").onchange=()=>runSSA();
+document.getElementById("ssaBody").addEventListener("change",ssaCount);
+document.getElementById("ssaClose").onclick=()=>ssaDlg.close();
+document.getElementById("ssaAdd").onclick=()=>{
+  const picks=[...ssaDlg.querySelectorAll("#ssaBody input:checked:not(:disabled)")].map(x=>ssaFound[+x.dataset.i]);
+  if(!picks.length) return;
+  state.ssaList=(state.ssaList||[]).filter(r=>Object.values(r||{}).some(v=>String(v??"").trim()))
+    .concat(picks.map(o=>({area:o.name, what:o.what+(o.down?" (downwind)":""), dist:fmtMi(o.mi), dir:o.dir})));
+  rerenderSection("ssa"); scheduleSave(); ssaDlg.close();
+  const m=document.getElementById("distMsg"); if(m){ m.classList.remove("err"); m.textContent=`Added ${picks.length} place${picks.length===1?"":"s"} from OpenStreetMap. Check them, and add anything the map doesn't know about.`; }
+};
 /* Runs every lookup for the saved unit (or the location point) and reports what changed. */
 async function recalcFromMap(){
   const poly=hasUnit()?state.unitPoly:null, c=unitCenter();
