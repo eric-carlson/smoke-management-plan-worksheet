@@ -1846,10 +1846,13 @@ function updateDerived(){
     if(s.custom==="emissions"){ total=1; done = t.p>0 ? 1 : 0; }
     else s.fields.forEach(f=>{
       if(f.type==="checklist"){ total+=f.opts.length; done+=(state[f.k]||[]).length; }
-      else if(f.type!=="computed" && f.type!=="mapcalc"){ total++; if(filled(state[f.k]) || coveredByMap(f.k)) done++; }
+      else if(f.type!=="computed" && f.type!=="mapcalc"){
+        const ok = filled(state[f.k]) || coveredByMap(f.k);
+        if(!ok && OPTIONAL.has(f.k)) return;   // optional and empty: not part of the count, same as the field coloring
+        total++; if(ok) done++; }
     });
     const c=toc.querySelector(`[data-count="${s.id}"]`), b=toc.querySelector(`[data-bar="${s.id}"]`);
-    if(c) c.textContent = `${done}/${total}`; if(b) b.style.width = (total?done/total*100:0)+"%";
+    if(c) c.textContent = total ? `${done}/${total}` : ""; if(b) b.style.width = (total?done/total*100:0)+"%";
   });
 }
 
@@ -2960,6 +2963,50 @@ async function terrainStats(poly){
   }
   return out;
 }
+/* Slope and aspect of the land just outside the unit: a band ADJ_M meters wide around the edge,
+   sampled from the same USGS 3DEP elevation service. */
+const ADJ_M=150;   // about 500 ft
+function distToPolyM(p,poly){
+  const kx=111320*Math.cos(p[0]*Math.PI/180), ky=110540, P=q=>[(q[1]-p[1])*kx,(q[0]-p[0])*ky];
+  let best=Infinity;
+  for(let i=0;i<poly.length;i++){ const a=P(poly[i]), b=P(poly[(i+1)%poly.length]), dx=b[0]-a[0], dy=b[1]-a[1];
+    const t=Math.max(0,Math.min(1,-(a[0]*dx+a[1]*dy)/((dx*dx+dy*dy)||1))); best=Math.min(best,Math.hypot(a[0]+t*dx,a[1]+t*dy)); }
+  return best;
+}
+async function adjacentTerrain(poly){
+  const rad=Math.PI/180, lats=poly.map(p=>p[0]), lons=poly.map(p=>p[1]);
+  const mid=(Math.min(...lats)+Math.max(...lats))/2, kx=111320*Math.cos(mid*rad), ky=110540;
+  const s=Math.min(...lats)-ADJ_M/ky, n=Math.max(...lats)+ADJ_M/ky, w=Math.min(...lons)-ADJ_M/kx, e=Math.max(...lons)+ADJ_M/kx;
+  const W=(e-w)*kx, H=(n-s)*ky, cell=Math.max(10, Math.sqrt(W*H/450));
+  const dx=cell/kx, dy=cell/ky, nx=Math.ceil(W/cell)+3, ny=Math.ceil(H/cell)+3;
+  const grid=[]; for(let j=0;j<ny;j++) for(let i=0;i<nx;i++) grid.push([s-dy+j*dy, w-dx+i*dx]);
+  // only fetch the band and its immediate neighbors (slope needs the cells on each side)
+  const inBand=p=>!inPoly(p,poly) && distToPolyM(p,poly)<=ADJ_M;
+  const need=new Set();
+  grid.forEach((p,k)=>{ if(!inBand(p)) return; const i=k%nx, j=(k-i)/nx; [[0,0],[1,0],[-1,0],[0,1],[0,-1]].forEach(([a,b])=>{ const ii=i+a, jj=j+b; if(ii>=0&&jj>=0&&ii<nx&&jj<ny) need.add(jj*nx+ii); }); });
+  const idx=[...need]; if(!idx.length) return null;
+  const body=new URLSearchParams({geometryType:"esriGeometryMultipoint",
+    geometry:JSON.stringify({points:idx.map(k=>[grid[k][1],grid[k][0]]),spatialReference:{wkid:4326}}),returnFirstValueOnly:"true",f:"json"});
+  const r=await fetch("https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/getSamples",{method:"POST",body});
+  const js=await r.json(), z=new Map();
+  (js.samples||[]).forEach((x,i)=>{ const li=x.locationId!=null?+x.locationId:i, v=parseFloat(x.value); if(!isNaN(v)&&v>-500) z.set(idx[li],v); });
+  const at=(i,j)=>z.get(j*nx+i);
+  const slopes=[]; let sx=0, sy=0, sw=0;
+  for(let j=1;j<ny-1;j++) for(let i=1;i<nx-1;i++){
+    if(!inBand(grid[j*nx+i])) continue;
+    const zl=at(i-1,j), zr=at(i+1,j), zd=at(i,j-1), zu=at(i,j+1);
+    if([zl,zr,zd,zu].some(v=>v==null)) continue;
+    const gx=(zr-zl)/(2*cell), gy=(zu-zd)/(2*cell), sl=Math.hypot(gx,gy);
+    slopes.push(sl*100);
+    if(sl>0){ const b=Math.atan2(-gx,-gy); sx+=Math.sin(b)*sl; sy+=Math.cos(b)*sl; sw+=sl; }
+  }
+  if(slopes.length<4) return null;
+  slopes.sort((a,b)=>a-b);
+  const pct=q=>slopes[Math.min(slopes.length-1,Math.max(0,Math.round(q*(slopes.length-1))))];
+  const R=sw ? Math.hypot(sx,sy)/sw : 0;
+  return {slopeLo:Math.round(pct(.05)), slopeHi:Math.round(pct(.95)), slopeAvg:Math.round(slopes.reduce((a,b)=>a+b,0)/slopes.length),
+    aspect: R<0.25 ? "Variable" : C8[Math.round(((Math.atan2(sx,sy)/rad)+360)%360/45)%8]};
+}
 const MERIDIANS={"21":"Mount Diablo","27":"Humboldt","15":"San Bernardino"};
 async function plssLookup(poly,pt){
   const geom = poly
@@ -3194,10 +3241,15 @@ async function recalcFromMap(){
       if(!t){ failed.push("elevation"); return; }
       setField("elevTop",String(Math.round(t.max))); setField("elevBottom",String(Math.round(t.min))); filledL.push("top and bottom elevation");
       if(t.slopeLo!=null){
-        const sv=`${t.slopeLo} to ${t.slopeHi}% (average ${t.slopeAvg}%)`;
+        const sv=`${t.slopeLo===t.slopeHi?`${t.slopeLo}%`:`${t.slopeLo} to ${t.slopeHi}%`} (average ${t.slopeAvg}%)`;
         note(setAuto("unitDesc.slope.in",sv),"slope",sv); note(setAuto("unitDesc.aspect.in",t.aspect),"aspect",t.aspect);
       }
     }).catch(()=>failed.push("elevation")) : Promise.resolve(),
+    poly ? adjacentTerrain(poly).then(t=>{
+      if(!t){ failed.push("slope adjacent to the unit"); return; }
+      const sv=`${t.slopeLo===t.slopeHi?`${t.slopeLo}%`:`${t.slopeLo} to ${t.slopeHi}%`} (average ${t.slopeAvg}%, within 500 ft of the unit)`;
+      note(setAuto("unitDesc.slope.adj",sv),"slope adjacent to the unit",sv); note(setAuto("unitDesc.aspect.adj",t.aspect),"aspect adjacent to the unit",t.aspect);
+    }).catch(()=>failed.push("slope adjacent to the unit")) : Promise.resolve(),
     plssLookup(poly,c).then(p=>{
       if(!p){ failed.push("township/range/section"); return; }
       note(setAuto("legalT",p.t),"township",p.t); note(setAuto("legalR",p.r),"range",p.r); note(setAuto("legalSec",p.sec),"section",p.sec);
