@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Smoke Management Plan worksheet</title>
+<title>Prescribed burn worksheet</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;800&display=swap" rel="stylesheet">
@@ -1042,7 +1042,7 @@ body.readonly .ro-banner{display:block}
 <header class="top">
   <div class="top-inner">
     <div class="title">
-      <h1 id="docTitle">Yorkville Schoolhouse Ranch 2026 Prescribed Burn</h1>
+      <h1 id="docTitle">Prescribed burn worksheet</h1>
       <p>Prepares the Mendocino County AQMD smoke management plan and the California burn plan from one worksheet and map. Saves as you type. <button type="button" class="linkbtn" data-about>How it works</button></p>
     </div>
     <div class="meta">
@@ -1299,7 +1299,7 @@ const SECTIONS = [
   {k:"attach",label:"Attachments (check as applicable)",type:"checks",wide:1,opts:["Section A attached (burn could impact smoke sensitive areas)","Section B attached (over 100 acres or over 5 tons PM10)"]}
  ]},
  {id:"emissions", title:"Emissions estimate", hint:"Acres × fuel loading (tons/acre) × emission value from the district's Table 2. Adjust the split between vegetation types to match the unit.", custom:"emissions"},
- {id:"ssa", title:"Section A: Smoke sensitive areas", hint:"Required when smoke could reach roads, homes, or towns. Hwy 128 alone triggers this section.", fields:[
+ {id:"ssa", title:"Section A: Smoke sensitive areas", hint:"Required when smoke could reach roads, homes, or towns. A public road next to the unit is enough to need it.", fields:[
   {k:"ssaList",label:"Smoke sensitive areas",type:"table",wide:1,cols:[{k:"area",label:"Area"},{k:"what",label:"What it is"},{k:"dist",label:"Distance (mi)"},{k:"dir",label:"Direction"}]},
   {k:"dayTravel",label:"Smoke travel projection, day",type:"textarea",wide:1},
   {k:"nightTravel",label:"Smoke travel projection, night",type:"textarea",wide:1},
@@ -1346,7 +1346,7 @@ const SECTIONS = [
    "SMP approved and SMP number received",
    "Adjacent landowners notified",
    "Public notice published",
-   "Signs placed on Hwy 128",
+   "Signs placed on the nearby public road",
    "Ignition request submitted online the day before",
    "District called before ignition to confirm conditions",
    "Post-burn report filed in January with acreage fee"
@@ -1422,73 +1422,15 @@ const SECTIONS = [
  ]}
 ];
 
-/* Starting values for burn plan fields, from the partially completed burn plan. Applied only
-   to fields that don't exist yet, so they never overwrite anything someone has entered. */
-const BP_DEFAULTS = {
-  bpAhj:"CAL FIRE MEU", bpOwnership:"Private",
-  unitDesc:{fuel:{in:"Oak woodland and grass",adj:"Grass, oak woodland over hill above Hwy 128, mixed conifer/hardwood across Dry Creek"},
-            slope:{in:"0 to 60%",adj:""}, aspect:{in:"NE",adj:""},
-            special:{in:"",adj:"Two structures, Jungle Creek floodplain, driveway, Highway 128"}},
-  bpPrep:"Large downed woody material from 2023 snow storm (12 to 18 in.)\nBottom of the unit and N side bounded by gravel driveway\nW side of unit: dirt road\nS side: semi-mowed two-track\nSteep E side: dirt trail\nDay-of large tree prep (scraping), moving woody debris, etc.\nPower lines",
-  bpWater:"20,000 gal in tanks at the top of the hill; hydrant at house for filling (E)\n6 ac lake with easy drafting site access",
-  bpAccess:"1/3 mile from entrance gate up main access road\nUnit directly adjacent to Hwy 128: signage needed\nDriveway runs up to house\n30 mi of roads criss-crossing ranch up to ridge\nGate to adjacent property to W unlocked",
-  bpValues:"House: assign resources to structure protection\nPower and utility lines",
-  bpSmp:["Submitted in hard copy or online to air district"],
-  bpNotify:{preAq:{name:"Mendocino County AQMD",phone:"707-463-4354"},preFire:{name:"CAL FIRE MEU",phone:""},
-            ecc:{name:"",phone:""},dayAq:{name:"Mendocino County AQMD",phone:"707-463-4354"},dayFire:{name:"",phone:""}},
-  riskActs:["Contingency plan (required)","Medical plan"], otherAtt:["Project and area maps (required)","Go/no-go checklist (recommended)"]
-};
 function withDefaults(obj){
   if(!obj) return obj;
-  Object.keys(BP_DEFAULTS).forEach(k=>{ if(obj[k]===undefined) obj[k]=JSON.parse(JSON.stringify(BP_DEFAULTS[k])); });
   if(obj.cSmoke===undefined) obj.cSmoke = obj.contingency || "";
   return obj;
 }
 
-const DEFAULTS = {
-  name:"Yorkville Schoolhouse Ranch 128 Ridge Burn",
-  address:"30010 Highway 128, Yorkville, CA 95494",
-  lat:"38° 53.207′ N", lon:"123° 09.352′ W",
-  county:"Mendocino", town:"Yorkville",
-  landowner:"Barbara Henderson and Eric Carlson",
-  burnBoss:"Kyle Farmer",
-  org:"Mendocino County Prescribed Burn Association (prescribed fire workshop burn)",
-  hazard:"Yes", wildlife:"No", vegCond:"Broadcast / standing brush", acres:"9", broadcastAcres:"9", numPiles:"0",
-  appType:["Potential to impact sensitive receptors","Burning past 3:00 P.M. and overnight burns"],
-  ignHours:"10:00 to 15:00, after test fire",
-  duration:"1 day of ignition; large downed logs may smolder overnight",
-  technique:"Drip torch", intensity:"Low",
-  drying:"Large downed woody material (12 to 18 in.) from the 2023 snow storm in the unit.",
-  objectives:"Training for Yorkville residents. Fuel reduction along ingress/egress and defensible space. 70 to 90% annual grass thatch reduction. 50 to 75% oak litter consumption.",
-  emis:[{veg:"Grass/Forb",acres:"4.5",load:"1.5"},{veg:"Oak (Black)",acres:"4.5",load:"10"}],
-  ssaList:[
-    {area:"Highway 128",what:"Public road",dist:"0",dir:"Adjacent"},
-    {area:"On-site structures (2)",what:"Residence and structure",dist:"",dir:""},
-    {area:"Neighboring residences",what:"Homes",dist:"",dir:""},
-    {area:"Hopland",what:"Town",dist:"~6 (verify)",dir:"N"},
-    {area:"Cloverdale",what:"Town (Sonoma Co.)",dist:"~9 (verify)",dir:"SE"},
-    {area:"Boonville",what:"Town",dist:"~14 (verify)",dir:"NW"}
-  ],
-  nightTravel:"Smoke from smoldering logs drains downslope into the Hwy 128 corridor under nighttime inversions.",
-  wx:[{method:"Belt weather kit",loc:"On site",begin:"Before test fire",interval:"Hourly",end:"End of ignition"}],
-  smoke:[{method:"Visual observers",loc:"Hwy 128, up and down canyon",begin:"Test fire",interval:"Continuous",end:"End of day"},
-         {method:"Test fire",loc:"Representative spot chosen by burn boss",begin:"Before ignition",interval:"Once",end:""}],
-  notify:["Telephone calls"],
-  notifyDetails:"Call adjacent landowners. MCPBA announcement to workshop network. Start before burn day and continue until burning ends.",
-  signage:"\"Prescribed Burn / Smoke Ahead\" signs on Hwy 128 in both directions.",
-  adjDistricts:[{district:"Northern Sonoma County APCD",contact:"",phone:""}],
-  contingency:"Stop ignition if smoke lays down on Hwy 128 or wind shifts toward structures. Hold the perimeter and begin mop-up.",
-  cutoff:"Gravel driveway (bottom and N side), dirt road (W side), semi-mowed two-track (S side), dirt trail (E side).",
-  altRejected:"Grazing and mowing considered. Neither meets the workshop training goal or the oak litter consumption objective.",
-  authContacts:[{name:"Kyle Farmer",role:"Burn boss",phone:"",email:""},
-                {name:"Eric Carlson",role:"Landowner",phone:"",email:""},
-                {name:"Barbara Henderson",role:"Landowner",phone:"",email:""}],
-  neighbors:[{name:"Jim Hill",phone:"",notified:""},{name:"Bernie Bernstein",phone:"",notified:""},
-             {name:"Vance Damran",phone:"",notified:""},{name:"Justin Hoffman",phone:"",notified:""}],
-  agencies:[{agency:"Mendocino County AQMD",contact:"",phone:"707-463-4354",when:"Pre-burn and day of burn"},
-            {agency:"CAL FIRE MEU ECC",contact:"",phone:"",when:"Day of burn"}],
-  steps:[]
-};
+/* A new worksheet starts empty. The plan itself lives in the shared worksheet on the sync Worker,
+   which needs an access code, so nothing about a project is published with the page. */
+const DEFAULTS = { steps:[] };
 
 
 const TIPS = {
@@ -1565,7 +1507,7 @@ const TIPS = {
  emisPM:"Fuel tons × emission value. Calculated. This is the number the district uses to set the plan tier."
 };
 Object.assign(TIPS, {
- appType:"Why this burn needs an SMP. Check every reason that applies. Being next to Hwy 128 is a potential impact to sensitive receptors, and smoldering logs overnight count as burning past 3:00 P.M.",
+ appType:"Why this burn needs an SMP. Check every reason that applies. Being next to a highway is a potential impact to sensitive receptors, and smoldering logs overnight count as burning past 3:00 P.M.",
  org:"The business or organization applying, as it should appear on the permit. For a workshop burn this may be the Prescribed Burn Association or the ranch.",
  permitTo:"The person or organization whose name goes on the permit. They are responsible for meeting the permit conditions.",
  landowner:"Name(s) on title for the property, if different from the business or organization above.",
@@ -1649,7 +1591,7 @@ Object.assign(TIPS, {
  medEquip:"First aid kits, trauma kits, burn kits, AED, etc., and where they are.",
  medPeople:"People on site with medical training (EMT, first responder, etc.).",
  cInjury:"What happens if someone is hurt: who stops ignition, who provides care, and who calls 911.",
- cSmoke:"What happens if smoke impacts sensitive areas or Hwy 128: stop ignition, hold, mop up, notify the air district.",
+ cSmoke:"What happens if smoke impacts sensitive areas or a public road: stop ignition, hold, mop up, notify the air district.",
  cBehavior:"Actions if fire behavior goes beyond the prescription, such as stopping ignition or switching to backing fire.",
  cEscape:"Actions if fire crosses the control line: who suppresses, who calls the ECC, and when to declare a wildfire."
 });
@@ -1683,7 +1625,11 @@ function tipBox(k){ return TIPS[k] ? `<div class="tip" id="tip_${k}" hidden>${es
 /* ---------- state ---------- */
 let state;
 function load(){
-  try{ const raw = localStorage.getItem(KEY); if(raw) return withDefaults(JSON.parse(raw)); }catch(e){}
+  try{
+    // the copy kept in this browser belongs to whoever signed in here; without a code, start empty
+    if(!localStorage.getItem(KEY+":code")){ [KEY, KEY+":sync", KEY+":who"].forEach(k=>localStorage.removeItem(k)); }
+    else { const raw = localStorage.getItem(KEY); if(raw) return withDefaults(JSON.parse(raw)); }
+  }catch(e){}
   return withDefaults(JSON.parse(JSON.stringify(DEFAULTS)));
 }
 state = load();
@@ -1881,6 +1827,9 @@ function markEmpty(){
   }));
 }
 function updateDerived(){
+  { const t=String(state.name||"").trim() || "Prescribed burn worksheet", h=document.getElementById("docTitle");
+    if(h && h.textContent!==t) h.textContent=t;
+    const dt = state.name ? `${String(state.name).trim()}: burn worksheet` : "Prescribed burn worksheet"; if(document.title!==dt) document.title=dt; }
   markEmpty();
   if(typeof mapCardSummary==="function") mapCardSummary();
   main.querySelectorAll(".mapcalc").forEach(el=>{
@@ -3624,6 +3573,7 @@ async function api(path, opts={}){
 
 function applyChanges(merged){
   const changed = Object.keys({...merged, ...docData()}).filter(k=>k!=="_savedAt" && !same(state[k], merged[k]));
+  const hadSite = hasUnit() || feats().length>0 || lines().length>0;
   const savedAt = state._savedAt;
   state = merged; state._savedAt = savedAt;
   try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
@@ -3645,6 +3595,7 @@ function applyChanges(merged){
   if(map && map._loaded){
     syncMarker();
     if(mapMode==="browse"){ drawSaved(); drawFeatures(); drawWind(false); unitSummary(); }
+    if(!hadSite && (hasUnit() || feats().length>0 || lines().length>0)) fitToSite();
     else if(mapMode==="feat" && !featPending && !featLine.length && !featSel) drawFeatures();
   }
   return changed.length;
@@ -3740,7 +3691,7 @@ function applyReadOnly(){
   document.body.classList.toggle("readonly", ro);
   document.getElementById("roText").textContent = sync.who
     ? "You have view-only access. Ask the owner for an editor code to make changes."
-    : "You're not signed in, so this worksheet is view-only.";
+    : "Sign in with your access code to see and edit this plan.";
   document.getElementById("roSignIn").hidden = !!sync.who;
   main.querySelectorAll("textarea,input:not([type=checkbox]):not([type=file]):not(.computed)").forEach(el=>{ el.readOnly = ro; });
   main.querySelectorAll("select,input[type=checkbox],button[data-add],button[data-del],.actbtn").forEach(el=>{ el.disabled = ((el.id==="pickMap"||el.id==="drawUnit") && !canPick()); });
@@ -3845,10 +3796,18 @@ document.getElementById("signIn").onclick=async()=>{
 };
 document.getElementById("codeInput").addEventListener("keydown",e=>{ if(e.key==="Enter") document.getElementById("signIn").click(); });
 document.getElementById("signOut").onclick=()=>{
-  try{ localStorage.removeItem(CODE_KEY); }catch(e){}
-  sync.code=""; sync.who=null; people=null; cacheWho(null); roShown=false; applyReadOnly(); updateShareUI(); showSaved();
-  toast("Signed out on this device");
+  try{ [CODE_KEY, KEY, META_KEY, WHO_KEY].forEach(k=>localStorage.removeItem(k)); }catch(e){}
+  sync.code=""; sync.who=null; sync.version=0; sync.base=null; people=null; cacheWho(null); roShown=false;
+  clearTimeout(sync.timer); sync.timer=null;
+  state=withDefaults(JSON.parse(JSON.stringify(DEFAULTS)));
+  renderAll(); applyTips(); applyReadOnly(); updateShareUI(); showSaved(); redrawMapAll();
+  toast("Signed out. The plan was removed from this browser");
 };
+function redrawMapAll(){
+  if(!map || !map._loaded) return;
+  if(mapMode!=="browse") setMode("browse");
+  syncMarker(); drawSaved(); drawFeatures(); drawWind(false); unitSummary();
+}
 
 function peopleMsg(t,err){ const m=document.getElementById("peopleMsg"); m.textContent=t||""; m.classList.toggle("err",!!err); }
 async function loadPeople(){
