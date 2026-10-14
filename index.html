@@ -915,6 +915,7 @@ input.computed{background:transparent;border-style:dashed;font-variant-numeric:t
   font:700 11px/18px "Public Sans",system-ui,sans-serif;text-align:center;box-sizing:border-box;white-space:nowrap}
 .fpin.square{border-radius:3px}
 .fpop-wrap .leaflet-popup-content{margin:12px 12px 10px;font:.875rem/1.4 "Public Sans",system-ui,sans-serif;color:#1c2420}
+.fpop label[hidden]{display:none}
 .fpop label{display:block;font-weight:600;font-size:.8125rem;margin-bottom:8px}
 .fpop input,.fpop select{display:block;width:100%;margin-top:3px;padding:6px 8px;font:inherit;font-weight:400;border:1px solid #c7cdc3;border-radius:6px;background:#f7f8f5;color:#1c2420}
 .fpop-meta{color:#5d6862;font-size:.8125rem;margin:2px 0 10px;font-variant-numeric:tabular-nums}
@@ -925,7 +926,10 @@ input.computed{background:transparent;border-style:dashed;font-variant-numeric:t
 .fpin.sel{box-shadow:0 0 0 3px #000,0 0 0 5px #fff}
 .fpin.pending{opacity:.75;border-style:dashed}
 .lvtx{width:12px;height:12px;border-radius:50%;background:#fff;border:2px solid #333;cursor:grab}
+.lvtx.mid{width:10px;height:10px;opacity:.75;cursor:copy}
+.lvtx.mid:hover{opacity:1}
 .lvtx.sel,.vtx.sel{background:#F0E442;border-color:#000;box-shadow:0 0 0 2px #fff,0 0 0 4px #000}
+.mc-note{font-size:.75rem;font-weight:600;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:0 8px;white-space:nowrap}
 .mapcalc{font-size:.9375rem;background:var(--field);border:1px dashed var(--line);border-radius:6px;padding:8px 12px}
 .mapcalc ul{margin:0;padding-left:18px}
 .mapcalc li{margin:2px 0}
@@ -1241,6 +1245,7 @@ const SECTIONS = [
   {k:"ssaList",label:"Smoke sensitive areas",type:"table",wide:1,cols:[{k:"area",label:"Area"},{k:"what",label:"What it is"},{k:"dist",label:"Distance (mi)"},{k:"dir",label:"Direction"}]},
   {k:"dayTravel",label:"Smoke travel projection, day",type:"textarea",wide:1},
   {k:"nightTravel",label:"Smoke travel projection, night",type:"textarea",wide:1},
+  {k:"calcNightSmoke",label:"Night smoke drainage from the map",type:"mapcalc",wide:1},
   {k:"mapRef",label:"Map number(s) attached",wide:1},
   {k:"history",label:"Prescribed burning has occurred here before",type:"select",opts:["Yes","No","Don't know"]},
   {k:"historyImpacts",label:"Past smoke impacts, if any"},
@@ -1465,8 +1470,8 @@ const TIPS = {
  drying:"Time since the last significant rain and how dry fuels will be at ignition. Wet fuels smolder and smoke more. Note heavy fuels like downed logs that will burn longer.",
  objectives:"What the burn should accomplish, in measurable terms. Copy these from the burn plan.",
  ssaList:"Find nearby searches OpenStreetMap for towns, schools, hospitals, care homes, campgrounds, and highways around the unit and lets you pick which to add, with distance and direction filled in (and marked downwind if you've saved wind directions on the map). Calculate distances looks up each area by name and fills in distance and direction from the burn unit's center. Rows it can't find, like a highway or neighbors, stay as entered. Places where people could be affected by smoke: roads, homes, towns, schools, hospitals, campgrounds. Give straight-line distance in miles and compass direction from the unit.",
- dayTravel:"Where smoke is expected to go during the day, based on forecast winds. Daytime heating usually lifts smoke and carries it with the prevailing wind. Show the path on the map.",
- nightTravel:"Where smoke goes after sunset. Cool air drains downhill and pools in valleys, carrying residual smoke. Name the drainages, roads, and homes it would reach.",
+ dayTravel:"Where smoke is expected to go during the day, based on forecast winds. Daytime heating usually lifts smoke and carries it with the prevailing wind. Saving wind directions on the map fills this in from those directions and the smoke sensitive areas table (your own text is never replaced), and the exported area maps show the daytime smoke path.",
+ nightTravel:"Where smoke goes after sunset. Cool air drains downhill and pools in valleys, carrying residual smoke. Name the drainages, roads, and homes it would reach. To show it on the maps, draw Night smoke drainage lines in the map's Site features mode.",
  mapRef:"Page or figure number of the attached map showing the unit, sensitive areas, smoke paths, and sign locations.",
  history:"Whether this ground has been burned before. Past burns help the district predict smoke behavior.",
  historyImpacts:"Any smoke complaints or problems from previous burns here. Write \"None known\" if none.",
@@ -1594,6 +1599,7 @@ Object.assign(TIPS, {
 Object.assign(TIPS, {
  calcAccess:"Calculated from the entrance gate and access route drawn in the map's Site features mode. Copy what you need into the access route description above.",
  calcAccessBp:"Calculated from the entrance gate and access route drawn in the map's Site features mode.",
+ calcNightSmoke:"Night smoke drainage lines drawn in the map's Site features mode: length, direction of travel, and where each ends. Draw each line from the unit downhill, following the drainage; arrows on the map show the direction.",
  calcSigns:"Locations of signs placed in the map's Site features mode, with distance and direction from the unit.",
  calcLines:"Lengths of roads, trails, mowed lines, hand lines, and other control lines drawn in the map's Site features mode. 1 chain = 66 ft.",
  calcWater:"Water sources placed in the map's Site features mode, with distance and direction from the unit edge. Add capacity to the name, e.g. \"Tanks, 20,000 gal\".",
@@ -1707,7 +1713,7 @@ function emissionsHTML(){
 }
 
 function fieldHTML(f){
-  if(f.type==="mapcalc") return `<div class="f wide"><div class="lblrow"><span class="lbl">${esc(f.label)}</span>${tipBtn(f.k)}<span class="actgroup"><button type="button" class="actbtn" data-openfeat="1">Site features map</button></span></div>${tipBox(f.k)}<div class="mapcalc" id="mc_${f.k}"></div></div>`;
+  if(f.type==="mapcalc") return `<div class="f wide"><div class="lblrow"><span class="lbl">${esc(f.label)}</span>${tipBtn(f.k)}<span class="mc-note">Included in exports</span><span class="actgroup"><button type="button" class="actbtn" data-openfeat="1">Site features map</button></span></div>${tipBox(f.k)}<div class="mapcalc" id="mc_${f.k}"></div></div>`;
   if(f.type==="grid") return `<div class="f wide"><div class="lblrow"><span class="lbl">${esc(f.label)}</span>${tipBtn(f.k)}</div>${tipBox(f.k)}${gridHTML(f)}</div>`;
   if(f.type==="table") return `<div class="f wide"><div class="lblrow"><span class="lbl">${esc(f.label)}</span>${tipBtn(f.k)}</div>${tipBox(f.k)}${tableHTML(f)}</div>`;
   if(f.type==="checks"){
@@ -1785,9 +1791,24 @@ const OPTIONAL = new Set(["thp","facilityId","ownershipOther","vegCondOther","ve
   "pileSize","historyImpacts","otherDispersion","altUsed","notes","hoursBetween","mapRef",
   "rxOther","postOther","riskOther","otherAttDesc","dayOther","bpReeval","holdingSpec","production"]);
 const blankVal = v => String(v??"").trim()==="";
+/* Typed fields answered by a calculated "from the map" box right below them. When the map box has
+   content the question is answered (exports include it), so the typed field becomes optional
+   and its placeholder says what is still worth adding. */
+const MAP_PARTNER={
+  access:["calcAccess","gate codes, road conditions, or vehicle limits"],
+  bpWater:["calcWater","pump or tender access, refill plans, or hydrant fittings"],
+  bpAccess:["calcAccessBp","road conditions, signage needs, or parking"],
+  bpValues:["calcValues","how each one will be protected"],
+  bpPrep:["calcLines","line construction, fuel pretreatment, or grazing deferment"],
+  signage:["calcSigns","sign wording, who places them, and when"],
+  nightTravel:["calcNightSmoke","which homes or roads the smoke would reach, and when"]
+};
+const coveredByMap = k => !!MAP_PARTNER[k] && mapCalc(MAP_PARTNER[k][0]).length>0;
 function markEmpty(){
+  Object.entries(MAP_PARTNER).forEach(([k,[,add]])=>{ const el=document.getElementById("f_"+k); if(!el) return;
+    el.placeholder = coveredByMap(k) ? `Optional. The map details below are included in exports. Add what the map can't show: ${add}.` : ""; });
   main.querySelectorAll("input[data-k],select[data-k],textarea[data-k]").forEach(el=>{
-    const opt = OPTIONAL.has(el.dataset.k);
+    const opt = OPTIONAL.has(el.dataset.k) || coveredByMap(el.dataset.k);
     const empty = !opt && blankVal(el.value);
     el.classList.toggle("is-empty", empty);
     const f=el.closest(".f"); if(f) f.classList.toggle("unfilled", empty);
@@ -1807,6 +1828,9 @@ function updateDerived(){
   main.querySelectorAll(".mapcalc").forEach(el=>{
     const k=el.id.slice(3), ls=mapCalc(k);
     el.innerHTML = ls.length ? `<ul>${ls.map(l=>`<li>${esc(l)}</li>`).join("")}</ul>` : `<span class="muted">${esc(MAPCALC_HINT[k]||"")}</span>`;
+    // the SMP application goes to the district, so gate codes stay out of it; say where they went
+    if(k==="calcAccess" && feats().some(f=>f.kind==="gate" && f.code))
+      el.insertAdjacentHTML("beforeend",`<div class="muted" style="margin-top:4px">Gate codes are left out here because this goes to the air district. They're in the burn plan's Unit access, for crews.</div>`);
   });
   const t = emissionTotals();
   t.per.forEach((x,i)=>{
@@ -1822,7 +1846,7 @@ function updateDerived(){
     if(s.custom==="emissions"){ total=1; done = t.p>0 ? 1 : 0; }
     else s.fields.forEach(f=>{
       if(f.type==="checklist"){ total+=f.opts.length; done+=(state[f.k]||[]).length; }
-      else if(f.type!=="computed" && f.type!=="mapcalc"){ total++; if(filled(state[f.k])) done++; }
+      else if(f.type!=="computed" && f.type!=="mapcalc"){ total++; if(filled(state[f.k]) || coveredByMap(f.k)) done++; }
     });
     const c=toc.querySelector(`[data-count="${s.id}"]`), b=toc.querySelector(`[data-bar="${s.id}"]`);
     if(c) c.textContent = `${done}/${total}`; if(b) b.style.width = (total?done/total*100:0)+"%";
@@ -2305,6 +2329,15 @@ function windRadius(){
   const b=map.getBounds(), c=map.getCenter();
   return Math.max(150, Math.min(c.distanceTo([b.getNorth(),c.lng]), c.distanceTo([c.lat,b.getEast()]))*0.55);
 }
+// arrowheads along a line in the direction it was drawn: one per segment, more on long ones (every ~250 m)
+function flowArrows(pts){
+  const out=[];
+  for(let i=1;i<pts.length;i++){
+    const a=pts[i-1], b=pts[i], n=Math.max(1,Math.round(miles(a,b)*1609.344/250)), brg=bearing(a,b);
+    for(let j=0;j<n;j++){ const t=(j+0.5)/n; out.push([[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t], brg]); }
+  }
+  return out;
+}
 function wedge(c,a,b,r,steps=40){
   const pts=[c], s=span(a,b);
   for(let i=0;i<=steps;i++) pts.push(destPt(c, a+s*i/steps, r));
@@ -2344,13 +2377,28 @@ function windReadout(){
   if(!windTmp) return;
   readout(`Acceptable: ${windText(windTmp)}. Preferred: ${compass(windTmp.ideal)} (${Math.round(windTmp.ideal)}°).`);
 }
+/* Suggested daytime smoke projection from the permissible wind directions and the smoke sensitive areas table */
+function dayTravelText(){
+  const w=state.wind; if(!w) return "";
+  const to1=norm(w.from+180), to2=norm(w.to+180);
+  const deg = d => { const i=PTS16.indexOf(String(d||"").trim().toUpperCase()); return i<0 ? null : i*22.5; };
+  const rs=(state.ssaList||[]).filter(r=>String(r.area||"").trim());
+  const down=rs.filter(r=>{ const d=deg(r.dir); return d!=null && inArc(d,to1,to2); }).map(r=>`${String(r.area).trim()}${r.dist?` (${String(r.dist).trim()} mi ${String(r.dir).trim()})`:` (${String(r.dir).trim()})`}`);
+  const adj=rs.filter(r=>/adjacent|inside/i.test(String(r.dir||""))).map(r=>String(r.area).trim());
+  let t=`With surface winds from ${compass(w.from)} to ${compass(w.to)} (preferred ${compass(w.ideal)}), daytime heating lifts the smoke and carries it toward the ${compass(to1)} to ${compass(to2)}, most often ${compass(w.ideal+180)}.`;
+  t += down.length ? ` Smoke sensitive areas in that direction: ${down.join(", ")}.` : " No listed smoke sensitive areas lie in that direction.";
+  if(adj.length) t += ` ${adj.join(" and ")} ${adj.length>1?"are":"is"} next to the unit and may see smoke in any wind.`;
+  return t;
+}
+function updateDayTravel(){ const t=dayTravelText(); if(!t) return null; const r=setAuto("dayTravel",t); if(r==="set") scheduleSave(); return r; }
 document.getElementById("windSave").onclick=()=>{
   if(!windTmp) return;
   state.wind={...windTmp};
   setField("surfDirRange", windText(state.wind));
   setField("surfDirIdeal", `${compass(state.wind.ideal)} (${Math.round(state.wind.ideal)}°)`);
   mapReadout.dataset.keep="1"; setMode("browse");
-  readout(`Wind directions saved. Section B surface wind fields updated.`); toast("Wind directions saved");
+  const dr=updateDayTravel();
+  readout(`Wind directions saved. Section B surface wind fields updated${dr==="set"?", and the daytime smoke travel projection in Section A filled in":dr==="kept"?". Your own daytime smoke travel text was kept":""}.`); toast("Wind directions saved");
 };
 document.getElementById("windClear").onclick=()=>{
   delete state.wind; updateDerived(); scheduleSave();
@@ -2394,7 +2442,7 @@ main.addEventListener("click", async e=>{
     } else skipped.push(name);
     await new Promise(r=>setTimeout(r,1100));   // Nominatim allows one request per second
   }
-  rerenderSection("ssa"); scheduleSave();
+  updateDayTravel(); rerenderSection("ssa"); scheduleSave();
   const m=document.getElementById("distMsg");
   if(m){ m.classList.remove("busy"); m.classList.toggle("err",!done);
     m.textContent = `Updated ${done} row${done===1?"":"s"}.` + (skipped.length?` No map match, left as entered: ${skipped.join(", ")}.`:""); }
@@ -2422,7 +2470,8 @@ const FKINDS={
   wet:{label:"Wet line",t:"ln",color:"#FFFFFF",dash:"1 7"},
   natural:{label:"Natural barrier",t:"ln",color:OI.purple,dash:"12 4 2 4"},
   powerLine:{label:"Power line",t:"ln",color:OI.blue,dash:"14 5 3 5"},
-  utilLine:{label:"Utility line (phone, cable)",t:"ln",color:OI.sky,dash:"2 5"}
+  utilLine:{label:"Utility line (phone, cable)",t:"ln",color:OI.sky,dash:"2 5"},
+  smokeNight:{label:"Night smoke drainage",t:"ln",color:"#A0A0A0",dash:"8 5",arrows:true}
 };
 const CONTROL=["road","trail","mowed","hand","dozer","wet","natural"];
 const UTILITY=["powerPole","utilPole","powerLine","utilLine"];
@@ -2513,6 +2562,16 @@ function featUi(){
   featAddEl.disabled = !(sel || featPending || featLine.length>=2);
 }
 function featMapClick(ll){
+  if(featSel && featSel.t==="ln" && featVtx!=null){
+    const l=selItem();
+    if(l && (featVtx===0 || featVtx===l.pts.length-1)){
+      const p=[+ll.lat.toFixed(6),+ll.lng.toFixed(6)];
+      if(featVtx===0) l.pts.unshift(p); else { l.pts.push(p); }
+      const next = featVtx===0 ? 0 : l.pts.length-1;
+      afterFeatChange("Line extended."); selectFeat("ln",l.id); featVtx=next; featUi(); drawFeatures();
+      readout(`Line extended to ${fmtLen(lineLenM(l.pts))}. Keep clicking to extend it further, or press Escape when done.`); return;
+    }
+  }
   if(featSel){ clearSel(); featUi(); drawFeatures(); readout(featCountText()); return; }
   const kind=FKINDS[featKindEl.value];
   if(!kind){ readout("Click a feature to select it, or pick a type to add."); return; }
@@ -2547,6 +2606,13 @@ function featCommit(){
    Clicking a point or line (when no drawing tool is active) opens a small editor:
    rename, change type, move or reshape, or delete. */
 let featPop=null;
+/* Extra details some feature types carry, edited in the feature's box on the map */
+const KIND_FIELDS={
+  gate:[{k:"address",label:"Street address",ph:"Address at the gate, if it has one"},
+        {k:"code",label:"Gate code",ph:"Lock combination or keypad code"}],
+  water:[{k:"size",label:"Size or capacity",ph:"e.g. 20,000 gallons or 6 acres"}]
+};
+const ALL_EXTRA=[...new Set(Object.values(KIND_FIELDS).flat().map(f=>f.k))];
 function openFeatPopup(t,id,ll){
   const it=(t==="pt"?feats():lines()).find(x=>x.id===id); if(!it) return;
   const ro=isRO(), k=FKINDS[it.kind]||FKINDS.other;
@@ -2554,19 +2620,24 @@ function openFeatPopup(t,id,ll){
   const opts = Object.entries(FKINDS).filter(([,v])=>v.t===t).map(([kk,v])=>`<option value="${kk}"${kk===it.kind?" selected":""}>${esc(v.label)}</option>`).join("");
   const el=document.createElement("div"); el.className="fpop";
   el.innerHTML = ro
-    ? `<strong>${esc(it.name||k.label)}</strong><div class="fpop-type">${esc(k.label)}</div><div class="fpop-meta">${meta}</div>`
+    ? `<strong>${esc(it.name||k.label)}</strong><div class="fpop-type">${esc(k.label)}</div>${(KIND_FIELDS[it.kind]||[]).filter(f=>it[f.k]).map(f=>`<div class="fpop-meta">${esc(f.label)}: <strong>${esc(it[f.k])}</strong></div>`).join("")}<div class="fpop-meta">${meta}</div>`
     : `<label>Name<input type="text" data-p="name" value="${esc(it.name||"")}" placeholder="${esc(k.label)}" autocomplete="off"></label>
        <label>Type<select data-p="kind">${opts}</select></label>
+       ${Object.entries(KIND_FIELDS).flatMap(([kk,fs])=>fs.map(f=>`<label data-kind="${kk}"${kk===it.kind?"":" hidden"}>${esc(f.label)}<input type="text" data-x="${f.k}" data-xk="${kk}" value="${kk===it.kind?esc(it[f.k]||""):""}" placeholder="${esc(f.ph)}" autocomplete="off" spellcheck="false"></label>`)).join("")}
        <div class="fpop-meta">${meta}</div>
        <div class="fpop-btns">
          <button type="button" class="ib primary" data-p="save" title="Save changes" aria-label="Save changes">${ICON.check}</button>
-         <button type="button" class="ib" data-p="move" title="${t==="pt"?"Move: drag the point to a new spot":"Reshape: drag the line's points"}" aria-label="${t==="pt"?"Move":"Reshape"}">${ICON.move}</button>
+         <button type="button" class="ib" data-p="move" title="${t==="pt"?"Move: drag the point to a new spot":"Edit points: move, add, or remove the line's points"}" aria-label="${t==="pt"?"Move":"Edit points"}">${t==="pt"?ICON.move:ICON.nodes}</button>
          <button type="button" class="ib" data-p="del" title="Delete" aria-label="Delete">${ICON.trash}</button>
        </div>`;
   if(!ro){
-    const save=()=>{ it.name=el.querySelector("[data-p=name]").value.trim(); it.kind=el.querySelector("[data-p=kind]").value; map.closePopup(); afterFeatChange(`${it.name||FKINDS[it.kind].label} saved.`); };
+    const save=()=>{ it.name=el.querySelector("[data-p=name]").value.trim(); it.kind=el.querySelector("[data-p=kind]").value;
+      ALL_EXTRA.forEach(x=>delete it[x]);
+      el.querySelectorAll(`[data-xk="${it.kind}"]`).forEach(inp=>{ const v=inp.value.trim(); if(v) it[inp.dataset.x]=v; });
+      map.closePopup(); afterFeatChange(`${it.name||FKINDS[it.kind].label} saved.`); };
     el.querySelector("[data-p=save]").onclick=save;
-    el.querySelector("[data-p=name]").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); save(); } });
+    el.querySelector("[data-p=kind]").addEventListener("change",e=>{ el.querySelectorAll("label[data-kind]").forEach(l=>{ l.hidden = l.dataset.kind!==e.target.value; }); featPop && featPop.update(); });
+    el.querySelectorAll("input").forEach(inp=>inp.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); save(); } }));
     el.querySelector("[data-p=move]").onclick=()=>{ map.closePopup(); setMode("feat"); featKindEl.value="select"; featPrevKind="select"; featEditSession=true; selectFeat(t,id); };
     el.querySelector("[data-p=del]").onclick=()=>{ map.closePopup(); deleteFeature(t,id); };
   }
@@ -2577,6 +2648,7 @@ function openFeatPopup(t,id,ll){
 const ICON={
   check:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
   trash:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></svg>',
+  nodes:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18 10 7l5 7 5-9"/><rect x="2.5" y="16.5" width="3" height="3" fill="currentColor"/><rect x="8.5" y="5.5" width="3" height="3" fill="currentColor"/><rect x="13.5" y="12.5" width="3" height="3" fill="currentColor"/><rect x="18.5" y="3.5" width="3" height="3" fill="currentColor"/></svg>',
   move:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M3 12h18"/><path d="m9 6 3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/></svg>'
 };
 
@@ -2641,7 +2713,7 @@ function selectFeat(t,id){
   featPending=null; featLine=[]; featSel={t,id};
   const it=selItem(); featKindEl.value=it.kind; featNameEl.value=it.name||"";
   const len = t==="ln" ? `, ${fmtLen(lineLenM(it.pts))}` : "";
-  readout(`Selected: ${it.name||FKINDS[it.kind].label}${len}. Rename, ${t==="pt"?"drag to move":"drag its points to reshape"}, or delete it.`);
+  readout(`Selected: ${it.name||FKINDS[it.kind].label}${len}. ${t==="pt"?"Rename, drag to move, or delete it.":"Drag a point to move it, drag or click a small midpoint to add one, or click an end point and then the map to extend the line. Select a point and press Delete to remove it."}`);
   featUi(); drawFeatures();
 }
 function pinIcon(kind,extra){
@@ -2658,6 +2730,8 @@ function drawFeatures(){
     L.polyline(l.pts,{...CASING,weight:(sel?7:4)+4,interactive:false}).addTo(featLayer);
     const pl=L.polyline(l.pts,{color:k.color,weight:sel?7:4,opacity:1,dashArray:k.dash||null,lineCap:k.dash==="1 7"?"round":"butt",interactive:editing||mapMode==="browse"})
       .bindTooltip(showNames() ? (l.name||k.label) : `${l.name||k.label} (${fmtLen(lineLenM(l.pts))})`, showNames()?{permanent:true,direction:"center",className:"flabel"}:{sticky:true}).addTo(featLayer);
+    if(k.arrows) flowArrows(l.pts).forEach(([p,b])=>L.marker(p,{interactive:false,keyboard:false,icon:L.divIcon({className:"",iconSize:[22,22],iconAnchor:[11,11],
+      html:`<svg width="22" height="22" viewBox="-9 -9 18 18" style="transform:rotate(${b}deg)"><path d="M0-7L6 6L0 3L-6 6Z" fill="#fff" stroke="#000" stroke-width="1.6" stroke-linejoin="round"/></svg>`})}).addTo(featLayer));
     if(mapMode==="browse") pl.on("click",ev=>{ L.DomEvent.stopPropagation(ev); openFeatPopup("ln",l.id,ev.latlng); });
     if(editing) pl.on("click",ev=>{ L.DomEvent.stopPropagation(ev);
       if(isLineKind() && !featSel) return featMapClick(ev.latlng);
@@ -2666,9 +2740,21 @@ function drawFeatures(){
     if(sel) l.pts.forEach((p,i)=>{
       const h=L.marker(p,{draggable:true,keyboard:false,icon:L.divIcon({className:"",html:`<div class="lvtx${featVtx===i?" sel":""}"></div>`,iconSize:[12,12],iconAnchor:[6,6]})}).addTo(featTmp);
       h.on("click",ev=>{ L.DomEvent.stopPropagation(ev); featVtx = featVtx===i ? null : i; featUi(); drawFeatures();
-        readout(featVtx==null ? "Point deselected." : `Point ${i+1} of ${l.pts.length} selected. Press Delete or the remove-point button to remove it, or drag to move it.`); });
+        const end = featVtx===0 || featVtx===l.pts.length-1;
+        readout(featVtx==null ? "Point deselected." : `${end?"End point":`Point ${i+1} of ${l.pts.length}`} selected. ${end?"Click the map to extend the line from here, drag to move it, or press Delete to remove it.":"Drag to move it, or press Delete or the remove-point button to remove it."}`); });
       h.on("drag",ev=>{ const ll=ev.target.getLatLng(); l.pts[i]=[ll.lat,ll.lng]; pl.setLatLngs(l.pts); });
       h.on("dragend",()=>{ l.pts[i]=[+l.pts[i][0].toFixed(6),+l.pts[i][1].toFixed(6)]; afterFeatChange("Line updated."); selectFeat("ln",l.id); });
+    });
+    // small handles halfway along each segment: drag or click one to add a point there
+    if(sel) l.pts.slice(1).forEach((q,j)=>{
+      const p=l.pts[j], at=[(p[0]+q[0])/2,(p[1]+q[1])/2]; let added=false;
+      const m=L.marker(at,{draggable:true,keyboard:false,title:"Drag or click to add a point here",icon:L.divIcon({className:"",html:'<div class="lvtx mid"></div>',iconSize:[10,10],iconAnchor:[5,5]})}).addTo(featTmp);
+      const add=ll=>{ l.pts.splice(j+1,0,[ll.lat,ll.lng]); added=true; };
+      m.on("dragstart",ev=>add(ev.target.getLatLng()));
+      m.on("drag",ev=>{ const ll=ev.target.getLatLng(); l.pts[j+1]=[ll.lat,ll.lng]; pl.setLatLngs(l.pts); });
+      m.on("dragend",()=>{ l.pts[j+1]=[+l.pts[j+1][0].toFixed(6),+l.pts[j+1][1].toFixed(6)]; featVtx=null; afterFeatChange("Point added."); selectFeat("ln",l.id); });
+      m.on("click",ev=>{ L.DomEvent.stopPropagation(ev); if(added) return; add(L.latLng(at)); l.pts[j+1]=[+at[0].toFixed(6),+at[1].toFixed(6)];
+        afterFeatChange("Point added."); selectFeat("ln",l.id); featVtx=j+1; featUi(); drawFeatures(); readout("Point added and selected. Drag it into place."); });
     });
   });
   feats().forEach(f=>{
@@ -2752,26 +2838,30 @@ const MAPCALC_HINT={
   calcWater:"Place water sources in the map's Site features mode to calculate distances to the unit.",
   calcValues:"Place structures, power lines, and utility lines in the map's Site features mode to calculate distances to the unit.",
   calcPerimeter:"Draw the burn unit to measure its perimeter.",
-  calcStaging:"Place staging areas in the map's Site features mode to list them."
+  calcStaging:"Place staging areas in the map's Site features mode to list them.",
+  calcNightSmoke:"Draw Night smoke drainage lines in the map's Site features mode, starting at the unit and following the drainage downhill, to describe where smoke settles at night."
 };
 function mapCalc(k){
   const out=[], nm=(f,def)=>f.name||def;
   const ofKind = kind => feats().filter(f=>f.kind===kind);
   if(k==="calcAccess" || k==="calcAccessBp"){
     const gates=ofKind("gate"), used=new Set();
+    // gate codes go in the burn plan (for crews), not the SMP application (for the district)
+    // "Gate at 128, 30010 Highway 128 (gate code 4271; 38° 53.1′ N, ...)": address after the name, code and coordinates together
+    const gateRef = (g,def) => `${nm(g,def)}${g.address?`, ${g.address}`:""} (${[k==="calcAccessBp" && g.code ? `gate code ${g.code}` : "", dmm(g.lat,g.lon)].filter(Boolean).join("; ")})`;
     lines().filter(l=>l.kind==="access").forEach(l=>{
       const a=l.pts[0], b=l.pts[l.pts.length-1];
       const [start,end] = distFromUnit(a).m <= distFromUnit(b).m ? [b,a] : [a,b];
       const g=gates.find(g=>miles([g.lat,g.lon],start)*1609.344<60);
       if(g) used.add(g.id);
-      const from = g ? `${nm(g,"the entrance gate")} (${dmm(g.lat,g.lon)})` : `${dmm(start[0],start[1])}`;
+      const from = g ? gateRef(g,"the entrance gate") : `${dmm(start[0],start[1])}`;
       const to = distFromUnit(end).m<100 ? "the unit" : `${dmm(end[0],end[1])}, ${whereRel(end)}`;
       out.push(`${nm(l,"Access route")}: ${fmtDist(lineLenM(l.pts))} from ${from} to ${to}`);
     });
-    gates.filter(g=>!used.has(g.id)).forEach(g=>out.push(`${nm(g,"Entrance gate")}: ${dmm(g.lat,g.lon)}, ${whereRel([g.lat,g.lon])} (straight line)`));
+    gates.filter(g=>!used.has(g.id)).forEach(g=>out.push(`${gateRef(g,"Entrance gate")}: ${whereRel([g.lat,g.lon])} (straight line)`));
   }
   if(k==="calcSigns") ofKind("sign").forEach(f=>out.push(`${nm(f,"Sign")}: ${dmm(f.lat,f.lon)}, ${whereRel([f.lat,f.lon])}`));
-  if(k==="calcWater") ofKind("water").forEach(f=>out.push(`${nm(f,"Water source")}: ${whereRel([f.lat,f.lon])} (${dmm(f.lat,f.lon)})`));
+  if(k==="calcWater") ofKind("water").forEach(f=>out.push(`${nm(f,"Water source")}${f.size?`, ${f.size}`:""}: ${whereRel([f.lat,f.lon])} (${dmm(f.lat,f.lon)})`));
   if(k==="calcValues"){
     ofKind("structure").forEach(f=>out.push(`${nm(f,"Structure")}: ${whereRel([f.lat,f.lon])}`));
     lines().filter(l=>l.kind==="powerLine"||l.kind==="utilLine").forEach(l=>{
@@ -2785,6 +2875,9 @@ function mapCalc(k){
       else out.push(`${ps.length} ${lbl.toLowerCase()}s${inside?`, ${inside} inside the unit`:""}; nearest ${whereRel([near[0].f.lat,near[0].f.lon])}`);
     });
   }
+  if(k==="calcNightSmoke") lines().filter(l=>l.kind==="smokeNight").forEach(l=>{
+    const a=l.pts[0], b=l.pts[l.pts.length-1];
+    out.push(`${l.name||"Night smoke drainage"}: ${fmtDist(lineLenM(l.pts))} toward the ${compass(bearing(a,b))}, from ${distFromUnit(a).inside?"the unit":whereRel(a)} to ${whereRel(b)} (${dmm(b[0],b[1])})`); });
   if(k==="calcStaging") ofKind("staging").forEach(f=>out.push(`${nm(f,"Staging area")}: ${dmm(f.lat,f.lon)}, ${whereRel([f.lat,f.lon])}`));
   if(k==="calcLines"){
     const cl=lines().filter(l=>CONTROL.includes(l.kind));
@@ -3086,7 +3179,7 @@ document.getElementById("ssaAdd").onclick=()=>{
   if(!picks.length) return;
   state.ssaList=(state.ssaList||[]).filter(r=>Object.values(r||{}).some(v=>String(v??"").trim()))
     .concat(picks.map(o=>({area:o.name, what:o.what+(o.down?" (downwind)":""), dist:fmtMi(o.mi), dir:o.dir})));
-  rerenderSection("ssa"); scheduleSave(); ssaDlg.close();
+  updateDayTravel(); rerenderSection("ssa"); scheduleSave(); ssaDlg.close();
   const m=document.getElementById("distMsg"); if(m){ m.classList.remove("err"); m.textContent=`Added ${picks.length} place${picks.length===1?"":"s"} from OpenStreetMap. Check them, and add anything the map doesn't know about.`; }
 };
 /* Runs every lookup for the saved unit (or the location point) and reports what changed. */
@@ -3134,7 +3227,7 @@ document.getElementById("recalcBtn").onclick=async e=>{
 let BASES=null, currentBase="Satellite", lyrRoot=null;
 const LAYER_GROUPS=[
   {k:"unit",label:"Burn unit",color:UNIT_C,count:()=>hasUnit()?1:0},
-  {k:"wind",label:"Wind and smoke",color:"#0072B2",count:()=>state.wind?1:0},
+  {k:"wind",label:"Wind and smoke",color:"#0072B2",count:()=>(state.wind?1:0)+lines().filter(l=>l.kind==="smokeNight").length},
   {k:"loc",label:"Burn location point",color:"#000",count:()=>fromDMM(state.lat)!=null?1:0},
   {k:"access",label:"Gates and access route",color:FKINDS.access.color,count:()=>feats().filter(f=>f.kind==="gate").length+lines().filter(l=>l.kind==="access").length},
   {k:"control",label:"Control lines",color:FKINDS.road.color,count:()=>lines().filter(l=>CONTROL.includes(l.kind)).length},
@@ -3146,6 +3239,7 @@ const LAYER_GROUPS=[
   {k:"other",label:"Other points",color:FKINDS.other.color,count:()=>feats().filter(f=>f.kind==="other").length}
 ];
 function groupOf(kind){
+  if(kind==="smokeNight") return "wind";
   if(UTILITY.includes(kind)) return "utility";
   if(kind==="gate"||kind==="access") return "access";
   if(CONTROL.includes(kind)) return "control";
@@ -3918,8 +4012,10 @@ async function renderSiteMap({kind="site", base="Satellite", W=1600, H=1150}={})
   else z=hasUnit()?14:13;
   const order=[base,...Object.keys(TILE_SRC).filter(k=>k!==base)];
   const s=W/700;   // overlay scale: 1 on a 700 px wide map, so text prints at a readable size
-  const legendKinds = kind==="site" ? [...new Set([...feats().map(f=>f.kind),...lines().map(l=>l.kind)])].filter(k=>FKINDS[k]) : [];
-  const nLegend = (hasUnit()?1:0) + (unitCenter()?1:0) + legendKinds.length, cols=3, rowsL=Math.ceil(nLegend/cols);
+  const legendKinds = kind==="site" ? [...new Set([...feats().map(f=>f.kind),...lines().map(l=>l.kind)])].filter(k=>FKINDS[k])
+    : lines().some(l=>l.kind==="smokeNight") ? ["smokeNight"] : [];
+  const smokeFan = kind!=="site" && !!state.wind;
+  const nLegend = (hasUnit()?1:0) + (unitCenter()?1:0) + (smokeFan?1:0) + legendKinds.length, cols=3, rowsL=Math.ceil(nLegend/cols);
   const band = Math.round(62*s + rowsL*20*s + 8*s), Hm=H;
   const cv=document.createElement("canvas"); cv.width=W; cv.height=Hm+band; H=Hm;
   const ctx=cv.getContext("2d");
@@ -3952,6 +4048,23 @@ async function renderSiteMap({kind="site", base="Satellite", W=1600, H=1150}={})
       path(l.pts,false); ctx.setLineDash([]); ctx.lineCap="round"; ctx.strokeStyle="rgba(0,0,0,.6)"; ctx.lineWidth=8*s; ctx.stroke();
       ctx.lineCap=k.dash==="1 7"?"round":"butt"; ctx.setLineDash(dash(k.dash)); ctx.strokeStyle=k.color; ctx.lineWidth=4*s; ctx.stroke(); });
     ctx.setLineDash([]);
+    drawArrows(lines().filter(l=>(FKINDS[l.kind]||{}).arrows));
+  } else {
+    // area map: where daytime smoke goes (from the permissible wind directions) and night drainage lines
+    if(state.wind && unitCenter()){
+      const mpp=156543.03392*Math.cos(c[0]*Math.PI/180)/2**z, rM=Math.min(W,H)*0.42*mpp, cc=unitCenter();
+      path(wedge(cc,state.wind.from+180,state.wind.to+180,rM),true);
+      ctx.setLineDash([6*s,5*s]); ctx.fillStyle="rgba(120,120,120,.28)"; ctx.fill(); ctx.strokeStyle="#555"; ctx.lineWidth=1.5*s; ctx.stroke(); ctx.setLineDash([]);
+    }
+    lines().filter(l=>l.kind==="smokeNight").forEach(l=>{ const k=FKINDS[l.kind];
+      path(l.pts,false); ctx.lineCap="round"; ctx.strokeStyle="rgba(0,0,0,.6)"; ctx.lineWidth=8*s; ctx.stroke();
+      ctx.lineCap="butt"; ctx.setLineDash(dash(k.dash)); ctx.strokeStyle=k.color; ctx.lineWidth=4*s; ctx.stroke(); ctx.setLineDash([]); });
+    drawArrows(lines().filter(l=>l.kind==="smokeNight"));
+  }
+  function drawArrows(ls){
+    ls.forEach(l=>flowArrows(l.pts).forEach(([p,b])=>{ const [x,y]=P(p), r=b*Math.PI/180;
+      ctx.save(); ctx.translate(x,y); ctx.rotate(r); ctx.beginPath(); ctx.moveTo(0,-7*s); ctx.lineTo(6*s,6*s); ctx.lineTo(0,3*s); ctx.lineTo(-6*s,6*s); ctx.closePath();
+      ctx.fillStyle="#fff"; ctx.fill(); ctx.lineWidth=1.6*s; ctx.strokeStyle="#000"; ctx.lineJoin="round"; ctx.stroke(); ctx.restore(); }));
   }
   const halo = (t,x,y,size,align="left") => { ctx.font=`700 ${size}px "Public Sans",Arial,sans-serif`; ctx.textAlign=align; ctx.textBaseline="middle";
     ctx.lineWidth=size/3.2; ctx.strokeStyle="rgba(255,255,255,.92)"; ctx.strokeText(t,x,y); ctx.fillStyle="#111"; ctx.fillText(t,x,y); };
@@ -4010,11 +4123,15 @@ async function renderSiteMap({kind="site", base="Satellite", W=1600, H=1150}={})
     ctx.font=`500 ${10.5*s}px "Public Sans",Arial,sans-serif`; ctx.fillStyle="#444"; ctx.textAlign="left"; ctx.fillText(sub,14*s,Hm+38*s);
     const items=[];
     if(hasUnit()) items.push({t:"Burn unit",draw:(x,y)=>{ ctx.fillStyle="rgba(240,228,66,.35)"; ctx.fillRect(x,y-6*s,22*s,12*s); ctx.lineWidth=2.5*s; ctx.strokeStyle=UNIT_C; ctx.strokeRect(x,y-6*s,22*s,12*s); ctx.lineWidth=1*s; ctx.strokeStyle="#000"; ctx.strokeRect(x-1.5*s,y-7.5*s,25*s,15*s); }});
+    if(smokeFan) items.push({t:"Daytime smoke travel",draw:(x,y)=>{ ctx.beginPath(); ctx.moveTo(x,y+7*s); ctx.lineTo(x+24*s,y-7*s); ctx.lineTo(x+24*s,y+7*s); ctx.closePath();
+      ctx.fillStyle="rgba(120,120,120,.4)"; ctx.fill(); ctx.setLineDash([4*s,3*s]); ctx.strokeStyle="#555"; ctx.lineWidth=1.2*s; ctx.stroke(); ctx.setLineDash([]); }});
     if(loc) items.push({t:"Burn location",draw:(x,y)=>{ ctx.beginPath(); ctx.arc(x+11*s,y,6*s,0,Math.PI*2); ctx.fillStyle="#000"; ctx.fill(); ctx.lineWidth=2*s; ctx.strokeStyle="#fff"; ctx.stroke(); }});
     legendKinds.forEach(kk=>{ const k=FKINDS[kk]; items.push({t:k.label,draw:(x,y)=>{
       if(k.t==="pt") pin(k,x+11*s,y,8*s);
       else { ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+22*s,y); ctx.setLineDash([]); ctx.lineCap="round"; ctx.strokeStyle="rgba(0,0,0,.6)"; ctx.lineWidth=8*s; ctx.stroke();
-        ctx.lineCap="butt"; ctx.setLineDash(dash(k.dash)); ctx.strokeStyle=k.color; ctx.lineWidth=4*s; ctx.stroke(); ctx.setLineDash([]); } }}); });
+        ctx.lineCap="butt"; ctx.setLineDash(dash(k.dash)); ctx.strokeStyle=k.color; ctx.lineWidth=4*s; ctx.stroke(); ctx.setLineDash([]);
+        if(k.arrows){ ctx.save(); ctx.translate(x+17*s,y); ctx.rotate(Math.PI/2); ctx.beginPath(); ctx.moveTo(0,-6*s); ctx.lineTo(5*s,5*s); ctx.lineTo(0,2.5*s); ctx.lineTo(-5*s,5*s); ctx.closePath();
+          ctx.fillStyle="#fff"; ctx.fill(); ctx.lineWidth=1.4*s; ctx.strokeStyle="#000"; ctx.stroke(); ctx.restore(); } } }}); });
     const cw=(W-28*s)/cols, lh=20*s;
     items.forEach((it,i)=>{ const x=14*s+(i%cols)*cw, y=Hm+62*s+Math.floor(i/cols)*lh;
       it.draw(x,y); ctx.fillStyle="#111"; ctx.font=`500 ${11*s}px "Public Sans",Arial,sans-serif`; ctx.textAlign="left"; ctx.textBaseline="middle"; ctx.fillText(it.t,x+32*s,y); });
