@@ -41,6 +41,21 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background
 .title{flex:1 1 260px;min-width:0}
 .title h1{margin:0;font-size:1.25rem;font-weight:800;letter-spacing:-0.01em;line-height:1.2}
 .title p{margin:2px 0 0;color:var(--muted);font-size:.875rem}
+.linkbtn{border:0;background:none;padding:0;font:inherit;font-weight:600;color:var(--oak);text-decoration:underline;text-underline-offset:2px;cursor:pointer;white-space:nowrap}
+.about-mobile{display:none}
+#aboutDlg{width:min(640px,94vw)}
+#missDlg{width:min(560px,94vw)}
+#missDlg h2{margin:0 0 4px;font-size:1.25rem;font-weight:800}
+#missBody ul{margin:2px 0 10px;padding-left:20px}
+#missBody li{margin:2px 0;font-size:.9375rem}
+#missBody button{border:0;background:none;padding:0;font:inherit;color:var(--oak);text-decoration:underline;text-underline-offset:2px;cursor:pointer;text-align:left}
+#aboutDlg h2{margin:0 0 6px;font-size:1.25rem;font-weight:800}
+#aboutDlg h3{margin:16px 0 4px;font-size:1rem;font-weight:700}
+#aboutDlg p,#aboutDlg li{font-size:.9375rem;line-height:1.5}
+#aboutDlg p{margin:0 0 6px}
+#aboutDlg ul{margin:0;padding-left:20px}
+#aboutDlg li{margin:3px 0}
+#aboutDlg .h-body{max-height:min(64vh,620px)}
 .status{font-size:.8125rem;color:var(--muted);white-space:nowrap}
 .status.saved::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--oak);margin-right:6px;vertical-align:1px}
 .actions{display:flex;gap:8px;flex-wrap:wrap}
@@ -145,6 +160,7 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-w
   .title{flex:1 1 0}
   .title h1{font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .title p{display:none}
+  .about-mobile{display:block}
   .meta{order:3;flex:1 1 100%;flex-direction:row;align-items:center;gap:12px;justify-content:space-between}
   .who-badge{max-width:55%;font-size:.8125rem}
   .status{font-size:.75rem;white-space:normal;text-align:right}
@@ -189,7 +205,7 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-w
   dialog textarea{min-height:0;height:calc(100dvh - 220px)}
   /* Sharing and view-only stay traditional centered dialogs with the page visible around them */
   #historyDlg .h-body{max-height:calc(100dvh - 260px)}
-  #shareDlg,#roDlg,#historyDlg,#ssaDlg{inset:0;margin:auto;width:calc(100% - 24px);max-width:560px;height:fit-content;max-height:calc(100dvh - 48px);
+  #shareDlg,#roDlg,#historyDlg,#ssaDlg,#aboutDlg,#missDlg{inset:0;margin:auto;width:calc(100% - 24px);max-width:560px;height:fit-content;max-height:calc(100dvh - 48px);
     border:1px solid var(--line);border-radius:12px;padding:20px 18px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
   #shareDlg[open]{overflow-y:auto}
   #shareDlg .dlg-foot{position:sticky;bottom:-20px;background:var(--surface);padding-bottom:4px}
@@ -1027,7 +1043,7 @@ body.readonly .ro-banner{display:block}
   <div class="top-inner">
     <div class="title">
       <h1 id="docTitle">Yorkville Schoolhouse Ranch 2026 Prescribed Burn</h1>
-      <p>Mendocino County AQMD. Saves as you type.</p>
+      <p>Prepares the Mendocino County AQMD smoke management plan and the California burn plan from one worksheet and map. Saves as you type. <button type="button" class="linkbtn" data-about>How it works</button></p>
     </div>
     <div class="meta">
       <button type="button" class="who-badge" id="whoBadge" hidden title="You're signed in. Open Sharing to sign out or manage who has access."></button>
@@ -1036,6 +1052,7 @@ body.readonly .ro-banner{display:block}
     <button class="btn menu-btn" id="menuBtn" aria-expanded="false" aria-controls="actions" title="Show sharing, export, and backup actions">Menu</button>
     <div class="actions" id="actions">
       <button class="btn" id="shareBtn" title="Sign in with your access code to sync edits with everyone on the plan. The owner adds people and assigns editor or viewer access here.">Sharing</button>
+      <button class="btn about-mobile" data-about>About this worksheet</button>
       <button class="btn" id="historyBtn" title="See who changed which parts of the worksheet, and when.">History</button>
       <button class="btn" id="tipsAll" aria-pressed="false" title="Open the explanation under every field at once. Use the ? next to a field to open just that one.">Show all explanations</button>
       <button class="btn" id="exportBp" title="Download the burn plan as a Word (.docx) file: the California Standardized Prescribed Fire Plan filled in from this worksheet, with the unit boundary, go/no-go checklist, medical plan, and contingency plan attachments.">Export burn plan</button>
@@ -1157,6 +1174,47 @@ body.readonly .ro-banner{display:block}
     <button class="btn primary" id="savePeople" disabled hidden>Save changes</button>
     <button class="btn" id="shareClose">Close</button>
   </div>
+</dialog>
+<dialog id="aboutDlg" aria-labelledby="aboutTitle">
+  <h2 id="aboutTitle">About this worksheet</h2>
+  <div class="h-body">
+    <p>One place to prepare the paperwork for a prescribed burn: the <strong>Mendocino County AQMD smoke management plan (SMP) application</strong> and the <strong>California Standardized Prescribed Fire Plan</strong>. Many answers are shared between the two, so you enter them once.</p>
+    <h3>Filling it in</h3>
+    <ul>
+      <li>Work through the sections in the section list. The numbers show how many required answers are done; fields still needing one are tinted.</li>
+      <li>The <strong>?</strong> next to a field explains what the district or the burn plan is asking for. "Show all explanations" opens them all.</li>
+      <li>Optional fields, and fields already answered by the map, aren't tinted.</li>
+      <li>In the smoke sensitive areas section, <strong>Find nearby</strong> looks up towns, schools, care homes, and highways around the unit and adds the ones you pick, with distance and direction.</li>
+    </ul>
+    <h3>The map does a lot of the work</h3>
+    <ul>
+      <li><strong>Draw the burn unit</strong> to get acres, the burn location (its center), top and bottom elevation, slope and aspect inside and next to the unit, township, range, and section, county, and nearest town.</li>
+      <li><strong>Set the permissible wind directions</strong> to fill the Section B wind fields and the daytime smoke travel projection, and to show where smoke goes.</li>
+      <li><strong>Add site features</strong> (gates, roads and control lines, water, structures, power lines, staging, helispot, night smoke drainage) to get distances, lengths, and descriptions for access, water, values at risk, and more.</li>
+      <li>Calculated values fill a field only if it's empty or still holds the last calculated value. Anything you type is never overwritten.</li>
+    </ul>
+    <h3>Saving and sharing</h3>
+    <ul>
+      <li>Everything saves in this browser as you type.</li>
+      <li>Sign in with an access code (Sharing) to sync with everyone working on the plan. Editors can change it; viewers can only read it. History shows who changed what, and when.</li>
+      <li>Back up saves a copy of everything to a file; Restore loads one.</li>
+    </ul>
+    <h3>Getting the documents</h3>
+    <ul>
+      <li><strong>Export SMP</strong> fills in the district's own PDF application, puts the site map in Section VII, and adds Sections A and B, the emissions estimate, and notifications as attached pages. Sign and date page 1 before submitting.</li>
+      <li><strong>Export burn plan</strong> fills in the standardized plan as a Word file, with site and area maps, the unit boundary, and the go/no-go, medical, and contingency attachments.</li>
+      <li>Both are starting points. Read them through and adjust before submitting.</li>
+    </ul>
+    <h3>Where the data comes from</h3>
+    <p>Elevation, slope, and aspect: USGS 3DEP. Township, range, and section: BLM PLSS. Places, towns, and addresses: OpenStreetMap. Imagery and topo maps: Esri and USGS. These are good starting values, not surveyed measurements, so check anything that matters.</p>
+  </div>
+  <div class="dlg-foot"><button class="btn" id="aboutClose">Close</button></div>
+</dialog>
+<dialog id="missDlg" aria-labelledby="missTitle">
+  <h2 id="missTitle"></h2>
+  <p class="h-intro" id="missIntro"></p>
+  <div id="missBody" class="h-body"></div>
+  <div class="dlg-foot" id="missFoot"></div>
 </dialog>
 <dialog id="historyDlg" aria-labelledby="historyTitle">
   <h2 id="historyTitle">History</h2>
@@ -3888,6 +3946,9 @@ async function loadHistory(){
 }
 document.getElementById("historyBtn").onclick=()=>{ historyDlg.showModal(); loadHistory(); };
 document.getElementById("historyClose").onclick=()=>historyDlg.close();
+const aboutDlg=document.getElementById("aboutDlg");
+document.querySelectorAll("[data-about]").forEach(b=>b.addEventListener("click",()=>{ if(typeof setMenu==="function") setMenu(false); aboutDlg.showModal(); }));
+document.getElementById("aboutClose").onclick=()=>aboutDlg.close();
 document.getElementById("historyRefresh").onclick=()=>loadHistory();
 document.getElementById("historyBody").addEventListener("click",e=>{
   const b=e.target.closest("[data-goto]"); if(!b) return;
@@ -4744,9 +4805,76 @@ async function offerFile(filename,data,label){
     showText(data,`The file couldn't be saved here. Copy this text into ${filename}.`);
   }
 }
+/* Required fields still empty, for one export: "smp" uses the SMP sections, "bp" the burn plan sections
+   plus the SMP answers the burn plan reuses. Same rule as the tinting: optional fields and fields
+   answered by the map don't count. */
+const BP_SHARED=["name","burnBoss","landowner","address","lat","lon","acres","objectives"];
+function missingFields(kind){
+  const out=[], seen=new Set();
+  const add=(s,f,force)=>{
+    if(seen.has(f.k) || ["computed","mapcalc","checklist"].includes(f.type)) return;
+    if((!force && OPTIONAL.has(f.k)) || coveredByMap(f.k) || filled(state[f.k])) return;
+    seen.add(f.k); out.push({sec:s.id, title:s.title, k:f.k, label:f.label||s.title});
+  };
+  if(kind==="bp") BP_SHARED.forEach(k=>{ const s=SECTIONS.find(x=>x.fields && x.fields.some(f=>f.k===k)); if(s) add(s,s.fields.find(f=>f.k===k),true); });
+  SECTIONS.forEach(s=>{
+    if(s.id==="checklist" || s.id==="notes") return;
+    if(kind==="smp" ? s.bp : !s.bp) return;
+    if(s.custom==="emissions"){ if(!(emissionTotals().p>0)) out.push({sec:s.id,title:s.title,k:"emis",label:"Emissions table"}); return; }
+    s.fields.forEach(f=>add(s,f));
+  });
+  return out;
+}
+const missDlg=document.getElementById("missDlg");
+function missList(miss){
+  const groups=[]; miss.forEach(m=>{ let g=groups.find(x=>x.sec===m.sec); if(!g) groups.push(g={sec:m.sec,title:m.title,items:[]}); g.items.push(m); });
+  return groups.map(g=>`<div class="h-day">${esc(g.title)}</div><ul>${g.items.map(m=>`<li><button type="button" data-goto="${esc(m.k)}" data-sec="${esc(m.sec)}">${esc(m.label)}</button></li>`).join("")}</ul>`).join("");
+}
+// before: "N required fields are empty. Export anyway?"  resolves true to export
+function confirmExport(doc,miss){
+  return new Promise(res=>{
+    const n=miss.length;
+    document.getElementById("missTitle").textContent=`${n} required field${n===1?" is":"s are"} empty`;
+    document.getElementById("missIntro").textContent=`The ${doc} will have blanks where ${n===1?"it goes":"they go"}. You can export now and fill them in later; you'll get the list afterward.`;
+    document.getElementById("missBody").innerHTML="";
+    document.getElementById("missFoot").innerHTML=`<button class="btn" data-a="list">Show the list</button><button class="btn" data-a="cancel">Cancel</button><button class="btn primary" data-a="go">Export anyway</button>`;
+    const done=v=>{ missDlg.onclose=null; missDlg.close(); res(v); };
+    document.getElementById("missFoot").onclick=e=>{ const a=(e.target.closest("[data-a]")||{}).dataset?.a; if(!a) return;
+      if(a==="list"){ document.getElementById("missBody").innerHTML=missList(miss); e.target.closest("[data-a]").remove(); return; }
+      done(a==="go"); };
+    missDlg.onclose=()=>res(false);
+    missDlg.showModal();
+  });
+}
+// after: the list, each item jumps to its field
+function showMissing(doc,miss){
+  const n=miss.length;
+  document.getElementById("missTitle").textContent=`${doc[0].toUpperCase()+doc.slice(1)} exported with ${n} empty field${n===1?"":"s"}`;
+  document.getElementById("missIntro").textContent="Click a field to go to it. Export again once they're filled in.";
+  document.getElementById("missBody").innerHTML=missList(miss);
+  document.getElementById("missFoot").innerHTML=`<button class="btn primary" data-a="close">Close</button>`;
+  document.getElementById("missFoot").onclick=e=>{ if(e.target.closest("[data-a]")) missDlg.close(); };
+  missDlg.onclose=null; missDlg.showModal();
+}
+document.getElementById("missBody").addEventListener("click",e=>{
+  const b=e.target.closest("[data-goto]"); if(!b) return;
+  missDlg.close(); goToField(b.dataset.goto,b.dataset.sec);
+});
+function goToField(k,sec){
+  const el=document.getElementById("f_"+k) || main.querySelector(`[data-t="${k}"],[data-g="${k}"],[data-ck="${k}"]`);
+  const target=(el && el.closest(".f")) || document.getElementById(sec);
+  if(!target) return;
+  target.scrollIntoView({behavior:"smooth",block:"center"});
+  target.classList.add("flash"); setTimeout(()=>target.classList.add("fade"),900); setTimeout(()=>target.classList.remove("flash","fade"),2300);
+  const inp=target.querySelector("input,select,textarea"); if(inp) setTimeout(()=>inp.focus({preventScroll:true}),400);
+}
 document.getElementById("exportMd").onclick=async()=>{
-  saveNow(); toast("Filling in the SMP application…");
+  saveNow();
+  const miss=missingFields("smp");
+  if(miss.length && !(await confirmExport("SMP application",miss))) return;
+  toast("Filling in the SMP application…");
   try{ downloadBlob(slug()+"-smp-application.pdf", await exportSmpPdf(), "SMP application");
+    if(miss.length) setTimeout(()=>showMissing("SMP application",miss),600);
     if(lastMapBases.some(b=>!b)) setTimeout(()=>toast("Map imagery couldn't be loaded, so the map shows features only"),2800); }
   catch(e){ console.error(e); toast("Couldn't fill the PDF; saving Markdown instead"); offerFile(slug()+"-smp.md", toMarkdown(), "SMP"); }
 };
@@ -4760,8 +4888,12 @@ document.getElementById("mapImgBtn").onclick=async()=>{
   }catch(e){ console.error(e); readout("Couldn't make the map image."); }
 };
 document.getElementById("exportBp").onclick=async()=>{
-  saveNow(); toast("Building the burn plan…");
+  saveNow();
+  const miss=missingFields("bp");
+  if(miss.length && !(await confirmExport("burn plan",miss))) return;
+  toast("Building the burn plan…");
   try{ downloadBlob(slug()+"-burn-plan.docx", await exportBurnPlanDocx(), "Burn plan");
+    if(miss.length) setTimeout(()=>showMissing("burn plan",miss),600);
     if(lastMapBases.some(b=>!b)) setTimeout(()=>toast("Map imagery couldn't be loaded, so the maps show features only"),2800);
     else if(lastMapBases.length && lastMapBases[0]!==(currentBase||"Satellite")) setTimeout(()=>toast(`Site map uses the ${lastMapBases[0]} base map`),2800); }
   catch(e){ console.error(e); toast("Couldn't build the Word file; saving Markdown instead"); offerFile(slug()+"-burn-plan.md", toBurnPlanMd(), "Burn plan"); }
