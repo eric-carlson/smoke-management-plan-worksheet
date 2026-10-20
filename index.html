@@ -81,6 +81,9 @@ main,.mainwrap{min-width:0}
 section.sec{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:24px 24px 28px;margin-bottom:24px}
 section.sec h2{margin:0 0 4px;font-size:1.25rem;font-weight:800;letter-spacing:-0.01em}
 section.sec .sec-hint{margin:0 0 18px;color:var(--muted);font-size:.9375rem;max-width:62ch}
+section.sec .sec-off{margin:-6px 0 18px;padding:10px 12px;border:1px dashed var(--line);border-radius:8px;color:var(--muted);font-size:.9375rem}
+section.sec.off .sec-body{opacity:.6}
+nav.toc li.off a{opacity:.6}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px}
 .f{display:flex;flex-direction:column;gap:5px;min-width:0}
 .f.wide{grid-column:1 / -1}
@@ -980,6 +983,11 @@ input.computed{background:transparent;border-style:dashed;font-variant-numeric:t
 .lyr-row .cnt{margin-left:auto;color:var(--muted);font-variant-numeric:tabular-nums}
 .lyr-row.forced{opacity:.6}
 .lyr-foot{display:flex;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+.lyr-off{display:block;width:100%;margin-top:2px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field);color:var(--ink);font:inherit;font-size:.8125rem;cursor:pointer;text-align:left}
+.lyr-off:disabled{opacity:.6;cursor:default}
+.lyr-offmsg{font-size:.8125rem;margin-top:4px}
+.lyr-offmsg:empty{display:none}
+.lyr-h.lyr-offh{margin-top:12px}
 .lyr-foot button{border:0;background:none;color:var(--oak);font:inherit;font-weight:600;cursor:pointer;padding:2px 0}
 .leaflet-tooltip.flabel{background:rgba(255,255,255,.88);border:0;box-shadow:none;padding:1px 5px;font:600 11px/1.3 "Public Sans",system-ui,sans-serif;color:#1c2420}
 .leaflet-tooltip.flabel::before{display:none}
@@ -1197,6 +1205,7 @@ body.readonly .ro-banner{display:block}
     <ul>
       <li>Everything saves in this browser as you type.</li>
       <li>Sign in with an access code (Sharing) to sync with everyone working on the plan. Editors can change it; viewers can only read it. History shows who changed what, and when.</li>
+      <li>Works offline once you've opened it here while signed in. Edits are saved on the device and sync when you're back online; the status reads Offline until then. Elevation, PLSS, and OpenStreetMap lookups need a connection. Before heading out, open Layers on the map and use Save topo map for offline.</li>
       <li>Back up saves a copy of everything to a file; Restore loads one.</li>
     </ul>
     <h3>Getting the documents</h3>
@@ -1736,7 +1745,8 @@ function fieldHTML(f){
 
 function renderSection(s){
   const inner = s.custom==="emissions" ? emissionsHTML() : `<div class="grid">${s.fields.map(fieldHTML).join("")}</div>`;
-  return `<section class="sec" id="${s.id}"><h2>${esc(s.title)}</h2><p class="sec-hint">${esc(s.hint)}</p><div class="sec-body">${inner}</div></section>`;
+  const off = ATTACH_OPT[s.id] ? `<p class="sec-off" hidden>Not attached, so this section isn't counted or included in the SMP export. To include it, check "${esc(ATTACH_OPT[s.id].replace(/ \(.*/,""))}" under <button type="button" class="linkbtn" data-goto="attach" data-sec="project">Attachments in Project description</button>.</p>` : "";
+  return `<section class="sec" id="${s.id}"><h2>${esc(s.title)}</h2><p class="sec-hint">${esc(s.hint)}</p>${off}<div class="sec-body">${inner}</div></section>`;
 }
 
 function renderAll(){
@@ -1795,6 +1805,10 @@ const OPTIONAL = new Set(["thp","facilityId","ownershipOther","vegCondOther","ve
   "pileSize","historyImpacts","otherDispersion","altUsed","notes","hoursBetween","mapRef",
   "rxOther","postOther","riskOther","otherAttDesc","dayOther","bpReeval","holdingSpec","production"]);
 const blankVal = v => String(v??"").trim()==="";
+/* Sections A and B go with the SMP only when their "attached" box is checked in Project description.
+   Unchecked, they aren't counted, tinted, listed as missing, or exported. */
+const ATTACH_OPT={ssa:"Section A attached (burn could impact smoke sensitive areas)", rx:"Section B attached (over 100 acres or over 5 tons PM10)"};
+const secOff = id => !!ATTACH_OPT[id] && !(state.attach||[]).includes(ATTACH_OPT[id]);
 /* Typed fields answered by a calculated "from the map" box right below them. When the map box has
    content the question is answered (exports include it), so the typed field becomes optional
    and its placeholder says what is still worth adding. */
@@ -1809,21 +1823,24 @@ const MAP_PARTNER={
 };
 const coveredByMap = k => !!MAP_PARTNER[k] && mapCalc(MAP_PARTNER[k][0]).length>0;
 function markEmpty(){
+  Object.keys(ATTACH_OPT).forEach(id=>{ const sec=document.getElementById(id); if(!sec) return;
+    const off=secOff(id); sec.classList.toggle("off",off); const n=sec.querySelector(".sec-off"); if(n) n.hidden=!off;
+    const li=toc.querySelector(`[data-count="${id}"]`); if(li) li.closest("li").classList.toggle("off",off); });
   Object.entries(MAP_PARTNER).forEach(([k,[,add]])=>{ const el=document.getElementById("f_"+k); if(!el) return;
     el.placeholder = coveredByMap(k) ? `Optional. The map details below are included in exports. Add what the map can't show: ${add}.` : ""; });
   main.querySelectorAll("input[data-k],select[data-k],textarea[data-k]").forEach(el=>{
-    const opt = OPTIONAL.has(el.dataset.k) || coveredByMap(el.dataset.k);
+    const opt = OPTIONAL.has(el.dataset.k) || coveredByMap(el.dataset.k) || !!el.closest("section.sec.off");
     const empty = !opt && blankVal(el.value);
     el.classList.toggle("is-empty", empty);
     const f=el.closest(".f"); if(f) f.classList.toggle("unfilled", empty);
   });
-  main.querySelectorAll("input[data-t],select[data-t],input[data-g]").forEach(el=>el.classList.toggle("is-empty", blankVal(el.value)));
+  main.querySelectorAll("input[data-t],select[data-t],input[data-g]").forEach(el=>el.classList.toggle("is-empty", blankVal(el.value) && !el.closest("section.sec.off")));
   SECTIONS.forEach(s=>(s.fields||[]).forEach(f=>{
     if(f.type!=="checks" && f.type!=="table" && f.type!=="grid") return;
     const v=state[f.k];
     const empty = f.type==="checks" ? !(v&&v.length) : !filled(v||[]);
     const lbl=[...main.querySelectorAll(".f .lbl")].find(x=>x.textContent===f.label);
-    if(lbl) lbl.closest(".f").classList.toggle("unfilled", empty && !OPTIONAL.has(f.k));
+    if(lbl) lbl.closest(".f").classList.toggle("unfilled", empty && !OPTIONAL.has(f.k) && !secOff(s.id));
   }));
 }
 function updateDerived(){
@@ -1850,6 +1867,9 @@ function updateDerived(){
   ["fuelTotal","fuelPerAcre"].forEach(k=>{ const el=document.getElementById("f_"+k); if(el) el.value=computedVal(k); });
   SECTIONS.forEach(s=>{
     let done=0,total=0;
+    if(secOff(s.id)){ const c=toc.querySelector(`[data-count="${s.id}"]`), b=toc.querySelector(`[data-bar="${s.id}"]`);
+      if(c){ c.textContent="off"; c.title="Not attached to the SMP"; } if(b) b.style.width="0%"; return; }
+    { const c=toc.querySelector(`[data-count="${s.id}"]`); if(c) c.title=""; }
     if(s.custom==="emissions"){ total=1; done = t.p>0 ? 1 : 0; }
     else s.fields.forEach(f=>{
       if(f.type==="checklist"){ total+=f.opts.length; done+=(state[f.k]||[]).length; }
@@ -2365,7 +2385,16 @@ function drawWind(withHandles){
   L.polygon(wedge(c,w.from,w.to,r),{color:OI.blue,weight:2,fillColor:OI.blue,fillOpacity:.25,interactive:false}).addTo(windLayer);
   // downwind wedge: where the smoke goes
   L.polygon(wedge(c,w.from+180,w.to+180,r*0.8),{color:"#7a7a7a",weight:1,dashArray:"5 5",fillColor:"#9a9a9a",fillOpacity:.25,interactive:false}).addTo(windLayer);
-  L.polyline([destPt(c,w.ideal,r),c,destPt(c,w.ideal+180,r*0.8)],{color:OI.blue,weight:3,interactive:false}).addTo(windLayer);
+  // preferred wind: a line from upwind through the unit, with arrowheads showing the way it blows,
+  // one at the unit and one at the downwind end, where the smoke goes
+  // (notched and longer than wide, so the point is unmistakable)
+  const down=w.ideal+180, head=r*0.16;
+  const arrow=dist=>{ const tip=destPt(c,down,dist), base=destPt(c,down,dist-head), notch=destPt(c,down,dist-head*0.7);
+    L.polygon([tip,destPt(base,down+90,head*0.36),notch,destPt(base,down-90,head*0.36)],
+      {color:"#fff",weight:1.5,fillColor:OI.blue,fillOpacity:1,interactive:false}).addTo(windLayer); };
+  L.polyline([destPt(c,w.ideal,r),c,destPt(c,down,r*0.8-head*0.7)],{color:OI.blue,weight:3,interactive:false}).addTo(windLayer);
+  arrow(r*0.8);
+  arrow(-r*0.45+head);
   const lbl=(pt,t)=>L.marker(pt,{interactive:false,icon:L.divIcon({className:"",html:`<span class="wlabel">${t}</span>`,iconSize:null})}).addTo(windLayer);
   lbl(destPt(c,w.from+span(w.from,w.to)/2,r*0.6),"Wind from");
   lbl(destPt(c,w.from+180+span(w.from,w.to)/2,r*0.5),"Smoke");
@@ -3208,6 +3237,7 @@ function ssaCount(){ const n=ssaDlg.querySelectorAll("#ssaBody input:checked:not
 async function runSSA(){
   const msg=document.getElementById("ssaMsg"), r=+document.getElementById("ssaRadius").value;
   msg.textContent=""; msg.classList.remove("err","busy");
+  if(isOffline()){ msg.textContent="This search needs a connection. Try again when you're back online."; msg.classList.add("err"); return; }
   document.getElementById("ssaRadius").disabled=true; document.getElementById("ssaAdd").disabled=true;
   document.getElementById("ssaBody").innerHTML=`<div class="ssa-wait" role="status"><span id="ssaWaitText">Searching OpenStreetMap…</span></div>`;
   try{ const res=await findNearbySSA(r); ssaFound=res;
@@ -3269,7 +3299,8 @@ async function recalcFromMap(){
   const parts=[];
   if(filledL.length) parts.push(`Filled in: ${filledL.join(", ")}.`);
   if(kept.length) parts.push(`Kept your entries for ${kept.join("; ")}.`);
-  if(failed.length) parts.push(`Couldn't reach the lookup for ${failed.join(", ")}; try Recalculate later.`);
+  if(failed.length) parts.push(isOffline() ? `No connection, so ${failed.join(", ")} ${failed.length===1?"wasn't":"weren't"} looked up. Use Recalculate when you're back online.`
+    : `Couldn't reach the lookup for ${failed.join(", ")}; try Recalculate later.`);
   return parts.join(" ") || "Nothing new to fill in.";
 }
 document.getElementById("recalcBtn").onclick=async e=>{
@@ -3347,6 +3378,41 @@ function refreshLayersUi(){
     : `<div style="color:var(--muted)">Nothing drawn on the map yet.</div>`;
   lyrRoot.querySelector("[data-names]").checked=layerPrefs.names;
 }
+/* Ask the service worker to save USGS topo tiles (public domain) for 2 miles around the unit,
+   zoom 12 to 16. Satellite and Esri topo tiles are saved only as they're viewed, which their terms allow. */
+function offlineTileUrls(){
+  const c=unitCenter(); if(!c) return null;
+  let s=c[0], n=c[0], w=c[1], e=c[1];
+  if(hasUnit()) state.unitPoly.forEach(([la,lo])=>{ s=Math.min(s,la); n=Math.max(n,la); w=Math.min(w,lo); e=Math.max(e,lo); });
+  const dLat=3219/111320, dLon=3219/(111320*Math.cos(c[0]*Math.PI/180));   // 2 miles
+  s-=dLat; n+=dLat; w-=dLon; e+=dLon;
+  const tx=(lon,z)=>Math.floor((lon+180)/360*2**z);
+  const ty=(lat,z)=>{ const r=lat*Math.PI/180; return Math.floor((1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*2**z); };
+  const urls=[];
+  for(let z=12; z<=16; z++) for(let x=tx(w,z); x<=tx(e,z); x++) for(let y=ty(n,z); y<=ty(s,z); y++)
+    urls.push(`https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/${z}/${y}/${x}`);
+  return urls;
+}
+async function saveOfflineMap(root){
+  const msg=root.querySelector(".lyr-offmsg"), btn=root.querySelector("[data-offline]");
+  const say=t=>{ msg.textContent=t; };
+  const urls=offlineTileUrls();
+  if(!urls){ say("Draw the burn unit first."); return; }
+  if(isOffline()){ say("This needs a connection."); return; }
+  const reg = "serviceWorker" in navigator ? await navigator.serviceWorker.getRegistration().catch(()=>null) : null;
+  const sw = reg && (reg.active || navigator.serviceWorker.controller);
+  if(!sw){ say("Offline maps need the page opened from its web address."); return; }
+  btn.disabled=true; say(`Saving ${urls.length} map tiles…`);
+  const ch=new MessageChannel();
+  ch.port1.onmessage=ev=>{ const {done,failed,total}=ev.data;
+    if(done<total){ say(`Saving map tiles: ${done} of ${total}…`); return; }
+    btn.disabled=false;
+    say(failed ? `Saved ${total-failed} of ${total} tiles; ${failed} couldn't be loaded. Try again to fill the gaps.`
+               : `Saved. The USGS topo map works offline for 2 miles around the unit. Satellite tiles you've viewed are saved too.`);
+    if(!failed) toast("Topo map saved for offline use");
+  };
+  sw.postMessage({type:"saveTiles", urls}, [ch.port2]);
+}
 function addLayersControl(){
   const Ctl=L.Control.extend({options:{position:"topright"},onAdd(){
     const d=L.DomUtil.create("div","lyr");
@@ -3359,6 +3425,9 @@ function addLayersControl(){
         <div class="lyr-h">Show on map</div>
         <div class="lyr-list"></div>
         <label class="lyr-row" style="margin-top:6px"><input type="checkbox" data-names><span>Feature names</span></label>
+        <div class="lyr-h lyr-offh">Offline</div>
+        <button type="button" class="lyr-off" data-offline title="Save USGS topo map tiles for 2 miles around the unit so the map works without a connection">Save topo map for offline</button>
+        <div class="lyr-offmsg muted" aria-live="polite"></div>
         <div class="lyr-foot"><button type="button" data-showall>Show all</button><button type="button" data-done>Done</button></div>
       </div>`;
     L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
@@ -3367,6 +3436,7 @@ function addLayersControl(){
       const b=e.target.closest("[data-base]"); if(b) setBase(b.dataset.base);
       if(e.target.closest("[data-showall]")){ layerPrefs.hidden=[]; saveLayerPrefs(); redrawAll(); }
       if(e.target.closest("[data-done]")) closeLayers();
+      if(e.target.closest("[data-offline]")) saveOfflineMap(d);
     });
     d.addEventListener("change",e=>{
       const c=e.target.closest("[data-lyr]");
@@ -3561,13 +3631,23 @@ function merge3(local, base, remote){
 }
 function fmtTime(iso){ const d=new Date(iso); return d.toLocaleDateString(undefined,{month:"short",day:"numeric"})+", "+d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}); }
 function setSync(text,kind){ sync.status=text; sync.kind=kind; showSyncStatus(); }
+const isOffline = () => navigator.onLine===false;
+// edits made here that the shared copy doesn't have yet
+const unsynced = () => !!sync.who && sync.who.role!=="viewer" && !!sync.base && !same(docData(), sync.base);
+function setOffline(){
+  const p = unsynced();
+  setSync(p ? "Offline. Changes saved on this device" : "Offline", "offline");
+  statusEl.title = p ? "No connection. Your changes are saved in this browser and will sync when you're back online."
+                     : "No connection. You can keep working; changes are saved in this browser and sync when you're back online.";
+}
 function showSyncStatus(){
   if(!sync.who) return;
   statusEl.textContent = sync.status; statusEl.className = "status " + (sync.kind||"");
-  statusEl.title = sync.lastAt ? `Last change by ${sync.lastBy||"unknown"}, ${fmtTime(sync.lastAt)}` : "";
+  if(sync.kind!=="offline") statusEl.title = sync.lastAt ? `Last change by ${sync.lastBy||"unknown"}, ${fmtTime(sync.lastAt)}` : "";
 }
 async function api(path, opts={}){
-  return fetch(SYNC_URL+path, {...opts, cache:"no-store",
+  // a weak signal can leave a request hanging; treat 15 seconds without an answer as offline
+  return fetch(SYNC_URL+path, {...opts, cache:"no-store", signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined,
     headers:{"Authorization":"Bearer "+sync.code, "Content-Type":"application/json"}});
 }
 
@@ -3608,8 +3688,9 @@ main.addEventListener("focusout", ()=>setTimeout(()=>{
 
 async function pull(){
   if(!sync.who || sync.inflight) return;
+  if(isOffline()){ setOffline(); return; }
   let res;
-  try{ res = await api("/doc"); }catch(e){ setSync("Offline. Saved on this device","offline"); return; }
+  try{ res = await api("/doc"); }catch(e){ setOffline(); return; }
   if(res.status===401){ return lostAccess(); }
   if(!res.ok){ setSync("Sync error ("+res.status+")","warn"); return; }
   const remote = await res.json();
@@ -3619,7 +3700,11 @@ async function pull(){
     return;
   }
   sync.lastBy=remote.updatedBy; sync.lastAt=remote.updatedAt;
-  if(remote.version===sync.version){ if(!sync.timer && !sync.inflight) setSync("Synced","saved"); return; }
+  if(remote.version===sync.version){
+    // changes made while offline (possibly before a reload) go up now
+    if(unsynced()){ if(!sync.timer && !sync.inflight) schedulePush(0); }
+    else if(!sync.timer && !sync.inflight) setSync("Synced","saved");
+    return; }
   const local = docData();
   const merged = withDefaults(merge3(local, sync.base, remote.data));
   const n = applyChanges(merged);
@@ -3631,7 +3716,9 @@ async function pull(){
 
 function schedulePush(delay=2500){
   if(!sync.who || sync.who.role==="viewer") return;
-  setSync("Syncing…",""); clearTimeout(sync.timer);
+  clearTimeout(sync.timer);
+  if(isOffline()){ sync.timer=null; setOffline(); return; }   // the "online" event sends it
+  setSync("Syncing…","");
   sync.timer=setTimeout(()=>{ sync.timer=null; push(); }, delay);
 }
 async function push(){
@@ -3655,8 +3742,8 @@ async function push(){
     else if(res.status===403){ sync.who.role="viewer"; applyReadOnly(); setSync("View only","offline"); }
     else setSync("Sync error ("+res.status+")","warn");
   }catch(e){
-    setSync("Offline. Saved on this device","offline");
-    clearTimeout(sync.retry); sync.retry=setTimeout(()=>push(),15000);
+    setOffline();
+    clearTimeout(sync.retry); sync.retry=setTimeout(()=>{ if(!isOffline()) push(); },15000);
   }finally{
     sync.inflight=false;
     if(sync.again){ sync.again=false; push(); }
@@ -3675,7 +3762,7 @@ async function connect(){
   catch(e){
     // Offline: keep the last confirmed identity so edits continue and sync when back online
     const w = cachedWho();
-    if(w){ sync.who=w; applyReadOnly(); updateShareUI(); setSync("Offline. Saved on this device","offline"); return true; }
+    if(w){ sync.who=w; applyReadOnly(); updateShareUI(); setOffline(); return true; }
     statusEl.textContent="Offline. Can't verify your access code"; statusEl.className="status offline"; return false;
   }
   if(res.status===401){ lostAccess(); return false; }
@@ -3748,7 +3835,8 @@ function openSignIn(){
 }
 setInterval(()=>{ if(document.visibilityState==="visible" && !sync.timer) pull(); }, 20000);
 document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible") pull(); });
-window.addEventListener("online", ()=>{ if(sync.who) push(); else connect(); });
+window.addEventListener("online", ()=>{ if(sync.who) pull(); else connect(); });
+window.addEventListener("offline", ()=>{ if(sync.who) setOffline(); });
 
 /* ---------- sharing dialog ---------- */
 const shareDlg=document.getElementById("shareDlg");
@@ -4127,6 +4215,12 @@ async function renderSiteMap({kind="site", base="Satellite", W=1600, H=1150}={})
       const mpp=156543.03392*Math.cos(c[0]*Math.PI/180)/2**z, rM=Math.min(W,H)*0.42*mpp, cc=unitCenter();
       path(wedge(cc,state.wind.from+180,state.wind.to+180,rM),true);
       ctx.setLineDash([6*s,5*s]); ctx.fillStyle="rgba(120,120,120,.28)"; ctx.fill(); ctx.strokeStyle="#555"; ctx.lineWidth=1.5*s; ctx.stroke(); ctx.setLineDash([]);
+      // preferred direction the smoke travels, with an arrowhead
+      const d=state.wind.ideal+180, [x0,y0]=P(cc), [x1,y1]=P(destPt(cc,d,rM*0.85)), a=Math.atan2(y1-y0,x1-x0), hl=16*s;
+      ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1-hl*0.8*Math.cos(a),y1-hl*0.8*Math.sin(a));
+      ctx.lineCap="round"; ctx.strokeStyle="rgba(255,255,255,.85)"; ctx.lineWidth=7*s; ctx.stroke(); ctx.strokeStyle="#333"; ctx.lineWidth=3.5*s; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x1-hl*Math.cos(a-0.45),y1-hl*Math.sin(a-0.45)); ctx.lineTo(x1-hl*Math.cos(a+0.45),y1-hl*Math.sin(a+0.45)); ctx.closePath();
+      ctx.fillStyle="#333"; ctx.fill(); ctx.lineJoin="round"; ctx.lineWidth=1.5*s; ctx.strokeStyle="#fff"; ctx.stroke();
     }
     lines().filter(l=>l.kind==="smokeNight").forEach(l=>{ const k=FKINDS[l.kind];
       path(l.pts,false); ctx.lineCap="round"; ctx.strokeStyle="rgba(0,0,0,.6)"; ctx.lineWidth=8*s; ctx.stroke();
@@ -4362,9 +4456,7 @@ function burnPlanAppendix(extra,maps=[]){
 }
 async function exportBurnPlanDocx(){
   const JSZip=await loadJSZip();
-  const res=await fetch("burn-plan-template.docx",{cache:"no-cache"});
-  if(!res.ok) throw new Error("template");
-  const zip=await JSZip.loadAsync(await res.arrayBuffer());
+  const zip=await JSZip.loadAsync(await fetchTemplate("burn-plan-template.docx"));
   let xml=await zip.file("word/document.xml").async("string");
   const {V,extra}=burnPlanValues();
   const maps=[];
@@ -4446,9 +4538,7 @@ function pdfSafe(font,s){
 async function exportSmpPdf(){
   const PDFLib=await loadPdfLib();
   const {PDFDocument,StandardFonts,rgb}=PDFLib;
-  const res=await fetch("smp-application-template.pdf",{cache:"no-cache"});
-  if(!res.ok) throw new Error("template");
-  const doc=await PDFDocument.load(await res.arrayBuffer(),{ignoreEncryption:true});
+  const doc=await PDFDocument.load(await fetchTemplate("smp-application-template.pdf"),{ignoreEncryption:true});
   const form=doc.getForm();
   const helv=await doc.embedFont(StandardFonts.Helvetica);
   const times=await doc.embedFont(StandardFonts.TimesRoman), timesB=await doc.embedFont(StandardFonts.TimesRomanBold), timesI=await doc.embedFont(StandardFonts.TimesRomanItalic);
@@ -4624,6 +4714,7 @@ async function exportSmpPdf(){
   }
   const secA=SECTIONS.find(s=>s.id==="ssa"), secB=SECTIONS.find(s=>s.id==="rx");
   const renderSection=(sec,heading)=>{
+    if(secOff(sec.id)) return;
     if(!sec.fields.some(f=>filled(state[f.k]) || (f.type==="mapcalc" && mapCalc(f.k).length))) return;
     title(heading);
     sec.fields.forEach(f=>{
@@ -4672,7 +4763,7 @@ function mdTable(cols,rows){
 function toMarkdown(){
   const blank = "_Not filled in_";
   let md = `# Smoke Management Plan: ${state.name||"Untitled"}\n\nMendocino County Air Quality Management District  \nExported ${new Date().toLocaleString()}\n`;
-  SECTIONS.filter(s=>!s.bp).forEach(s=>{
+  SECTIONS.filter(s=>!s.bp && !secOff(s.id)).forEach(s=>{
     md += `\n## ${s.title}\n\n`;
     if(s.custom==="emissions"){
       const t=emissionTotals();
@@ -4732,7 +4823,26 @@ function getDownloads(){
   return dlPromise;
 }
 const toastEl=document.getElementById("toast");
-function toast(msg){ toastEl.textContent=msg; toastEl.classList.add("show"); clearTimeout(toastEl._t); toastEl._t=setTimeout(()=>toastEl.classList.remove("show"),2600); }
+function toast(msg,ms){ toastEl.textContent=msg; toastEl.classList.add("show"); clearTimeout(toastEl._t); toastEl._t=setTimeout(()=>toastEl.classList.remove("show"),ms||2600); }
+/* A failed export still saves the Markdown version, then says why the real file couldn't be made. */
+async function exportFailed(e,form,mdName,mdText,label){
+  console.error(e);
+  const m=String(e && e.message || e);
+  let why;
+  if(m==="template") why = location.protocol==="file:"
+    ? `This page is open as a local file, so it can't load the ${form} template. Open it from its web address to export.`
+    : `Couldn't load the ${form} template${e.status?` (error ${e.status})`:""}. Check the connection and try again.`;
+  else if(m==="jszip"||m==="pdf-lib") why = "Couldn't load the export library. Check the connection and try again.";
+  else why = `Couldn't make the ${form}: ${m}.`;
+  await offerFile(mdName, mdText, label);
+  toast(why+" Saved a Markdown copy instead.", 10000);
+}
+async function fetchTemplate(name){
+  let res;
+  try{ res=await fetch(name,{cache:"no-cache"}); }catch(_){ throw new Error("template"); }
+  if(!res.ok){ const err=new Error("template"); err.status=res.status; throw err; }
+  return res.arrayBuffer();
+}
 
 const dlg=document.getElementById("mdDialog"), mdText=document.getElementById("mdText"), mdNote=document.getElementById("mdNote");
 function showText(text,note){ mdText.value=text; mdNote.textContent=note; if(dlg.showModal) dlg.showModal(); else dlg.setAttribute("open",""); }
@@ -4777,7 +4887,7 @@ function missingFields(kind){
   };
   if(kind==="bp") BP_SHARED.forEach(k=>{ const s=SECTIONS.find(x=>x.fields && x.fields.some(f=>f.k===k)); if(s) add(s,s.fields.find(f=>f.k===k),true); });
   SECTIONS.forEach(s=>{
-    if(s.id==="checklist" || s.id==="notes") return;
+    if(s.id==="checklist" || s.id==="notes" || secOff(s.id)) return;
     if(kind==="smp" ? s.bp : !s.bp) return;
     if(s.custom==="emissions"){ if(!(emissionTotals().p>0)) out.push({sec:s.id,title:s.title,k:"emis",label:"Emissions table"}); return; }
     s.fields.forEach(f=>add(s,f));
@@ -4815,6 +4925,10 @@ function showMissing(doc,miss){
   document.getElementById("missFoot").onclick=e=>{ if(e.target.closest("[data-a]")) missDlg.close(); };
   missDlg.onclose=null; missDlg.showModal();
 }
+main.addEventListener("click",e=>{
+  const b=e.target.closest(".sec-off [data-goto]"); if(!b) return;
+  goToField(b.dataset.goto,b.dataset.sec);
+});
 document.getElementById("missBody").addEventListener("click",e=>{
   const b=e.target.closest("[data-goto]"); if(!b) return;
   missDlg.close(); goToField(b.dataset.goto,b.dataset.sec);
@@ -4835,7 +4949,7 @@ document.getElementById("exportMd").onclick=async()=>{
   try{ downloadBlob(slug()+"-smp-application.pdf", await exportSmpPdf(), "SMP application");
     if(miss.length) setTimeout(()=>showMissing("SMP application",miss),600);
     if(lastMapBases.some(b=>!b)) setTimeout(()=>toast("Map imagery couldn't be loaded, so the map shows features only"),2800); }
-  catch(e){ console.error(e); toast("Couldn't fill the PDF; saving Markdown instead"); offerFile(slug()+"-smp.md", toMarkdown(), "SMP"); }
+  catch(e){ exportFailed(e, "SMP application", slug()+"-smp.md", toMarkdown(), "SMP"); }
 };
 document.getElementById("mapImgBtn").onclick=async()=>{
   if(!siteBounds("site")){ readout("Draw the unit or add site features first."); return; }
@@ -4855,7 +4969,7 @@ document.getElementById("exportBp").onclick=async()=>{
     if(miss.length) setTimeout(()=>showMissing("burn plan",miss),600);
     if(lastMapBases.some(b=>!b)) setTimeout(()=>toast("Map imagery couldn't be loaded, so the maps show features only"),2800);
     else if(lastMapBases.length && lastMapBases[0]!==(currentBase||"Satellite")) setTimeout(()=>toast(`Site map uses the ${lastMapBases[0]} base map`),2800); }
-  catch(e){ console.error(e); toast("Couldn't build the Word file; saving Markdown instead"); offerFile(slug()+"-burn-plan.md", toBurnPlanMd(), "Burn plan"); }
+  catch(e){ exportFailed(e, "burn plan", slug()+"-burn-plan.md", toBurnPlanMd(), "Burn plan"); }
 };
 document.getElementById("backup").onclick=()=>{ saveNow(); offerFile(slug()+"-backup.json", JSON.stringify(state,null,2), "Backup"); };
 
@@ -4873,6 +4987,9 @@ restoreFile.onchange=async()=>{
 
 renderAll(); applyTips(); showSaved(); applyReadOnly();
 connect().then(()=>{ if(!sync.who) openSignIn(); });
+// Offline support: sw.js keeps copies of the page, templates, libraries, and viewed map tiles
+if("serviceWorker" in navigator && (location.protocol==="https:" || location.hostname==="localhost"))
+  navigator.serviceWorker.register("sw.js").catch(e=>console.warn("Offline support unavailable:",e));
 const hdrEl=document.querySelector("header.top");
 const setHdr=()=>document.documentElement.style.setProperty("--hdr", hdrEl.offsetHeight+"px");
 setHdr(); if(window.ResizeObserver) new ResizeObserver(setHdr).observe(hdrEl);
