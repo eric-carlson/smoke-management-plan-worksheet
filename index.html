@@ -47,6 +47,7 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background
 #missDlg{width:min(560px,94vw)}
 #missDlg h2{margin:0 0 4px;font-size:1.25rem;font-weight:800}
 #noticeDlg{width:min(460px,94vw)}
+.app-ver{margin:10px 0 0;font-size:.8125rem;color:var(--muted)}
 #noticeDlg h2{margin:0 0 4px;font-size:1.25rem;font-weight:800}
 #missBody ul{margin:2px 0 10px;padding-left:20px}
 #missBody li{margin:2px 0;font-size:.9375rem}
@@ -991,8 +992,9 @@ input.computed{background:transparent;border-style:dashed;font-variant-numeric:t
 .lyr-offmsg:empty{display:none}
 .lyr-h.lyr-offh{margin-top:12px}
 .lyr-foot button{border:0;background:none;color:var(--oak);font:inherit;font-weight:600;cursor:pointer;padding:2px 0}
-.leaflet-tooltip.flabel{background:rgba(255,255,255,.88);border:0;box-shadow:none;padding:1px 5px;font:600 11px/1.3 "Public Sans",system-ui,sans-serif;color:#1c2420}
+.leaflet-tooltip.flabel{white-space:normal;width:max-content;max-width:150px;background:rgba(255,255,255,.88);border:0;box-shadow:none;padding:0 4px;font:600 10px/1.25 "Public Sans",system-ui,sans-serif;color:#1c2420}
 .leaflet-tooltip.flabel::before{display:none}
+.leaflet-tooltip .fsub{display:block;font-weight:500;font-size:9px;opacity:.85}
 .status.offline::before,.status.warn::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
 .status.offline::before{background:var(--muted)}
 .status.warn::before{background:var(--accent)}
@@ -1237,6 +1239,7 @@ body.readonly .ro-banner{display:block}
   <p class="h-intro">Who changed which parts of the worksheet. One person's edits within 15 minutes are grouped together. Click a field to jump to it.</p>
   <div id="historyBody" class="h-body"></div>
   <div class="dlg-foot"><span class="fieldmsg" id="historyMsg"></span><button class="btn" id="historyRefresh">Refresh</button><button class="btn" id="historyClose">Close</button></div>
+  <p class="app-ver" id="appVer"></p>
 </dialog>
 <dialog id="ssaDlg" aria-labelledby="ssaTitle">
   <h2 id="ssaTitle">Nearby smoke sensitive areas</h2>
@@ -2811,7 +2814,7 @@ function drawFeatures(){
     if(!layerOn(groupOf(f.kind))) return;
     const sel=featSel && featSel.t==="pt" && featSel.id===f.id;
     const m=L.marker([f.lat,f.lon],{icon:pinIcon(f.kind,sel?"sel":""),draggable:editing,keyboard:false,interactive:editing||mapMode==="browse"})
-      .bindTooltip(f.name||FKINDS[f.kind].label, showNames()?{permanent:true,direction:"right",offset:[10,0],className:"flabel"}:{direction:"top",offset:[0,-10]}).addTo(featLayer);
+      .bindTooltip(esc(f.name||FKINDS[f.kind].label)+(f.kind==="water" && String(f.size||"").trim() ? `<span class="fsub">${esc(String(f.size).trim())}</span>` : ""), showNames()?{permanent:true,direction:"right",offset:[10,0],className:"flabel"}:{direction:"top",offset:[0,-10]}).addTo(featLayer);
     if(mapMode==="browse") m.on("click",ev=>{ L.DomEvent.stopPropagation(ev); openFeatPopup("pt",f.id,L.latLng(f.lat,f.lon)); });
     if(editing){
       m.on("click",ev=>{ L.DomEvent.stopPropagation(ev);
@@ -4243,7 +4246,7 @@ async function renderSiteMap({kind="site", base="Satellite", W=1600, H=1150}={})
       ctx.save(); ctx.translate(x,y); ctx.rotate(r); ctx.beginPath(); ctx.moveTo(0,-7*s); ctx.lineTo(6*s,6*s); ctx.lineTo(0,3*s); ctx.lineTo(-6*s,6*s); ctx.closePath();
       ctx.fillStyle="#fff"; ctx.fill(); ctx.lineWidth=1.6*s; ctx.strokeStyle="#000"; ctx.lineJoin="round"; ctx.stroke(); ctx.restore(); }));
   }
-  const halo = (t,x,y,size,align="left") => { ctx.font=`700 ${size}px "Public Sans",Arial,sans-serif`; ctx.textAlign=align; ctx.textBaseline="middle";
+  const halo = (t,x,y,size,align="left",weight=700) => { ctx.font=`${weight} ${size}px "Public Sans",Arial,sans-serif`; ctx.textAlign=align; ctx.textBaseline="middle";
     ctx.lineWidth=size/3.2; ctx.strokeStyle="rgba(255,255,255,.92)"; ctx.strokeText(t,x,y); ctx.fillStyle="#111"; ctx.fillText(t,x,y); };
   const pin = (k,x,y,r) => {
     ctx.beginPath(); if(k.shape==="square") ctx.rect(x-r,y-r,2*r,2*r); else ctx.arc(x,y,r,0,Math.PI*2);
@@ -4261,21 +4264,36 @@ async function renderSiteMap({kind="site", base="Satellite", W=1600, H=1150}={})
       || a.x<4*s || a.y<4*s || a.x+a.w>W-4*s || a.y+a.h>H-4*s;
     const pts=feats().map(f=>({f,k:FKINDS[f.kind]||FKINDS.other,p:f.pt||[f.lat,f.lon]})).filter(o=>o.p&&isFinite(o.p[0])).map(o=>({...o,xy:P(o.p)}));
     pts.forEach(o=>{ const r=13*s; taken.push({x:o.xy[0]-r,y:o.xy[1]-r,w:2*r,h:2*r}); });
-    const place=(t,x,y,size,r,extra=[])=>{
-      ctx.font=`700 ${size}px "Public Sans",Arial,sans-serif`; const tw=ctx.measureText(t).width, th=size*1.15, g=4*s;
-      const cand=[[x+r+g,y-th/2],[x-r-g-tw,y-th/2],[x-tw/2,y-r-g-th],[x-tw/2,y+r+g],[x+r,y-r-th],[x+r,y+r],[x-r-tw,y-r-th],[x-r-tw,y+r],...extra];
+    if(loc){ const [lx,ly]=P(loc), r=9*s; taken.push({x:lx-r,y:ly-r,w:2*r,h:2*r}); }   // keep names off the burn location dot
+    // long names wrap onto lines about 18 characters wide, so they don't sprawl across the map
+    // sub: an optional smaller line under the name (a water source's size)
+    const place=(t,x,y,size,r,extra=[],sub="")=>{
+      ctx.font=`700 ${size}px "Public Sans",Arial,sans-serif`;
+      const maxW=size*9.5, ls=[]; let cur="";
+      String(t).split(/\s+/).forEach(w=>{ const tryL=cur?cur+" "+w:w; if(!cur || ctx.measureText(tryL).width<=maxW) cur=tryL; else { ls.push(cur); cur=w; } });
+      if(cur) ls.push(cur);
+      const subSize=size*0.85, lh=size*1.15;
+      let subW=0; if(sub){ ctx.font=`500 ${subSize}px "Public Sans",Arial,sans-serif`; subW=ctx.measureText(sub).width; ctx.font=`700 ${size}px "Public Sans",Arial,sans-serif`; }
+      const tw=Math.max(subW,...ls.map(l=>ctx.measureText(l).width)), th=lh*ls.length+(sub?subSize*1.15:0), g=4*s;
+      // [x, y, alignment]: right of the pin, left, above, below, then the diagonals
+      const cand=[[x+r+g,y-th/2,"left"],[x-r-g-tw,y-th/2,"right"],[x-tw/2,y-r-g-th,"center"],[x-tw/2,y+r+g,"center"],
+        [x+r,y-r-th,"left"],[x+r,y+r,"left"],[x-r-tw,y-r-th,"right"],[x-r-tw,y+r,"right"],...extra.map(([ex,ey])=>[ex,ey,"left"])];
       const at=cand.find(([cx,cy])=>!hit({x:cx,y:cy,w:tw,h:th}))||cand[0];
-      taken.push({x:at[0],y:at[1],w:tw,h:th}); halo(t,at[0],at[1]+th/2,size);
+      taken.push({x:at[0],y:at[1],w:tw,h:th});
+      const ax = at[2]==="right" ? at[0]+tw : at[2]==="center" ? at[0]+tw/2 : at[0];
+      ls.forEach((l,i)=>halo(l,ax,at[1]+lh*i+lh/2,size,at[2]));
+      if(sub) halo(sub,ax,at[1]+lh*ls.length+subSize*0.575,subSize,at[2],500);
     };
     pts.forEach(o=>pin(o.k,o.xy[0],o.xy[1],11*s));
-    pts.forEach(o=>{ if(o.f.name) place(o.f.name,o.xy[0],o.xy[1],12*s,11*s); });
+    pts.forEach(o=>{ const sub=o.f.kind==="water" ? String(o.f.size||"").trim() : "";
+      if(o.f.name || sub) place(o.f.name||o.k.label,o.xy[0],o.xy[1],12*s,11*s,[],sub); });
     lines().forEach(l=>{ if(!l.name||l.pts.length<2) return;
       // try the middle of each segment, longest first
       const segs=l.pts.slice(1).map((q,i)=>{ const a=P(l.pts[i]), b2=P(q); return {mx:(a[0]+b2[0])/2,my:(a[1]+b2[1])/2,len:Math.hypot(b2[0]-a[0],b2[1]-a[1])}; }).sort((a,b2)=>b2.len-a.len);
       const m=segs[0], extra=segs.slice(1).flatMap(sg=>[[sg.mx+8*s,sg.my-20*s],[sg.mx+8*s,sg.my+6*s]]);
-      place(l.name,m.mx,m.my,11*s,8*s,extra); });
+      place(l.name,m.mx,m.my,9.5*s,8*s,extra); });
   } else if(hasUnit()){
-    const [x,y]=P(loc); halo(`Burn unit (${polyAcres(state.unitPoly).toFixed(1)} ac)`,x+14*s,y-14*s,13*s);
+    const [x,y]=P(loc); halo(`Burn unit (${polyAcres(state.unitPoly).toFixed(1)} ac)`,x+12*s,y-12*s,11*s);
   }
   // frame elements: title, north arrow, scale bar, legend, credit
   const box = (x,y,w,h) => { ctx.fillStyle="rgba(255,255,255,.93)"; ctx.fillRect(x,y,w,h); ctx.lineWidth=1*s; ctx.strokeStyle="rgba(0,0,0,.35)"; ctx.strokeRect(x,y,w,h); };
@@ -4595,7 +4613,11 @@ async function exportSmpPdf(){
     if(where){ cont.push({where, text:String(val).trim(), f, size, room}); f.setText(""); }
     else { f.setText(s); f.setFontSize(size); }
   };
-  const check=(name,on)=>{ if(!on) return; try{ const c=form.getCheckBox(name); c.check(); c.updateAppearances(); }catch(e){ console.warn("No checkbox",name); } };
+  const check=(name,on)=>{ if(!on) return; try{ const c=form.getCheckBox(name);
+    // boxes the form draws as part of the field (border color set, no border width) would lose
+    // their outline when the checked appearance is regenerated; give them a 1 pt border
+    c.acroField.getWidgets().forEach(w=>{ const mk=w.getAppearanceCharacteristics(); if(mk && mk.getBorderColor()) w.getOrCreateBorderStyle().setWidth(1); });
+    c.check(); c.updateAppearances(); }catch(e){ console.warn("No checkbox",name,e); } };
 
   // Section I
   const types=["Potential to impact sensitive receptors","Burning past 3:00 P.M. and overnight burns","More than 10 acres broadcast or 50 tons piled fuels","Burning 100+ acres"];
@@ -4863,6 +4885,13 @@ function getDownloads(){
   return dlPromise;
 }
 const toastEl=document.getElementById("toast");
+/* Version shown at the bottom of the History dialog, so it's clear which copy a browser is running (the offline
+   support can keep serving an older one until it reloads). Bump APP_VERSION with every release;
+   the published time comes from GitHub Pages' Last-Modified header. */
+const APP_VERSION="2026-10-27.5";
+{ const lm=new Date(document.lastModified), el=document.getElementById("appVer");
+  const pub = !isNaN(lm) && Date.now()-lm>60000 ? `, published ${lm.toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"})} ${lm.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"})}` : "";
+  if(el) el.textContent=`Version ${APP_VERSION}${pub}`; }
 /* Problems are reported in a dialog that stays until it's dismissed: a toast is easy to miss and can
    vanish behind the browser's save prompt. Notices wait their turn behind any dialog already open. */
 const noticeDlg=document.getElementById("noticeDlg"), noticeQ=[];
