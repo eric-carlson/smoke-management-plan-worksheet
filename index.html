@@ -1813,7 +1813,7 @@ const secOff = id => !!ATTACH_OPT[id] && !(state.attach||[]).includes(ATTACH_OPT
    content the question is answered (exports include it), so the typed field becomes optional
    and its placeholder says what is still worth adding. */
 const MAP_PARTNER={
-  access:["calcAccess","gate codes, road conditions, or vehicle limits"],
+  access:["calcAccess","road conditions or vehicle limits"],
   bpWater:["calcWater","pump or tender access, refill plans, or hydrant fittings"],
   bpAccess:["calcAccessBp","road conditions, signage needs, or parking"],
   bpValues:["calcValues","how each one will be protected"],
@@ -1852,9 +1852,6 @@ function updateDerived(){
   main.querySelectorAll(".mapcalc").forEach(el=>{
     const k=el.id.slice(3), ls=mapCalc(k);
     el.innerHTML = ls.length ? `<ul>${ls.map(l=>`<li>${esc(l)}</li>`).join("")}</ul>` : `<span class="muted">${esc(MAPCALC_HINT[k]||"")}</span>`;
-    // the SMP application goes to the district, so gate codes stay out of it; say where they went
-    if(k==="calcAccess" && feats().some(f=>f.kind==="gate" && f.code))
-      el.insertAdjacentHTML("beforeend",`<div class="muted" style="margin-top:4px">Gate codes are left out here because this goes to the air district. They're in the burn plan's Unit access, for crews.</div>`);
   });
   const t = emissionTotals();
   t.per.forEach((x,i)=>{
@@ -2373,7 +2370,14 @@ function wedge(c,a,b,r,steps=40){
   for(let i=0;i<=steps;i++) pts.push(destPt(c, a+s*i/steps, r));
   return pts;
 }
-function windText(w){ return `${compass(w.from)} (${Math.round(w.from)}°) clockwise to ${compass(w.to)} (${Math.round(w.to)}°)`; }
+/* A clockwise range of directions named with its middle too ("E through S to W"), so a wide range
+   can't be read the short way around. The middle is left out when it would repeat an end. */
+function arcText(a,b){
+  const m=compass(a+span(a,b)/2), x=compass(a), y=compass(b);
+  return x===y ? x : (m===x || m===y) ? `${x} to ${y}` : `${x} through ${m} to ${y}`;
+}
+function windText(w){ const m=compass(w.from+span(w.from,w.to)/2), x=compass(w.from), y=compass(w.to);
+  return `${x} (${Math.round(w.from)}°) ${m===x||m===y ? "clockwise" : `through ${m}`} to ${y} (${Math.round(w.to)}°)`; }
 function drawWind(withHandles){
   if(!map || !map._loaded) return;
   // withHandles: true = redraw handles, false = remove them, null = leave them (during a drag)
@@ -2424,7 +2428,7 @@ function dayTravelText(){
   const rs=(state.ssaList||[]).filter(r=>String(r.area||"").trim());
   const down=rs.filter(r=>{ const d=deg(r.dir); return d!=null && inArc(d,to1,to2); }).map(r=>`${String(r.area).trim()}${r.dist?` (${String(r.dist).trim()} mi ${String(r.dir).trim()})`:` (${String(r.dir).trim()})`}`);
   const adj=rs.filter(r=>/adjacent|inside/i.test(String(r.dir||""))).map(r=>String(r.area).trim());
-  let t=`With surface winds from ${compass(w.from)} to ${compass(w.to)} (preferred ${compass(w.ideal)}), daytime heating lifts the smoke and carries it toward the ${compass(to1)} to ${compass(to2)}, most often ${compass(w.ideal+180)}.`;
+  let t=`With surface winds from the ${arcText(w.from,w.to)} (preferred ${compass(w.ideal)}), daytime heating lifts the smoke and carries it toward the ${arcText(to1,to2)}, most often toward the ${compass(w.ideal+180)}.`;
   t += down.length ? ` Smoke sensitive areas in that direction: ${down.join(", ")}.` : " No listed smoke sensitive areas lie in that direction.";
   if(adj.length) t += ` ${adj.join(" and ")} ${adj.length>1?"are":"is"} next to the unit and may see smoke in any wind.`;
   return t;
@@ -2885,9 +2889,9 @@ function mapCalc(k){
   const ofKind = kind => feats().filter(f=>f.kind===kind);
   if(k==="calcAccess" || k==="calcAccessBp"){
     const gates=ofKind("gate"), used=new Set();
-    // gate codes go in the burn plan (for crews), not the SMP application (for the district)
+    // every description of a locked gate carries its code, in both the SMP and the burn plan
     // "Gate at 128, 30010 Highway 128 (gate code 4271; 38° 53.1′ N, ...)": address after the name, code and coordinates together
-    const gateRef = (g,def) => `${nm(g,def)}${g.address?`, ${g.address}`:""} (${[k==="calcAccessBp" && g.code ? `gate code ${g.code}` : "", dmm(g.lat,g.lon)].filter(Boolean).join("; ")})`;
+    const gateRef = (g,def) => `${nm(g,def)}${g.address?`, ${g.address}`:""} (${[g.code ? `gate code ${g.code}` : "", dmm(g.lat,g.lon)].filter(Boolean).join("; ")})`;
     lines().filter(l=>l.kind==="access").forEach(l=>{
       const a=l.pts[0], b=l.pts[l.pts.length-1];
       const [start,end] = distFromUnit(a).m <= distFromUnit(b).m ? [b,a] : [a,b];
@@ -4053,7 +4057,7 @@ function toBurnPlanMd(){
     md += `| ${l} | ${cell(g("rxTable",r,"min"))} | ${cell(g("rxTable",r,"des"))} | ${cell(g("rxTable",r,"max"))} |\n`; });
   if(v("rxOther")) md += `\n**Other prescription elements**\n\n${block(v("rxOther"))}\n`;
   const wind = state.wind
-    ? `Acceptable: wind from ${windText(state.wind)}. Optimal: ${compass(state.wind.ideal)} (${Math.round(state.wind.ideal)}°). Smoke travels toward ${compass(state.wind.from+180)} to ${compass(state.wind.to+180)}.`
+    ? `Acceptable: wind from ${windText(state.wind)}. Optimal: ${compass(state.wind.ideal)} (${Math.round(state.wind.ideal)}°). Smoke travels toward the ${arcText(state.wind.from+180,state.wind.to+180)}.`
     : [v("surfDirRange") && `Acceptable: ${v("surfDirRange")}.`, v("surfDirIdeal") && `Optimal: ${v("surfDirIdeal")}.`].filter(Boolean).join(" ");
   md += `\n${line("Wind direction (acceptable range and optimal)",wind)}\n${line("Seasonality of burn",v("rxSeason"))}\n`;
 
@@ -4553,15 +4557,24 @@ async function exportSmpPdf(){
     const s=pdfSafe(helv,String(val??"").trim().replace(/\s*\n+\s*/g,"; "));
     if(!s){ return; }
     const w=f.acroField.getWidgets()[0].getRectangle(), room=w.width-4;
+    // 1. one line, shrinking to 8 pt
     let size=Math.min(10, Math.max(6,w.height-5));
     while(size>8 && helv.widthOfTextAtSize(s,size)>room) size-=0.5;
-    if(helv.widthOfTextAtSize(s,size)>room && where){
-      cont.push([where,String(val).trim()]);
-      const note=` (see attached)`;
-      let cut=s; while(cut.length>10 && helv.widthOfTextAtSize(cut+"..."+note,size)>room) cut=cut.slice(0,-1);
-      f.setText(cut.replace(/\s+\S*$/,"")+"..."+note);
-    } else f.setText(s);
-    f.setFontSize(size);
+    if(helv.widthOfTextAtSize(s,size)<=room){ f.setText(s); f.setFontSize(size); return; }
+    // 2. wrapped onto as many lines as the box holds, shrinking to 6.5 pt
+    const wrap=(t,sz)=>{ const out=[]; let line="";
+      t.split(/\s+/).forEach(word=>{ const tryL=line?line+" "+word:word;
+        if(helv.widthOfTextAtSize(tryL,sz)<=room) line=tryL;
+        else { if(line) out.push(line); line=word; } });
+      if(line) out.push(line); return out; };
+    for(let sz=Math.min(10,size); sz>=6.5; sz-=0.5){
+      const lines=wrap(s,sz), fits=Math.floor((w.height-3)/(sz*1.18));
+      if(fits>=2 && lines.length<=fits && lines.every(l=>helv.widthOfTextAtSize(l,sz)<=room)){
+        f.enableMultiline(); f.setText(lines.join("\n")); f.setFontSize(sz); return; }
+    }
+    // 3. still too long: the whole answer goes on the continuation page, and the box says so
+    if(where){ cont.push([where,String(val).trim()]); f.setText("See continuation page: "+where.replace(/^Section [IVX]+, /,"")); f.setFontSize(Math.min(9,size)); }
+    else { f.setText(s); f.setFontSize(size); }
   };
   const check=(name,on)=>{ if(!on) return; try{ const c=form.getCheckBox(name); c.check(); c.updateAppearances(); }catch(e){ console.warn("No checkbox",name); } };
 
@@ -4725,7 +4738,7 @@ async function exportSmpPdf(){
       else if(f.type==="textarea") block(f.label,val);
       else kv(f.label,val);
     });
-    if(sec.id==="rx" && state.wind) kv("Permissible wind directions",`Wind from ${windText(state.wind)}; preferred ${compass(state.wind.ideal)} (${Math.round(state.wind.ideal)} deg). Smoke travels toward ${compass(state.wind.from+180)} to ${compass(state.wind.to+180)}.`);
+    if(sec.id==="rx" && state.wind) kv("Permissible wind directions",`Wind from ${windText(state.wind)}; preferred ${compass(state.wind.ideal)} (${Math.round(state.wind.ideal)} deg). Smoke travels toward the ${arcText(state.wind.from+180,state.wind.to+180)}.`);
   };
   renderSection(secA,"Section A: Smoke sensitive areas, meteorology, and notification");
   renderSection(secB,"Section B: Prescription and contingency");
@@ -4800,7 +4813,7 @@ function toMarkdown(){
     });
     if(simple.length) md += simple.join("\n")+"\n";
     if(s.id==="rx" && state.wind){
-      md += `\n### Permissible wind directions\n\nWind from ${windText(state.wind)}. Preferred: ${compass(state.wind.ideal)} (${Math.round(state.wind.ideal)}°). Smoke travels toward ${compass(state.wind.from+180)} to ${compass(state.wind.to+180)}.\n`;
+      md += `\n### Permissible wind directions\n\nWind from ${windText(state.wind)}. Preferred: ${compass(state.wind.ideal)} (${Math.round(state.wind.ideal)}°). Smoke travels toward the ${arcText(state.wind.from+180,state.wind.to+180)}.\n`;
     }
     if(s.id==="project" && hasUnit()){
       md += `\n### Unit boundary\n\nDrawn on the worksheet map: ${state.unitPoly.length} corners, ${polyAcres(state.unitPoly).toFixed(1)} acres.\n\n| Corner | Latitude | Longitude |\n| --- | --- | --- |\n`;
