@@ -46,6 +46,8 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background
 #aboutDlg{width:min(640px,94vw)}
 #missDlg{width:min(560px,94vw)}
 #missDlg h2{margin:0 0 4px;font-size:1.25rem;font-weight:800}
+#noticeDlg{width:min(460px,94vw)}
+#noticeDlg h2{margin:0 0 4px;font-size:1.25rem;font-weight:800}
 #missBody ul{margin:2px 0 10px;padding-left:20px}
 #missBody li{margin:2px 0;font-size:.9375rem}
 #missBody button{border:0;background:none;padding:0;font:inherit;color:var(--oak);text-decoration:underline;text-underline-offset:2px;cursor:pointer;text-align:left}
@@ -208,7 +210,7 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-w
   dialog textarea{min-height:0;height:calc(100dvh - 220px)}
   /* Sharing and view-only stay traditional centered dialogs with the page visible around them */
   #historyDlg .h-body{max-height:calc(100dvh - 260px)}
-  #shareDlg,#roDlg,#historyDlg,#ssaDlg,#aboutDlg,#missDlg{inset:0;margin:auto;width:calc(100% - 24px);max-width:560px;height:fit-content;max-height:calc(100dvh - 48px);
+  #shareDlg,#roDlg,#historyDlg,#ssaDlg,#aboutDlg,#missDlg,#noticeDlg{inset:0;margin:auto;width:calc(100% - 24px);max-width:560px;height:fit-content;max-height:calc(100dvh - 48px);
     border:1px solid var(--line);border-radius:12px;padding:20px 18px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
   #shareDlg[open]{overflow-y:auto}
   #shareDlg .dlg-foot{position:sticky;bottom:-20px;background:var(--surface);padding-bottom:4px}
@@ -1218,6 +1220,11 @@ body.readonly .ro-banner{display:block}
     <p>Elevation, slope, and aspect: USGS 3DEP. Township, range, and section: BLM PLSS. Places, towns, and addresses: OpenStreetMap. Imagery and topo maps: Esri and USGS. These are good starting values, not surveyed measurements, so check anything that matters.</p>
   </div>
   <div class="dlg-foot"><button class="btn" id="aboutClose">Close</button></div>
+</dialog>
+<dialog id="noticeDlg" aria-labelledby="noticeTitle" aria-describedby="noticeText">
+  <h2 id="noticeTitle"></h2>
+  <p class="h-intro" id="noticeText"></p>
+  <div class="dlg-foot"><button class="btn primary" id="noticeOk">OK</button></div>
 </dialog>
 <dialog id="missDlg" aria-labelledby="missTitle">
   <h2 id="missTitle"></h2>
@@ -4544,6 +4551,17 @@ async function exportSmpPdf(){
   const {PDFDocument,StandardFonts,rgb}=PDFLib;
   const doc=await PDFDocument.load(await fetchTemplate("smp-application-template.pdf"),{ignoreEncryption:true});
   const form=doc.getForm();
+  // the district's form carries a leftover reviewer's comment (a sticky note shown as a speech bubble
+  // on page 5) and some empty comment boxes; drop them, keeping real form labels like "SMP Application #:"
+  { const {PDFName}=PDFLib;
+    doc.getPages().forEach(page=>{
+      const annots=page.node.Annots(); if(!annots) return;
+      for(let i=annots.size()-1;i>=0;i--){
+        const a=annots.lookup(i); if(!a || !a.get) continue;
+        const sub=String(a.get(PDFName.of("Subtype"))||""), contents=a.get(PDFName.of("Contents"));
+        if(sub==="/Text" || sub==="/Popup" || (sub==="/FreeText" && !(contents && String(contents.decodeText ? contents.decodeText() : contents).trim()))) annots.remove(i);
+      }
+    }); }
   const helv=await doc.embedFont(StandardFonts.Helvetica);
   const times=await doc.embedFont(StandardFonts.TimesRoman), timesB=await doc.embedFont(StandardFonts.TimesRomanBold), timesI=await doc.embedFont(StandardFonts.TimesRomanItalic);
   const v = k => String(state[k]??"").trim();
@@ -4567,13 +4585,14 @@ async function exportSmpPdf(){
         if(helv.widthOfTextAtSize(tryL,sz)<=room) line=tryL;
         else { if(line) out.push(line); line=word; } });
       if(line) out.push(line); return out; };
-    for(let sz=Math.min(10,size); sz>=6.5; sz-=0.5){
+    for(let sz=Math.min(10,size); sz>=7.5; sz-=0.5){
       const lines=wrap(s,sz), fits=Math.floor((w.height-3)/(sz*1.18));
       if(fits>=2 && lines.length<=fits && lines.every(l=>helv.widthOfTextAtSize(l,sz)<=room)){
         f.enableMultiline(); f.setText(lines.join("\n")); f.setFontSize(sz); return; }
     }
-    // 3. still too long: the whole answer goes on the continuation page, and the box says so
-    if(where){ cont.push([where,String(val).trim()]); f.setText("See continuation page: "+where.replace(/^Section [IVX]+, /,"")); f.setFontSize(Math.min(9,size)); }
+    // 3. still too long: the whole answer goes on the continuation pages at the end, and the box
+    //    gets "See attached page N" once that page number is known (after the attachments are laid out)
+    if(where){ cont.push({where, text:String(val).trim(), f, size, room}); f.setText(""); }
     else { f.setText(s); f.setFontSize(size); }
   };
   const check=(name,on)=>{ if(!on) return; try{ const c=form.getCheckBox(name); c.check(); c.updateAppearances(); }catch(e){ console.warn("No checkbox",name); } };
@@ -4698,10 +4717,6 @@ async function exportSmpPdf(){
     need(40); drawRow(cols,true); data.forEach(r=>drawRow(r,false)); y-=10;
   };
 
-  if(cont.length){
-    title("Continued from the application form");
-    cont.forEach(([where,text])=>block(where,text));
-  }
   if(mapNote || hasUnit()){
     title("Burn location");
     kv("Burn unit center (DMM)",[v("lat"),v("lon")].filter(Boolean).join(", "));
@@ -4759,6 +4774,18 @@ async function exportSmpPdf(){
         para("The unit and surrounding roads."+(m.base?` Base map: ${m.base}.`:" The base map couldn't be loaded, so only the features are shown."),{font:timesI,size:10}); }
     }
   }catch(e){ console.warn("Area map not added",e); }
+
+  // answers too long for their boxes, at the very end
+  if(cont.length){
+    newPage(); para("Continued from the application form",{font:timesB,size:14,gap:6});
+    cont.forEach(c=>{ need(LH*3); c.page=pageNo; block(c.where,c.text); });
+    cont.forEach(c=>{
+      const opts=[`See attached page ${c.page}`,`See att. page ${c.page}`,`See p. ${c.page}`,`p. ${c.page}`];
+      let txt=opts[opts.length-1], sz=Math.min(10,c.size);
+      for(const o of opts){ let z=Math.min(10,c.size); while(z>7 && helv.widthOfTextAtSize(o,z)>c.room) z-=0.5; if(helv.widthOfTextAtSize(o,z)<=c.room){ txt=o; sz=z; break; } }
+      c.f.setText(txt); c.f.setFontSize(sz); c.f.updateAppearances(helv);
+    });
+  }
 
   doc.setTitle(pdfSafe(helv,`Smoke Management Plan application: ${v("name")||""}`));
   const bytes=await doc.save();
@@ -4836,6 +4863,20 @@ function getDownloads(){
   return dlPromise;
 }
 const toastEl=document.getElementById("toast");
+/* Problems are reported in a dialog that stays until it's dismissed: a toast is easy to miss and can
+   vanish behind the browser's save prompt. Notices wait their turn behind any dialog already open. */
+const noticeDlg=document.getElementById("noticeDlg"), noticeQ=[];
+document.getElementById("noticeOk").onclick=()=>noticeDlg.close();
+noticeDlg.addEventListener("close",()=>setTimeout(nextNotice,0));
+function notice(title,text){ noticeQ.push([title,text]); nextNotice(); }
+function nextNotice(){
+  if(!noticeQ.length || noticeDlg.open) return;
+  if(document.querySelector("dialog[open]")){ setTimeout(nextNotice,300); return; }
+  const [title,text]=noticeQ.shift();
+  document.getElementById("noticeTitle").textContent=title;
+  document.getElementById("noticeText").textContent=text;
+  noticeDlg.showModal(); document.getElementById("noticeOk").focus();
+}
 function toast(msg,ms){ toastEl.textContent=msg; toastEl.classList.add("show"); clearTimeout(toastEl._t); toastEl._t=setTimeout(()=>toastEl.classList.remove("show"),ms||2600); }
 /* A failed export still saves the Markdown version, then says why the real file couldn't be made. */
 async function exportFailed(e,form,mdName,mdText,label){
@@ -4847,8 +4888,8 @@ async function exportFailed(e,form,mdName,mdText,label){
     : `Couldn't load the ${form} template${e.status?` (error ${e.status})`:""}. Check the connection and try again.`;
   else if(m==="jszip"||m==="pdf-lib") why = "Couldn't load the export library. Check the connection and try again.";
   else why = `Couldn't make the ${form}: ${m}.`;
-  await offerFile(mdName, mdText, label);
-  toast(why+" Saved a Markdown copy instead.", 10000);
+  await offerFile(mdName, mdText, "Markdown copy");
+  notice(`Couldn't make the ${form}`, why+" A Markdown copy was saved instead.");
 }
 async function fetchTemplate(name){
   let res;
@@ -4960,8 +5001,8 @@ document.getElementById("exportMd").onclick=async()=>{
   if(miss.length && !(await confirmExport("SMP application",miss))) return;
   toast("Filling in the SMP application…");
   try{ downloadBlob(slug()+"-smp-application.pdf", await exportSmpPdf(), "SMP application");
-    if(miss.length) setTimeout(()=>showMissing("SMP application",miss),600);
-    if(lastMapBases.some(b=>!b)) setTimeout(()=>toast("Map imagery couldn't be loaded, so the map shows features only"),2800); }
+    setTimeout(()=>{ if(miss.length) showMissing("SMP application",miss);
+      if(lastMapBases.some(b=>!b)) notice("Map shows features only","The map imagery couldn't be loaded, so the map in the SMP application shows the unit and features without a base map. Export again when you have a connection to include it."); },600); }
   catch(e){ exportFailed(e, "SMP application", slug()+"-smp.md", toMarkdown(), "SMP"); }
 };
 document.getElementById("mapImgBtn").onclick=async()=>{
@@ -4971,7 +5012,7 @@ document.getElementById("mapImgBtn").onclick=async()=>{
     const m=await renderSiteMap({kind:"site",base:currentBase||"Satellite",W:2000,H:1440});
     downloadBlob(slug()+"-site-map.png", m.blob, "Map image");
     readout(m.base ? `Map image saved (${m.base} base map).` : "Map imagery couldn't be loaded, so the image shows features only.");
-  }catch(e){ console.error(e); readout("Couldn't make the map image."); }
+  }catch(e){ console.error(e); readout("Couldn't make the map image."); notice("Couldn't make the map image", `${e && e.message ? e.message+". " : ""}Try again, or export the burn plan, which includes the maps.`); }
 };
 document.getElementById("exportBp").onclick=async()=>{
   saveNow();
@@ -4979,9 +5020,9 @@ document.getElementById("exportBp").onclick=async()=>{
   if(miss.length && !(await confirmExport("burn plan",miss))) return;
   toast("Building the burn plan…");
   try{ downloadBlob(slug()+"-burn-plan.docx", await exportBurnPlanDocx(), "Burn plan");
-    if(miss.length) setTimeout(()=>showMissing("burn plan",miss),600);
-    if(lastMapBases.some(b=>!b)) setTimeout(()=>toast("Map imagery couldn't be loaded, so the maps show features only"),2800);
-    else if(lastMapBases.length && lastMapBases[0]!==(currentBase||"Satellite")) setTimeout(()=>toast(`Site map uses the ${lastMapBases[0]} base map`),2800); }
+    setTimeout(()=>{ if(miss.length) showMissing("burn plan",miss);
+      if(lastMapBases.some(b=>!b)) notice("Maps show features only","The map imagery couldn't be loaded, so the maps in the burn plan show the unit and features without a base map. Export again when you have a connection to include it."); },600);
+    if(!lastMapBases.some(b=>!b) && lastMapBases.length && lastMapBases[0]!==(currentBase||"Satellite")) setTimeout(()=>toast(`Site map uses the ${lastMapBases[0]} base map`),2800); }
   catch(e){ exportFailed(e, "burn plan", slug()+"-burn-plan.md", toBurnPlanMd(), "Burn plan"); }
 };
 document.getElementById("backup").onclick=()=>{ saveNow(); offerFile(slug()+"-backup.json", JSON.stringify(state,null,2), "Backup"); };
@@ -4994,7 +5035,7 @@ restoreFile.onchange=async()=>{
     const data=JSON.parse(await file.text());
     if(typeof data!=="object"||Array.isArray(data)) throw new Error();
     state=data; saveNow(); renderAll(); applyReadOnly(); schedulePush(); toast("Backup restored");
-  }catch(e){ toast("That file isn't a worksheet backup"); }
+  }catch(e){ notice("Not a worksheet backup",`${file.name} isn't a backup saved by this worksheet, so nothing was restored. Choose a file made with Back up.`); }
   restoreFile.value="";
 };
 
