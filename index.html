@@ -134,7 +134,9 @@ tfoot td{font-weight:700;background:var(--field)}
 th .lblrow{gap:4px}
 .tbl-foot{margin-top:8px}
 
-dialog{border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);width:min(760px,94vw);padding:20px}
+dialog{border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);width:min(760px,94vw);padding:20px;overscroll-behavior:contain}
+dialog *{overscroll-behavior:contain}
+html:has(dialog[open]){overflow:hidden}
 dialog::backdrop{background:rgba(0,0,0,.45)}
 dialog textarea{min-height:50vh;font-size:.8125rem}
 dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap}
@@ -992,7 +994,7 @@ input.computed{background:transparent;border-style:dashed;font-variant-numeric:t
 .lyr-offmsg:empty{display:none}
 .lyr-h.lyr-offh{margin-top:12px}
 .lyr-foot button{border:0;background:none;color:var(--oak);font:inherit;font-weight:600;cursor:pointer;padding:2px 0}
-.leaflet-tooltip.flabel{white-space:normal;width:max-content;max-width:150px;background:rgba(255,255,255,.88);border:0;box-shadow:none;padding:0 4px;font:600 10px/1.25 "Public Sans",system-ui,sans-serif;color:#1c2420}
+.leaflet-tooltip.flabel{white-space:normal;text-wrap:balance;width:max-content;max-width:150px;background:rgba(255,255,255,.88);border:0;box-shadow:none;padding:0 4px;font:600 10px/1.25 "Public Sans",system-ui,sans-serif;color:#1c2420}
 .leaflet-tooltip.flabel::before{display:none}
 .leaflet-tooltip .fsub{display:block;font-weight:500;font-size:9px;opacity:.85}
 .status.offline::before,.status.warn::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
@@ -4267,17 +4269,24 @@ async function renderSiteMap({kind="site", base="Satellite", W=1600, H=1150}={})
     if(loc){ const [lx,ly]=P(loc), r=9*s; taken.push({x:lx-r,y:ly-r,w:2*r,h:2*r}); }   // keep names off the burn location dot
     // long names wrap onto lines about 18 characters wide, so they don't sprawl across the map
     // sub: an optional smaller line under the name (a water source's size)
-    const place=(t,x,y,size,r,extra=[],sub="")=>{
+    const place=(t,x,y,size,r,extra=[],sub="",onLine=false)=>{
       ctx.font=`700 ${size}px "Public Sans",Arial,sans-serif`;
-      const maxW=size*9.5, ls=[]; let cur="";
-      String(t).split(/\s+/).forEach(w=>{ const tryL=cur?cur+" "+w:w; if(!cur || ctx.measureText(tryL).width<=maxW) cur=tryL; else { ls.push(cur); cur=w; } });
-      if(cur) ls.push(cur);
+      // too long for one line: use as few lines as the width limit needs, then make them about
+      // equal by finding the narrowest width that still fits in that many lines
+      const words=String(t).split(/\s+/).filter(Boolean), mw=x=>ctx.measureText(x).width;
+      const fill=lim=>{ const out=[]; let cur=""; words.forEach(w=>{ const tryL=cur?cur+" "+w:w; if(!cur || mw(tryL)<=lim) cur=tryL; else { out.push(cur); cur=w; } }); if(cur) out.push(cur); return out; };
+      let ls=fill(size*9.5);
+      if(ls.length>1){ const n=ls.length; let lo=Math.max(...words.map(mw)), hi=size*9.5;
+        for(let i=0;i<14;i++){ const mid=(lo+hi)/2; if(fill(mid).length<=n) hi=mid; else lo=mid; }
+        ls=fill(hi); }
       const subSize=size*0.85, lh=size*1.15;
       let subW=0; if(sub){ ctx.font=`500 ${subSize}px "Public Sans",Arial,sans-serif`; subW=ctx.measureText(sub).width; ctx.font=`700 ${size}px "Public Sans",Arial,sans-serif`; }
       const tw=Math.max(subW,...ls.map(l=>ctx.measureText(l).width)), th=lh*ls.length+(sub?subSize*1.15:0), g=4*s;
       // [x, y, alignment]: right of the pin, left, above, below, then the diagonals
       const cand=[[x+r+g,y-th/2,"left"],[x-r-g-tw,y-th/2,"right"],[x-tw/2,y-r-g-th,"center"],[x-tw/2,y+r+g,"center"],
         [x+r,y-r-th,"left"],[x+r,y+r,"left"],[x-r-tw,y-r-th,"right"],[x-r-tw,y+r,"right"],...extra.map(([ex,ey])=>[ex,ey,"left"])];
+      // a line's name goes above or below it first, so it doesn't sit across the line
+      if(onLine) cand.unshift(cand[2],cand[3]);
       const at=cand.find(([cx,cy])=>!hit({x:cx,y:cy,w:tw,h:th}))||cand[0];
       taken.push({x:at[0],y:at[1],w:tw,h:th});
       const ax = at[2]==="right" ? at[0]+tw : at[2]==="center" ? at[0]+tw/2 : at[0];
@@ -4291,7 +4300,7 @@ async function renderSiteMap({kind="site", base="Satellite", W=1600, H=1150}={})
       // try the middle of each segment, longest first
       const segs=l.pts.slice(1).map((q,i)=>{ const a=P(l.pts[i]), b2=P(q); return {mx:(a[0]+b2[0])/2,my:(a[1]+b2[1])/2,len:Math.hypot(b2[0]-a[0],b2[1]-a[1])}; }).sort((a,b2)=>b2.len-a.len);
       const m=segs[0], extra=segs.slice(1).flatMap(sg=>[[sg.mx+8*s,sg.my-20*s],[sg.mx+8*s,sg.my+6*s]]);
-      place(l.name,m.mx,m.my,9.5*s,8*s,extra); });
+      place(l.name,m.mx,m.my,9.5*s,8*s,extra,"",true); });
   } else if(hasUnit()){
     const [x,y]=P(loc); halo(`Burn unit (${polyAcres(state.unitPoly).toFixed(1)} ac)`,x+12*s,y-12*s,11*s);
   }
@@ -4885,10 +4894,39 @@ function getDownloads(){
   return dlPromise;
 }
 const toastEl=document.getElementById("toast");
+/* While a dialog is open, scrolling never reaches the page behind it. A wheel or touch drag is let
+   through only when something inside the dialog can still scroll that way; at the top or bottom of
+   the dialog (or over its backdrop) it's cancelled instead of scrolling the page. */
+{
+  const canScroll=(el,dy,root)=>{
+    for(let n=el; n && n.nodeType===1; n=n.parentElement){
+      const st=getComputedStyle(n);
+      if(/(auto|scroll)/.test(st.overflowY) && n.scrollHeight>n.clientHeight+1){
+        if(dy<0 && n.scrollTop>0) return true;
+        if(dy>0 && n.scrollTop+n.clientHeight<n.scrollHeight-1) return true;
+      }
+      if(n===root) break;
+    }
+    return false;
+  };
+  const openDlg=()=>[...document.querySelectorAll("dialog[open]")].pop();
+  const inMap=t=>t.closest && t.closest(".leaflet-container");   // the map zooms and pans on its own
+  document.addEventListener("wheel",e=>{
+    const d=openDlg(); if(!d || inMap(e.target) || e.ctrlKey) return;
+    if(!d.contains(e.target) || !canScroll(e.target,e.deltaY,d)) e.preventDefault();
+  },{passive:false});
+  let ty=null;
+  document.addEventListener("touchstart",e=>{ ty=e.touches.length===1 ? e.touches[0].clientY : null; },{passive:true});
+  document.addEventListener("touchmove",e=>{
+    const d=openDlg(); if(!d || ty==null || inMap(e.target)) return;
+    const y=e.touches[0].clientY, dy=ty-y; ty=y;
+    if(!d.contains(e.target) || !canScroll(e.target,dy,d)) e.preventDefault();
+  },{passive:false});
+}
 /* Version shown at the bottom of the History dialog, so it's clear which copy a browser is running (the offline
    support can keep serving an older one until it reloads). Bump APP_VERSION with every release;
    the published time comes from GitHub Pages' Last-Modified header. */
-const APP_VERSION="2026-10-27.5";
+const APP_VERSION="2026-10-27.7";
 { const lm=new Date(document.lastModified), el=document.getElementById("appVer");
   const pub = !isNaN(lm) && Date.now()-lm>60000 ? `, published ${lm.toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"})} ${lm.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"})}` : "";
   if(el) el.textContent=`Version ${APP_VERSION}${pub}`; }
